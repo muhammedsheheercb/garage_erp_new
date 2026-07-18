@@ -57,7 +57,8 @@ async function createWindow() {
       ...process.env,
       NODE_ENV: 'production',
       PORT: port.toString(),
-      HOSTNAME: 'localhost'
+      HOSTNAME: 'localhost',
+      ELECTRON_RUN_AS_NODE: '1'
     };
 
     nextProcess = spawn(process.execPath, [serverPath], { env });
