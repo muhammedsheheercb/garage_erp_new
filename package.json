@@ -58,6 +58,7 @@
   "build": {
     "appId": "com.garageerp.app",
     "productName": "Garage ERP",
+    "asar": false,
     "directories": {
       "output": "dist"
     },
