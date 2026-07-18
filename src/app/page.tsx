@@ -44,7 +44,7 @@ export default async function DashboardPage() {
               <form
                 action={async () => {
                   "use server"
-                  await signOut()
+                  await signOut({ redirectTo: "/login" })
                 }}
               >
                 <Button variant="ghost" size="sm" type="submit" className="gap-2 text-muted-foreground hover:text-foreground">
