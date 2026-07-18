@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Customer {
+  id        String    @id @default(uuid())
+  name      String
+  email     String?   @unique
+  phone     String?
+  address   String?
+  vehicles  Vehicle[]
+  jobCards  JobCard[]
+  invoices  Invoice[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Vehicle {
+  id           String    @id @default(uuid())
+  brand        String
+  model        String
+  year         Int?
+  fuelType     String?
+  plateNumber  String    @unique
+  customerId   String
+  customer     Customer  @relation(fields: [customerId], references: [id])
+  jobCards     JobCard[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Mechanic {
+  id        String    @id @default(uuid())
+  name      String
+  phone     String?
+  email     String?   @unique
+  jobCards  JobCard[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Service {
+  id          String           @id @default(uuid())
+  name        String
+  price       Float
+  estimatedTime String?
+  category    String?
+  jobCards    JobCardService[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model JobCard {
+  id             String           @id @default(uuid())
+  status         String           @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  complaint      String
+  workDone       String?
+  estimatedCost  Float?
+  notes          String?
+  customerId     String
+  customer       Customer         @relation(fields: [customerId], references: [id])
+  vehicleId      String
+  vehicle        Vehicle          @relation(fields: [vehicleId], references: [id])
+  mechanicId     String
+  mechanic       Mechanic         @relation(fields: [mechanicId], references: [id])
+  services       JobCardService[]
+  parts          JobCardPart[]
+  
+  serviceTotal   Float            @default(0)
+  partsTotal     Float            @default(0)
+  discount       Float            @default(0)
+  tax            Float            @default(0)
+  grandTotal     Float            @default(0)
+
+  invoice        Invoice?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+// Join table for many-to-many relationship between JobCard and Service
+model JobCardService {
+  id        String   @id @default(uuid())
+  jobCardId String
+  jobCard   JobCard  @relation(fields: [jobCardId], references: [id])
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id])
+  quantity  Int      @default(1)
+  price     Float    // Captures the price at the time of service
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([jobCardId, serviceId])
+}
+
+model JobCardPart {
+  id          String    @id @default(uuid())
+  jobCardId   String
+  jobCard     JobCard   @relation(fields: [jobCardId], references: [id])
+  inventoryId String
+  inventory   Inventory @relation(fields: [inventoryId], references: [id])
+  quantity    Int       @default(1)
+  price       Float     // Selling price at the time of use
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([jobCardId, inventoryId])
+}
+
+model Invoice {
+  id              String    @id @default(uuid())
+  amount          Float     // Kept for backward compatibility, same as grandTotal
+  serviceCharge   Float     @default(0)
+  labourCharge    Float     @default(0)
+  partsCost       Float     @default(0)
+  discount        Float     @default(0)
+  tax             Float     @default(0)
+  subTotal        Float     @default(0)
+  grandTotal      Float     @default(0)
+  servicesDetails String?   // Text to store services details
+  partsDetails    String?   // Text or JSON string to store parts used
+  status          String    @default("UNPAID") // UNPAID, PARTIAL, PAID
+  customerId      String
+  customer        Customer  @relation(fields: [customerId], references: [id])
+  jobCardId       String    @unique
+  jobCard         JobCard   @relation(fields: [jobCardId], references: [id])
+  payments        Payment[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  amount    Float
+  method    String   // CASH, CARD, TRANSFER
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Supplier {
+  id        String      @id @default(uuid())
+  name      String
+  contact   String
+  email     String?
+  address   String?
+  inventory Inventory[]
+  payments  SupplierPayment[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Inventory {
+  id            String    @id @default(uuid())
+  itemName      String
+  partNumber    String
+  quantity      Int       @default(0)
+  minStockLevel Int       @default(5)
+  purchasePrice Float     @default(0)
+  sellingPrice  Float     @default(0)
+  supplierId    String
+  supplier      Supplier  @relation(fields: [supplierId], references: [id])
+  supplierPayments SupplierPayment[]
+  jobCardParts  JobCardPart[]
+  createdAt     DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  category    String   // RENT, UTILITIES, SALARY
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SupplierPayment {
+  id          String   @id @default(uuid())
+  amount      Float
+  method      String   @default("CASH")
+  date        DateTime @default(now())
+  reference   String?
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  inventoryId String?
+  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Setting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+}

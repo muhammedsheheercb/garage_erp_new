@@ -1,0 +1,62 @@
+src/features/customers/components/customer-list.tsx(165,26): error TS2322: Type '{ children: Element; asChild: true; }' is not assignable to type 'IntrinsicAttributes & Props<unknown>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & Props<unknown>'.
+src/features/expenses/components/expense-form.tsx(20,5): error TS2322: Type 'Resolver<{ category: "Rent" | "Electricity" | "Salary" | "Water Bill" | "Other Expenses"; amount: number; id?: string | undefined; description?: string | undefined; date?: Date | undefined; }, any, { ...; }>' is not assignable to type 'Resolver<{ category: "Rent" | "Electricity" | "Salary" | "Water Bill" | "Other Expenses"; amount: number; date: Date; id?: string | undefined; description?: string | undefined; }, any, { ...; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ category: "Rent" | "Electricity" | "Salary" | "Water Bill" | "Other Expenses"; amount: number; date: Date; id?: string | undefined; description?: string | undefined; }>' is not assignable to type 'ResolverOptions<{ category: "Rent" | "Electricity" | "Salary" | "Water Bill" | "Other Expenses"; amount: number; id?: string | undefined; description?: string | undefined; date?: Date | undefined; }>'.
+      Type 'Date | undefined' is not assignable to type 'Date'.
+        Type 'undefined' is not assignable to type 'Date'.
+src/features/expenses/components/expense-form.tsx(51,34): error TS2345: Argument of type '(data: ExpenseFormValues) => void' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ category: "Rent" | "Electricity" | "Salary" | "Water Bill" | "Other Expenses"; amount: number; date: Date; id?: string | undefined; description?: string | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ category: "Rent" | "Electricity" | "Salary" | "Water Bill" | "Other Expenses"; amount: number; date: Date; id?: string | undefined; description?: string | undefined; }': category, amount, date
+src/features/expenses/components/expense-list.tsx(221,102): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/features/expenses/components/expense-list.tsx(231,100): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/features/expenses/schema.ts(13,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: readonly ["Rent", "Electricity", "Salary", "Water Bill", "Other Expenses"], params?: string | { error?: string | $ZodErrorMap<$ZodIssueInvalidValue<unknown>> | undefined; message?: string | undefined; } | undefined): ZodEnum<...>', gave the following error.
+    Object literal may only specify known properties, and 'required_error' does not exist in type '{ error?: string | $ZodErrorMap<$ZodIssueInvalidValue<unknown>> | undefined; message?: string | undefined; }'.
+  Overload 2 of 2, '(entries: Readonly<Record<string, EnumValue>>, params?: string | { error?: string | $ZodErrorMap<$ZodIssueInvalidValue<unknown>> | undefined; message?: string | undefined; } | undefined): ZodEnum<...>', gave the following error.
+    Argument of type 'readonly ["Rent", "Electricity", "Salary", "Water Bill", "Other Expenses"]' is not assignable to parameter of type 'Readonly<Record<string, EnumValue>>'.
+      Index signature for type 'string' is missing in type 'readonly ["Rent", "Electricity", "Salary", "Water Bill", "Other Expenses"]'.
+src/features/expenses/schema.ts(19,5): error TS2353: Object literal may only specify known properties, and 'required_error' does not exist in type '{ error?: string | $ZodErrorMap<$ZodIssueInvalidType<unknown>> | undefined; message?: string | undefined; }'.
+src/features/inventory/actions.ts(55,7): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/features/inventory/actions.ts(60,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/features/inventory/actions.ts(75,7): error TS2322: Type 'string | null' is not assignable to type 'string | StringFieldUpdateOperationsInput | undefined'.
+  Type 'null' is not assignable to type 'string | StringFieldUpdateOperationsInput | undefined'.
+src/features/inventory/actions.ts(80,7): error TS2322: Type 'string | null' is not assignable to type 'string | StringFieldUpdateOperationsInput | undefined'.
+  Type 'null' is not assignable to type 'string | StringFieldUpdateOperationsInput | undefined'.
+src/features/inventory/components/inventory-form.tsx(28,5): error TS2322: Type 'Resolver<{ itemName: string; partNumber: string; quantity: number; purchasePrice: number; sellingPrice: number; supplierId: string; minStockLevel?: number | undefined; }, any, { itemName: string; ... 5 more ...; supplierId: string; }>' is not assignable to type 'Resolver<{ itemName: string; partNumber: string; quantity: number; minStockLevel: number; purchasePrice: number; sellingPrice: number; supplierId: string; }, any, { itemName: string; partNumber: string; ... 4 more ...; supplierId: string; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ itemName: string; partNumber: string; quantity: number; minStockLevel: number; purchasePrice: number; sellingPrice: number; supplierId: string; }>' is not assignable to type 'ResolverOptions<{ itemName: string; partNumber: string; quantity: number; purchasePrice: number; sellingPrice: number; supplierId: string; minStockLevel?: number | undefined; }>'.
+      Type 'number | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+src/features/inventory/components/inventory-form.tsx(58,34): error TS2345: Argument of type '(data: InventoryFormValues) => void' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ itemName: string; partNumber: string; quantity: number; minStockLevel: number; purchasePrice: number; sellingPrice: number; supplierId: string; }'.
+      Type 'FieldValues' is missing the following properties from type '{ itemName: string; partNumber: string; quantity: number; minStockLevel: number; purchasePrice: number; sellingPrice: number; supplierId: string; }': itemName, partNumber, quantity, minStockLevel, and 3 more.
+src/features/invoices/components/invoice-form.tsx(25,5): error TS2322: Type 'Resolver<{ jobCardId: string; customerId: string; id?: string | undefined; serviceCharge?: number | undefined; labourCharge?: number | undefined; partsCost?: number | undefined; discount?: number | undefined; tax?: number | undefined; servicesDetails?: string | undefined; partsDetails?: string | undefined; status?: ...' is not assignable to type 'Resolver<{ jobCardId: string; customerId: string; serviceCharge: number; labourCharge: number; partsCost: number; discount: number; tax: number; status: "UNPAID" | "PARTIAL" | "PAID"; id?: string | undefined; servicesDetails?: string | undefined; partsDetails?: string | undefined; }, any, { ...; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ jobCardId: string; customerId: string; serviceCharge: number; labourCharge: number; partsCost: number; discount: number; tax: number; status: "UNPAID" | "PARTIAL" | "PAID"; id?: string | undefined; servicesDetails?: string | undefined; partsDetails?: string | undefined; }>' is not assignable to type 'ResolverOptions<{ jobCardId: string; customerId: string; id?: string | undefined; serviceCharge?: number | undefined; labourCharge?: number | undefined; partsCost?: number | undefined; discount?: number | undefined; tax?: number | undefined; servicesDetails?: string | undefined; partsDetails?: string | undefined; st...'.
+      Type 'number | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+src/features/invoices/components/invoice-form.tsx(102,34): error TS2345: Argument of type '(data: InvoiceFormValues) => void' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ jobCardId: string; customerId: string; serviceCharge: number; labourCharge: number; partsCost: number; discount: number; tax: number; status: "UNPAID" | "PARTIAL" | "PAID"; id?: string | undefined; servicesDetails?: string | undefined; partsDetails?: string | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ jobCardId: string; customerId: string; serviceCharge: number; labourCharge: number; partsCost: number; discount: number; tax: number; status: "UNPAID" | "PARTIAL" | "PAID"; id?: string | undefined; servicesDetails?: string | undefined; partsDetails?: string | undefined; }': jobCardId, customerId, serviceCharge, labourCharge, and 4 more.
+src/features/jobcards/components/jobcard-form.tsx(29,5): error TS2322: Type 'Resolver<{ customerId: string; vehicleId: string; mechanicId: string; complaint: string; id?: string | undefined; status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | undefined; workDone?: string | undefined; ... 7 more ...; grandTotal?: number | undefined; }, any, { ...; }>' is not assignable to type 'Resolver<{ customerId: string; vehicleId: string; mechanicId: string; status: "PENDING" | "IN_PROGRESS" | "COMPLETED"; complaint: string; services: { serviceId: string; name: string; quantity: number; price: number; }[]; ... 8 more ...; notes?: string | undefined; }, any, { ...; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ customerId: string; vehicleId: string; mechanicId: string; status: "PENDING" | "IN_PROGRESS" | "COMPLETED"; complaint: string; services: { serviceId: string; name: string; quantity: number; price: number; }[]; ... 8 more ...; notes?: string | undefined; }>' is not assignable to type 'ResolverOptions<{ customerId: string; vehicleId: string; mechanicId: string; complaint: string; id?: string | undefined; status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | undefined; workDone?: string | undefined; ... 7 more ...; grandTotal?: number | undefined; }>'.
+      Type '"PENDING" | "IN_PROGRESS" | "COMPLETED" | undefined' is not assignable to type '"PENDING" | "IN_PROGRESS" | "COMPLETED"'.
+        Type 'undefined' is not assignable to type '"PENDING" | "IN_PROGRESS" | "COMPLETED"'.
+src/features/jobcards/components/jobcard-form.tsx(129,34): error TS2345: Argument of type '(data: JobCardFormValues) => void' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ customerId: string; vehicleId: string; mechanicId: string; status: "PENDING" | "IN_PROGRESS" | "COMPLETED"; complaint: string; services: { serviceId: string; name: string; quantity: number; price: number; }[]; ... 8 more ...; notes?: string | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ customerId: string; vehicleId: string; mechanicId: string; status: "PENDING" | "IN_PROGRESS" | "COMPLETED"; complaint: string; services: { serviceId: string; name: string; quantity: number; price: number; }[]; ... 8 more ...; notes?: string | undefined; }': customerId, vehicleId, mechanicId, status, and 8 more.
+src/features/suppliers/actions.ts(63,7): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/features/suppliers/actions.ts(80,7): error TS2322: Type 'string | null' is not assignable to type 'string | StringFieldUpdateOperationsInput | undefined'.
+  Type 'null' is not assignable to type 'string | StringFieldUpdateOperationsInput | undefined'.
+src/features/suppliers/actions.ts(95,15): error TS2322: Type 'null' is not assignable to type 'string | StringFieldUpdateOperationsInput | undefined'.
