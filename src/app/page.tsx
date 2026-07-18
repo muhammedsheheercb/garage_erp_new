@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Wrench, LogOut, Users, Car, CheckCircle2, Clock, CalendarDays, PlusCircle, FileText, Activity, Briefcase, CreditCard, Package, Truck } from "lucide-react";
-import { auth, signOut } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { SignOutButton } from "@/components/sign-out-button";
 import { Currency, OmanIcon } from "@/components/currency";
 import Link from "next/link";
 import { getDashboardStats, getRecentActivities } from "@/features/reports/actions";
@@ -41,17 +42,7 @@ export default async function DashboardPage() {
           <div className="flex flex-1 items-center justify-end space-x-4">
             <nav className="flex items-center space-x-2">
               <ThemeToggle />
-              <form
-                action={async () => {
-                  "use server"
-                  await signOut({ redirectTo: "/login" })
-                }}
-              >
-                <Button variant="ghost" size="sm" type="submit" className="gap-2 text-muted-foreground hover:text-foreground">
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline-block">Sign Out</span>
-                </Button>
-              </form>
+              <SignOutButton />
             </nav>
           </div>
         </div>
