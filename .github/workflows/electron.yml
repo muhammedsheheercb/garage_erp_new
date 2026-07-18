@@ -1,0 +1,54 @@
+name: Build Electron Windows App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Generate Prisma Client
+        run: pnpm dlx prisma generate
+
+      - name: Build Next.js App
+        run: pnpm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Prepare Standalone Assets
+        shell: bash
+        run: |
+          cp -r public .next/standalone/
+          mkdir -p .next/standalone/.next
+          cp -r .next/static .next/standalone/.next/
+          
+      - name: Build Electron Windows App
+        run: pnpm dlx electron-builder --win -c.extraMetadata.main=main.js
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: garage-erp-windows-installer
+          path: dist/*.exe

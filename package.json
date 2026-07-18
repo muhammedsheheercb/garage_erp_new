@@ -2,11 +2,13 @@
   "name": "garage_erp",
   "version": "0.1.0",
   "private": true,
+  "main": "main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron:dev": "concurrently \"pnpm dev\" \"wait-on http://localhost:3000 && electron .\""
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -40,13 +42,41 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.3",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.10"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "build": {
+    "appId": "com.garageerp.app",
+    "productName": "Garage ERP",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "main.js",
+      "package.json",
+      ".next/standalone/**/*",
+      ".next/static/**/*",
+      "public/**/*",
+      "prisma/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "prisma/dev.db",
+        "to": "prisma/dev.db"
+      }
+    ]
   }
 }
