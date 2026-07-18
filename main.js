@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const http = require('http');
 
@@ -49,6 +50,15 @@ async function createWindow() {
       console.error('Dev server timeout', err);
     }
   } else {
+    // Persistent database setup
+    const dbPath = path.join(app.getPath('userData'), 'database.db');
+    if (!fs.existsSync(dbPath)) {
+      const sourceDb = path.join(__dirname, 'prisma', 'dev.db');
+      if (fs.existsSync(sourceDb)) {
+        fs.copyFileSync(sourceDb, dbPath);
+      }
+    }
+
     // In production, Next.js standalone server is run
     const serverPath = path.join(__dirname, '.next', 'standalone', 'server.js');
     
@@ -58,7 +68,8 @@ async function createWindow() {
       NODE_ENV: 'production',
       PORT: port.toString(),
       HOSTNAME: 'localhost',
-      ELECTRON_RUN_AS_NODE: '1'
+      ELECTRON_RUN_AS_NODE: '1',
+      DATABASE_URL: `file:${dbPath}`
     };
 
     nextProcess = spawn(process.execPath, [serverPath], { env });

@@ -41,6 +41,9 @@ jobs:
           cp -r public .next/standalone/
           mkdir -p .next/standalone/.next
           cp -r .next/static .next/standalone/.next/
+          mkdir -p .next/standalone/node_modules/
+          cp -r node_modules/.prisma .next/standalone/node_modules/ || true
+          cp -r node_modules/@prisma .next/standalone/node_modules/ || true
           
       - name: Build Electron Windows App
         run: pnpm exec electron-builder --win
