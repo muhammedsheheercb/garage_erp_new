@@ -1,7 +1,26 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
-const waitOn = require('wait-on');
+const http = require('http');
+
+const waitForServer = (url, timeout = 30000) => {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      if (Date.now() - startTime > timeout) {
+        clearInterval(interval);
+        reject(new Error('Timeout waiting for server'));
+      }
+      const req = http.get(url, () => {
+        clearInterval(interval);
+        resolve();
+      });
+      req.on('error', () => {
+        // Connection refused, server not up yet
+      });
+    }, 500);
+  });
+};
 
 let mainWindow;
 let nextProcess;
@@ -24,7 +43,7 @@ async function createWindow() {
   if (isDev) {
     // In dev mode, wait for Next.js dev server
     try {
-      await waitOn({ resources: [url], timeout: 30000 });
+      await waitForServer(url, 30000);
       mainWindow.loadURL(url);
     } catch (err) {
       console.error('Dev server timeout', err);
@@ -48,7 +67,7 @@ async function createWindow() {
 
     // Wait for the Next.js server to be ready before loading the URL
     try {
-      await waitOn({ resources: [url], timeout: 30000 });
+      await waitForServer(url, 30000);
       mainWindow.loadURL(url);
     } catch (error) {
       console.error('Next.js server failed to start:', error);
