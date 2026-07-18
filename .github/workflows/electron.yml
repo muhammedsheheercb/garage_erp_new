@@ -43,7 +43,7 @@ jobs:
           cp -r .next/static .next/standalone/.next/
           
       - name: Build Electron Windows App
-        run: pnpm dlx electron-builder --win -c.extraMetadata.main=main.js
+        run: pnpm exec electron-builder --win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
