@@ -2,20 +2,22 @@
 
 import { LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { logOutAction } from "@/app/actions/auth"
 
 export function SignOutButton() {
+  const handleSignOut = () => {
+    // Hard navigate to our custom API route to clear all cookies and redirect to /login
+    window.location.href = "/api/auth/force-logout"
+  }
+
   return (
-    <form action={logOutAction}>
-      <Button
-        type="submit"
-        variant="ghost"
-        size="sm"
-        className="gap-2 text-muted-foreground hover:text-foreground"
-      >
-        <LogOut className="h-4 w-4" />
-        <span className="hidden sm:inline-block">Sign Out</span>
-      </Button>
-    </form>
+    <Button
+      onClick={handleSignOut}
+      variant="ghost"
+      size="sm"
+      className="gap-2 text-muted-foreground hover:text-foreground"
+    >
+      <LogOut className="h-4 w-4" />
+      <span className="hidden sm:inline-block">Sign Out</span>
+    </Button>
   )
 }
