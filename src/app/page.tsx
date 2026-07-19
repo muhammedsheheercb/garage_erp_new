@@ -10,8 +10,14 @@ import { Currency, OmanIcon } from "@/components/currency";
 import Link from "next/link";
 import { getDashboardStats, getRecentActivities } from "@/features/reports/actions";
 
+import { redirect } from "next/navigation";
+
 export default async function DashboardPage() {
   const session = await auth();
+  
+  if (!session) {
+    redirect("/login");
+  }
   
   // Fetch real data from the database
   const realStats = await getDashboardStats();
