@@ -2,14 +2,17 @@
 
 import { LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
-import { signOut } from "next-auth/react"
+import { forceLogOut } from "@/app/actions/force-logout"
 
 export function SignOutButton() {
-  const router = useRouter()
-
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/login" })
+    try {
+      await forceLogOut()
+    } catch (error) {
+      console.error("Sign out error:", error)
+    } finally {
+      window.location.href = "/login"
+    }
   }
 
   return (
