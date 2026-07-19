@@ -2,18 +2,18 @@
 
 import { LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { logOut } from "@/app/actions/auth"
 
 export function SignOutButton() {
   const router = useRouter()
 
   const handleSignOut = async () => {
     try {
-      await signOut({ redirect: false })
+      await logOut()
     } catch (error) {
       console.error("Sign out error:", error)
-    } finally {
+      // Fallback redirect if server action throws an error (e.g. Next.js redirect error which is normal)
       window.location.href = "/login"
     }
   }
