@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button"
 
 export function SignOutButton() {
   const handleSignOut = () => {
-    // Hard navigate to our custom API route to clear all cookies and redirect to /login
-    window.location.href = "/api/auth/force-logout"
+    // Hard navigate to our custom logout route.
+    // This allows Electron to intercept and clear all Chromium storage,
+    // and deletes server cookies before loading the login page.
+    window.location.href = "/api/auth/logout"
   }
 
   return (

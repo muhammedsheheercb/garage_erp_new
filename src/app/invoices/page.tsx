@@ -1,5 +1,5 @@
 import { InvoiceList } from "@/features/invoices/components/invoice-list"
-import { auth } from "@/lib/auth"
+import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,7 @@ export const metadata = {
 }
 
 export default async function InvoicesPage() {
-  const session = await auth()
+  const session = await getSession()
   
   if (!session) {
     redirect('/login')

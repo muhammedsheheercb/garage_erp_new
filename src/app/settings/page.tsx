@@ -1,5 +1,5 @@
 import { SettingsForm } from "@/features/settings/components/settings-form"
-import { auth } from "@/lib/auth"
+import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 }
 
 export default async function SettingsPage() {
-  const session = await auth()
+  const session = await getSession()
   
   if (!session) {
     redirect('/login')

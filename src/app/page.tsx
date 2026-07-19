@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Wrench, LogOut, Users, Car, CheckCircle2, Clock, CalendarDays, PlusCircle, FileText, Activity, Briefcase, CreditCard, Package, Truck } from "lucide-react";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Currency, OmanIcon } from "@/components/currency";
 import Link from "next/link";
@@ -13,7 +13,7 @@ import { getDashboardStats, getRecentActivities } from "@/features/reports/actio
 import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  const session = await auth();
+  const session = await getSession();
   
   if (!session) {
     redirect("/login");
@@ -62,7 +62,7 @@ export default async function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground mt-1">
-              Welcome back, <span className="font-medium text-foreground">{session?.user?.name || 'Admin'}</span>. Here is what's happening today.
+              Welcome back, <span className="font-medium text-foreground">{session?.email || 'Admin'}</span>. Here is what's happening today.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 w-full md:w-auto">

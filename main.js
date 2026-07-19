@@ -41,6 +41,26 @@ async function createWindow() {
   const port = isDev ? 3000 : 3001; // Use 3001 for prod so it doesn't conflict if dev is running
   const url = `http://localhost:${port}`;
 
+  const handleLogoutNavigation = (event, targetUrl) => {
+    if (targetUrl.includes('/api/auth/logout') || targetUrl.includes('/api/auth/force-logout') || targetUrl.includes('/api/auth/signout')) {
+      event.preventDefault();
+      console.log('Intercepted logout navigation in Electron main process, clearing storage...');
+      const ses = mainWindow.webContents.session;
+      ses.clearStorageData({
+        storages: ['cookies', 'localstorage', 'indexdb', 'websql', 'serviceworkers', 'cachestorage']
+      }).then(() => {
+        console.log('Storage cleared successfully. Redirecting to login...');
+        mainWindow.loadURL(`${url}/login`);
+      }).catch(err => {
+        console.error('Failed to clear storage:', err);
+        mainWindow.loadURL(`${url}/login`);
+      });
+    }
+  };
+
+  mainWindow.webContents.on('will-navigate', handleLogoutNavigation);
+  mainWindow.webContents.on('will-redirect', handleLogoutNavigation);
+
   if (isDev) {
     // In dev mode, wait for Next.js dev server
     try {

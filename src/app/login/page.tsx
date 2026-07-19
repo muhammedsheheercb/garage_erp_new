@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { loginAction } from "@/app/actions/auth"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Wrench, Eye, EyeOff } from "lucide-react"
@@ -20,14 +20,10 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
+      const result = await loginAction(email, password)
 
-      if (result?.error) {
-        toast.error("Invalid email or password")
+      if (!result?.success) {
+        toast.error(result?.error || "Invalid email or password")
         return
       }
 

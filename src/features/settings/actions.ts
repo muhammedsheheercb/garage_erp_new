@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache"
 import fs from "fs/promises"
 import path from "path"
 import { format } from "date-fns"
-import { auth } from "@/lib/auth"
+import { getSession } from "@/lib/session"
 import bcrypt from "bcryptjs"
 
 export async function getSettings() {
@@ -108,15 +108,15 @@ export async function restoreDatabase(filename: string) {
 }
 
 export async function updateAdminCredentials(currentPassword: string, newEmail: string, newPassword?: string) {
-  const session = await auth()
+  const session = await getSession()
   
-  if (!session || !session.user || !session.user.email) {
+  if (!session || !session.email) {
     throw new Error("Unauthorized")
   }
   
   // Find current admin
   const admin = await prisma.admin.findUnique({
-    where: { email: session.user.email }
+    where: { email: session.email }
   })
   
   if (!admin) {
