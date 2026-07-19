@@ -9,9 +9,13 @@ export function SignOutButton() {
   const router = useRouter()
 
   const handleSignOut = async () => {
-    await signOut({ redirect: false })
-    router.push("/login")
-    router.refresh()
+    try {
+      await signOut({ redirect: false })
+    } catch (error) {
+      console.error("Sign out error:", error)
+    } finally {
+      window.location.href = "/login"
+    }
   }
 
   return (
