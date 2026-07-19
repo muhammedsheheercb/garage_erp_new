@@ -2,16 +2,16 @@
 
 import { LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { forceLogOut } from "@/app/actions/force-logout"
-
 export function SignOutButton() {
   const handleSignOut = async () => {
     try {
-      await forceLogOut()
+      // Call our custom API route to forcefully delete cookies
+      await fetch("/api/auth/force-logout", { method: "POST" });
     } catch (error) {
-      console.error("Sign out error:", error)
+      console.error("Sign out error:", error);
     } finally {
-      window.location.href = "/login"
+      // Hard redirect to login page
+      window.location.href = "/login";
     }
   }
 
