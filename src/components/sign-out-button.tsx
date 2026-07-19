@@ -2,11 +2,11 @@
 
 import { LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { logOut } from "@/app/actions/auth"
+import { logOutAction } from "@/app/actions/auth"
 
 export function SignOutButton() {
   return (
-    <form action={logOut}>
+    <form action={logOutAction}>
       <Button
         type="submit"
         variant="ghost"

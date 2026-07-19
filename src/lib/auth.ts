@@ -9,6 +9,7 @@ export const {
   signIn,
   signOut,
 } = NextAuth({
+  trustHost: true,
   providers: [
     CredentialsProvider({
       name: "Credentials",
