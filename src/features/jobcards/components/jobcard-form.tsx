@@ -12,10 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import { createJobCard, updateJobCard, getDropdownData } from "../actions"
 import { toast } from "sonner"
-import { Trash } from "lucide-react"
-import { useEffect } from "react"
+import { Trash, Plus } from "lucide-react"
+import { useEffect, useState } from "react"
 import { ServiceSelectionModal } from "./service-selection-modal"
 import { PartSelectionModal } from "./part-selection-modal"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { CustomerForm } from "@/features/customers/components/customer-form"
+import { VehicleForm } from "@/features/vehicles/components/vehicle-form"
 
 interface JobCardFormProps {
   initialData?: any // JobCard with relations
@@ -24,6 +27,8 @@ interface JobCardFormProps {
 
 export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const queryClient = useQueryClient()
+  const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false)
+  const [isNewVehicleOpen, setIsNewVehicleOpen] = useState(false)
   
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<JobCardFormValues>({
     resolver: zodResolver(jobCardSchema),
@@ -132,14 +137,41 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="customerId">Customer <span className="text-destructive">*</span></Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="customerId">Customer <span className="text-destructive">*</span></Label>
+                {!initialData && (
+                  <Dialog open={isNewCustomerOpen} onOpenChange={setIsNewCustomerOpen}>
+                    <DialogTrigger render={
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1">
+                        <Plus className="h-3.5 w-3.5" /> New Customer
+                      </Button>
+                    } />
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Create New Customer</DialogTitle>
+                      </DialogHeader>
+                      <CustomerForm onSuccess={(newCust) => {
+                        setIsNewCustomerOpen(false)
+                        queryClient.invalidateQueries({ queryKey: ['jobcards-dropdowns'] }).then(() => {
+                          if (newCust && newCust.id) {
+                            setValue("customerId", newCust.id)
+                            setValue("vehicleId", "")
+                          }
+                        })
+                      }} />
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
               <Controller
                 control={control}
                 name="customerId"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={(val) => { field.onChange(val); setValue("vehicleId", "") }} disabled={isLoading}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a customer" />
+                      <SelectValue placeholder="Select a customer">
+                        {(val: string) => dropdowns.customers.find((c: any) => c.id === val)?.name || null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {dropdowns.customers.map((c: any) => (
@@ -153,14 +185,46 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="vehicleId">Vehicle <span className="text-destructive">*</span></Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="vehicleId">Vehicle <span className="text-destructive">*</span></Label>
+                {!initialData && (
+                  <Dialog open={isNewVehicleOpen} onOpenChange={setIsNewVehicleOpen}>
+                    <DialogTrigger render={
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={!selectedCustomerId}>
+                        <Plus className="h-3.5 w-3.5" /> New Vehicle
+                      </Button>
+                    } />
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Create New Vehicle</DialogTitle>
+                      </DialogHeader>
+                      <VehicleForm 
+                        initialData={{ customerId: selectedCustomerId, plateNumber: "", brand: "", model: "", fuelType: "Petrol", year: new Date().getFullYear() }} 
+                        onSuccess={(newVeh) => {
+                          setIsNewVehicleOpen(false)
+                          queryClient.invalidateQueries({ queryKey: ['jobcards-dropdowns'] }).then(() => {
+                            if (newVeh && newVeh.id) {
+                              setValue("vehicleId", newVeh.id)
+                            }
+                          })
+                        }} 
+                      />
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
               <Controller
                 control={control}
                 name="vehicleId"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange} disabled={!selectedCustomerId || filteredVehicles.length === 0}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder={!selectedCustomerId ? "Select customer first" : "Select vehicle"} />
+                      <SelectValue placeholder={!selectedCustomerId ? "Select customer first" : "Select vehicle"}>
+                        {(val: string) => {
+                          const v = filteredVehicles.find((v: any) => v.id === val)
+                          return v ? `${v.plateNumber} (${v.brand})` : null
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {filteredVehicles.map((v: any) => (
@@ -183,7 +247,9 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                 render={({ field }) => (
                   <Select value={field.value || ""} onValueChange={field.onChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select Mechanic" />
+                      <SelectValue placeholder="Select Mechanic">
+                        {(val: string) => dropdowns.mechanics.find((m: any) => m.id === val)?.name || null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {dropdowns.mechanics.map((m: any) => (
@@ -202,14 +268,19 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                 control={control}
                 name="status"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={!initialData}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="PENDING">Pending</SelectItem>
-                      <SelectItem value="IN_PROGRESS">Working</SelectItem>
-                      <SelectItem value="COMPLETED">Completed</SelectItem>
+                      {initialData ? (
+                        <>
+                          <SelectItem value="WORKING">Working</SelectItem>
+                          <SelectItem value="COMPLETED">Completed</SelectItem>
+                          <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                        </>
+                      ) : null}
                     </SelectContent>
                   </Select>
                 )}
@@ -279,11 +350,11 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
           <div className="space-y-4 border rounded-md p-4">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-lg">Parts</h3>
-              <PartSelectionModal onSelect={(part) => {
-                if (!watchedParts.find(p => p.inventoryId === part.id)) {
-                  appendPart({ inventoryId: part.id, name: part.itemName, quantity: 1, price: part.sellingPrice, maxStock: part.quantity })
+              <PartSelectionModal onSelect={(batch) => {
+                if (!watchedParts.find(p => p.batchId === batch.id)) {
+                  appendPart({ batchId: batch.id, name: `${batch.inventory.itemName} (${batch.inventory.partNumber})`, quantity: 1, price: batch.sellingPrice, maxStock: batch.quantity })
                 } else {
-                  toast.error("Part already added.")
+                  toast.error("Part batch already added.")
                 }
               }} />
             </div>

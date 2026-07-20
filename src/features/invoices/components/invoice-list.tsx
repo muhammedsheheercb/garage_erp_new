@@ -6,7 +6,7 @@ import { getInvoices, deleteInvoice } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Printer, FileText } from "lucide-react"
+import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Printer, FileText, ClipboardList } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { InvoiceForm } from "./invoice-form"
@@ -20,6 +20,7 @@ export function InvoiceList() {
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingInvoice, setEditingInvoice] = useState<any>(null)
+  const [viewingJobCard, setViewingJobCard] = useState<any>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['invoices', page, search],
@@ -97,9 +98,102 @@ export function InvoiceList() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button variant="ghost" size="icon" onClick={() => router.push(`/invoices/${invoice.id}/print`)} title="Print/Download PDF">
+                    <Button variant="ghost" size="icon" onClick={() => router.push(`/invoices/${invoice.id}/print`)} title="Print/Download Invoice">
                       <Printer className="h-4 w-4" />
                     </Button>
+                    
+                    {invoice.jobCard?.id && (
+                      <Dialog open={viewingJobCard?.id === invoice.jobCard.id} onOpenChange={(open) => !open && setViewingJobCard(null)}>
+                        <DialogTrigger render={
+                          <Button variant="ghost" size="icon" onClick={() => setViewingJobCard(invoice.jobCard)} title="View Job Card">
+                            <ClipboardList className="h-4 w-4" />
+                          </Button>
+                        } />
+                        {viewingJobCard?.id === invoice.jobCard.id && (
+                          <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Job Card Details</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-6 mt-4 text-left">
+                              <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
+                                <div>
+                                  <p className="text-sm text-muted-foreground">Vehicle</p>
+                                  <p className="font-medium">{viewingJobCard.vehicle?.plateNumber} ({viewingJobCard.vehicle?.brand} {viewingJobCard.vehicle?.model})</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-muted-foreground">Customer</p>
+                                  <p className="font-medium">{viewingJobCard.customer?.name} - {viewingJobCard.customer?.phone}</p>
+                                </div>
+                                <div className="col-span-2">
+                                  <p className="text-sm text-muted-foreground">Complaint</p>
+                                  <p className="font-medium whitespace-pre-wrap">{viewingJobCard.complaint}</p>
+                                </div>
+                                {viewingJobCard.workDone && (
+                                  <div className="col-span-2">
+                                    <p className="text-sm text-muted-foreground">Work Done</p>
+                                    <p className="font-medium whitespace-pre-wrap">{viewingJobCard.workDone}</p>
+                                  </div>
+                                )}
+                                {viewingJobCard.notes && (
+                                  <div className="col-span-2">
+                                    <p className="text-sm text-muted-foreground">Notes / Description</p>
+                                    <p className="font-medium whitespace-pre-wrap">{viewingJobCard.notes}</p>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {viewingJobCard.services && viewingJobCard.services.length > 0 && (
+                                <div>
+                                  <h4 className="font-semibold mb-2">Services</h4>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Service</TableHead>
+                                        <TableHead>Qty</TableHead>
+                                        <TableHead className="text-right">Price</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {viewingJobCard.services.map((s: any) => (
+                                        <TableRow key={s.id}>
+                                          <TableCell>{s.service?.name}</TableCell>
+                                          <TableCell>{s.quantity}</TableCell>
+                                          <TableCell className="text-right">{s.price.toFixed(3)}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+
+                              {viewingJobCard.parts && viewingJobCard.parts.length > 0 && (
+                                <div>
+                                  <h4 className="font-semibold mb-2">Parts Used</h4>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Part / Item</TableHead>
+                                        <TableHead>Qty</TableHead>
+                                        <TableHead className="text-right">Price</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {viewingJobCard.parts.map((p: any) => (
+                                        <TableRow key={p.id}>
+                                          <TableCell>{p.batch?.inventory?.itemName}</TableCell>
+                                          <TableCell>{p.quantity}</TableCell>
+                                          <TableCell className="text-right">{p.price.toFixed(3)}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        )}
+                      </Dialog>
+                    )}
                     
                     <Dialog open={editingInvoice?.id === invoice.id} onOpenChange={(open) => !open && setEditingInvoice(null)}>
                       <DialogTrigger render={

@@ -70,31 +70,36 @@ export function InventoryList() {
               <TableHead>Part No.</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead>Prices</TableHead>
-              <TableHead>Supplier</TableHead>
+
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center h-24">Loading...</TableCell></TableRow>
             ) : data?.data.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center h-24">No items found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center h-24">No items found.</TableCell></TableRow>
             ) : (
               data?.data.map((item) => {
-                const isLowStock = item.quantity <= item.minStockLevel
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">
                       {item.itemName}
-                      {isLowStock && (
-                        <Badge variant="destructive" className="ml-2 text-[10px] px-1.5 py-0">Low Stock</Badge>
-                      )}
                     </TableCell>
                     <TableCell>{item.partNumber || '-'}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className={isLowStock ? "text-destructive font-bold" : ""}>{item.quantity}</span>
-                        {isLowStock && <AlertTriangle className="h-4 w-4 text-destructive" />}
+                      <div className="flex flex-col gap-1">
+                        <span className="font-semibold">{item.quantity} Total</span>
+                        {item.batches && item.batches.length > 0 && (
+                          <div className="text-xs text-muted-foreground flex flex-col gap-0.5 mt-1 border-t pt-1 border-border/50 max-w-[120px]">
+                            {item.batches.map((b: any) => (
+                              <div key={b.id} className="flex justify-between w-full">
+                                <span>{b.batchNumber}:</span>
+                                <span>{b.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -103,7 +108,7 @@ export function InventoryList() {
                         <span className="text-muted-foreground">Sel: </span>{item.sellingPrice.toFixed(3)}
                       </div>
                     </TableCell>
-                    <TableCell>{item.supplier?.name || '-'}</TableCell>
+
                     <TableCell className="text-right space-x-2">
                       
                       <Dialog open={editingItem?.id === item.id} onOpenChange={(open) => !open && setEditingItem(null)}>

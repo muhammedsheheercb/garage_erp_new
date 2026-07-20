@@ -17,43 +17,34 @@ import { useEffect } from "react"
 
 interface SupplierPaymentFormProps {
   supplierId: string
-  inventoryItems: any[]
+  purchases: any[]
   payments: any[]
   onSuccess?: () => void
 }
 
-export function SupplierPaymentForm({ supplierId, inventoryItems, payments, onSuccess }: SupplierPaymentFormProps) {
+export function SupplierPaymentForm({ supplierId, purchases, payments, onSuccess }: SupplierPaymentFormProps) {
   const queryClient = useQueryClient()
   
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<SupplierPaymentFormValues>({
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<SupplierPaymentFormValues>({
     resolver: zodResolver(supplierPaymentSchema),
     defaultValues: {
       amount: 0,
       method: "CASH",
       reference: "",
-      inventoryId: "none",
     }
   })
 
-  // Watch selected inventoryId to calculate its pending amount
-  const watchInventoryId = watch("inventoryId")
-  const currentMaxAmount = watchInventoryId && watchInventoryId !== "none" ? (() => {
-    const item = inventoryItems.find((i: any) => i.id === watchInventoryId)
-    if (!item) return 0
-    const totalCost = item.quantity * item.purchasePrice
-    const paidForThisItem = payments.filter((p: any) => p.inventoryId === watchInventoryId).reduce((acc, curr) => acc + curr.amount, 0)
-    return Math.max(0, totalCost - paidForThisItem)
-  })() : (() => {
-    const totalCost = inventoryItems.reduce((acc, curr) => acc + (curr.quantity * curr.purchasePrice), 0)
+  // We don't link payments to specific purchases anymore, it's just a general payment
+  // but if we did, we'd use purchaseId. For now, it's a general payment against the total balance.
+  const currentMaxAmount = (() => {
+    const totalCost = purchases.reduce((acc, curr) => acc + curr.grandTotal, 0)
     const totalPaid = payments.reduce((acc, curr) => acc + curr.amount, 0)
     return Math.max(0, totalCost - totalPaid)
   })()
 
   useEffect(() => {
-    if (watchInventoryId) {
-      setValue("amount", currentMaxAmount)
-    }
-  }, [watchInventoryId, currentMaxAmount, setValue])
+    setValue("amount", currentMaxAmount)
+  }, [currentMaxAmount, setValue])
 
   const mutation = useMutation({
     mutationFn: (data: SupplierPaymentFormValues) => createSupplierPayment(supplierId, data),
@@ -72,22 +63,12 @@ export function SupplierPaymentForm({ supplierId, inventoryItems, payments, onSu
       toast.error(`Amount cannot exceed pending total of ${currentMaxAmount.toFixed(3)}`)
       return
     }
-    // If 'none' is selected, don't pass inventoryId
     const submitData = { ...data }
-    if (submitData.inventoryId === "none") {
-      delete submitData.inventoryId
-    }
     mutation.mutate(submitData)
   }
 
-  const stats = watchInventoryId && watchInventoryId !== "none" ? (() => {
-    const item = inventoryItems.find((i: any) => i.id === watchInventoryId)
-    if (!item) return { cost: 0, paid: 0, pending: 0 }
-    const cost = item.quantity * item.purchasePrice
-    const paid = payments.filter((p: any) => p.inventoryId === watchInventoryId).reduce((acc, curr) => acc + curr.amount, 0)
-    return { cost, paid, pending: cost - paid }
-  })() : (() => {
-    const cost = inventoryItems.reduce((acc, curr) => acc + (curr.quantity * curr.purchasePrice), 0)
+  const stats = (() => {
+    const cost = purchases.reduce((acc, curr) => acc + curr.grandTotal, 0)
     const paid = payments.reduce((acc, curr) => acc + curr.amount, 0)
     return { cost, paid, pending: cost - paid }
   })()
@@ -109,34 +90,7 @@ export function SupplierPaymentForm({ supplierId, inventoryItems, payments, onSu
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="inventoryId">Pay For Specific Transaction</Label>
-        <Controller
-          control={control}
-          name="inventoryId"
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value}>
-              <SelectTrigger>
-                <SelectValue placeholder="General Supplier Payment (None selected)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">General Supplier Payment</SelectItem>
-                {inventoryItems.map((item: any) => {
-                  const cost = item.quantity * item.purchasePrice
-                  const paid = payments.filter((p: any) => p.inventoryId === item.id).reduce((acc, curr) => acc + curr.amount, 0)
-                  const pending = cost - paid
-                  if (pending <= 0) return null
-                  return (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.itemName} (Pending: {pending.toFixed(3)})
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          )}
-        />
-      </div>
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">

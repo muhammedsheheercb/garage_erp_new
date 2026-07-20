@@ -12,6 +12,7 @@ export const invoiceSchema = z.object({
   servicesDetails: z.string().optional(),
   partsDetails: z.string().optional(),
   status: z.enum(["UNPAID", "PARTIAL", "PAID"]),
+  otherCharges: z.string().optional(),
 })
 
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>

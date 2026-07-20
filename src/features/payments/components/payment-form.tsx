@@ -74,9 +74,11 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
           control={control}
           name="invoiceId"
           render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value}>
+            <Select onValueChange={field.onChange} value={field.value} disabled={!!initialInvoiceId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select Pending Invoice" />
+                <SelectValue placeholder="Select Pending Invoice">
+                  {(val: string) => invoices?.find((i: any) => i.id === val)?.label || null}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {isLoading ? (

@@ -22,7 +22,14 @@ export async function getInvoices(page = 1, search = "") {
       take: limit,
       include: {
         customer: { select: { id: true, name: true, phone: true } },
-        jobCard: { select: { id: true, vehicle: { select: { plateNumber: true, brand: true, model: true } } } },
+        jobCard: { 
+          include: { 
+            vehicle: true,
+            customer: true,
+            services: { include: { service: true } },
+            parts: { include: { batch: { include: { inventory: true } } } }
+          }
+        },
       },
       orderBy: { createdAt: 'desc' }
     }),
@@ -64,7 +71,7 @@ export async function getDropdownData() {
         customer: true, 
         vehicle: true,
         services: { include: { service: true } },
-        parts: { include: { inventory: true } }
+        parts: { include: { batch: { include: { inventory: true } } } }
       },
       orderBy: { createdAt: 'desc' } 
     }),
@@ -76,7 +83,19 @@ export async function getDropdownData() {
 export async function createInvoice(data: InvoiceFormValues) {
   const parsed = invoiceSchema.parse(data)
   
-  const subTotal = parsed.serviceCharge + parsed.labourCharge + parsed.partsCost;
+  let otherAmountSum = 0
+  if (parsed.otherCharges) {
+    try {
+      const parsedCharges = JSON.parse(parsed.otherCharges)
+      if (Array.isArray(parsedCharges)) {
+        otherAmountSum = parsedCharges.reduce((acc, c: any) => acc + Math.max(0, Number(c.amount) || 0), 0)
+      }
+    } catch (e) {
+      console.error("Failed to parse otherCharges", e)
+    }
+  }
+  
+  const subTotal = parsed.serviceCharge + parsed.labourCharge + parsed.partsCost + otherAmountSum;
   const totalBeforeTax = subTotal - parsed.discount;
   const grandTotal = totalBeforeTax + parsed.tax;
 
@@ -94,6 +113,7 @@ export async function createInvoice(data: InvoiceFormValues) {
       grandTotal,
       servicesDetails: parsed.servicesDetails,
       partsDetails: parsed.partsDetails,
+      otherCharges: parsed.otherCharges,
       status: "UNPAID",
     }
   })
@@ -105,14 +125,30 @@ export async function createInvoice(data: InvoiceFormValues) {
 export async function updateInvoice(id: string, data: InvoiceFormValues) {
   const parsed = invoiceSchema.parse(data)
   
-  const subTotal = parsed.serviceCharge + parsed.labourCharge + parsed.partsCost;
-  const totalBeforeTax = subTotal - parsed.discount;
-  const grandTotal = totalBeforeTax + parsed.tax;
-
   const existingInvoice = await prisma.invoice.findUnique({
     where: { id },
     include: { payments: true }
   });
+
+  if (existingInvoice && existingInvoice.status === "PAID") {
+    throw new Error("This invoice is fully paid and cannot be edited.")
+  }
+
+  let otherAmountSum = 0
+  if (parsed.otherCharges) {
+    try {
+      const parsedCharges = JSON.parse(parsed.otherCharges)
+      if (Array.isArray(parsedCharges)) {
+        otherAmountSum = parsedCharges.reduce((acc, c: any) => acc + Math.max(0, Number(c.amount) || 0), 0)
+      }
+    } catch (e) {
+      console.error("Failed to parse otherCharges", e)
+    }
+  }
+
+  const subTotal = parsed.serviceCharge + parsed.labourCharge + parsed.partsCost + otherAmountSum;
+  const totalBeforeTax = subTotal - parsed.discount;
+  const grandTotal = totalBeforeTax + parsed.tax;
 
   let newStatus = existingInvoice?.status || "UNPAID";
   if (existingInvoice) {
@@ -141,6 +177,7 @@ export async function updateInvoice(id: string, data: InvoiceFormValues) {
       grandTotal,
       servicesDetails: parsed.servicesDetails,
       partsDetails: parsed.partsDetails,
+      otherCharges: parsed.otherCharges,
       status: newStatus,
     }
   })

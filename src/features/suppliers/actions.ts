@@ -21,9 +21,10 @@ export async function getSuppliers(page = 1, search = "") {
       where,
       skip,
       take: limit,
+
       include: {
         _count: {
-          select: { inventory: true }
+          select: { purchases: true }
         }
       },
       orderBy: { name: 'asc' }
@@ -46,7 +47,9 @@ export async function getSupplierDetails(id: string) {
   return prisma.supplier.findUnique({
     where: { id },
     include: {
-      inventory: true,
+      purchases: {
+        include: { items: { include: { inventory: true } } }
+      },
       payments: {
         orderBy: { date: 'desc' }
       }
@@ -88,12 +91,12 @@ export async function updateSupplier(id: string, data: SupplierFormValues) {
 }
 
 export async function deleteSupplier(id: string) {
-  const count = await prisma.inventory.count({
+  const count = await prisma.purchase.count({
     where: { supplierId: id }
   })
   
   if (count > 0) {
-    throw new Error("Cannot delete supplier because they have associated inventory items.")
+    throw new Error("Cannot delete supplier because they have associated purchases.")
   }
 
   await prisma.$transaction([
@@ -118,7 +121,6 @@ export async function createSupplierPayment(supplierId: string, data: SupplierPa
       amount: parsed.amount,
       method: parsed.method,
       reference: parsed.reference || null,
-      inventoryId: parsed.inventoryId || null,
     }
   })
   

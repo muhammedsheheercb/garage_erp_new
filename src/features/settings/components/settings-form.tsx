@@ -4,15 +4,29 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { SettingsFormValues, settingsSchema } from "../schema"
-import { getSettings, updateSettings, createDatabaseBackup, listBackups, restoreDatabase, updateAdminCredentials } from "../actions"
+import { 
+  getSettings, 
+  updateSettings, 
+  createDatabaseBackup, 
+  listBackups, 
+  restoreDatabase, 
+  updateAdminCredentials,
+  getTaxSettings,
+  createTaxSetting,
+  updateTaxSetting,
+  activateTaxSetting,
+  deleteTaxSetting
+} from "../actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Save, Database, Download, RotateCcw, AlertTriangle, ShieldCheck, Eye, EyeOff } from "lucide-react"
+import { Loader2, Save, Database, Download, RotateCcw, AlertTriangle, ShieldCheck, Eye, EyeOff, Plus, Check, Trash2, Edit } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
 
 export function SettingsForm() {
@@ -26,6 +40,57 @@ export function SettingsForm() {
   // Password visibility state
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
+
+  // Tax settings form states
+  const [taxName, setTaxName] = useState("")
+  const [taxPercentage, setTaxPercentage] = useState<string>("")
+  const [editingTaxId, setEditingTaxId] = useState<string | null>(null)
+
+  const { data: taxSettings = [], isLoading: taxSettingsLoading } = useQuery({
+    queryKey: ['tax-settings'],
+    queryFn: () => getTaxSettings()
+  })
+
+  const createTaxMutation = useMutation({
+    mutationFn: (data: { name: string, percentage: number }) => createTaxSetting(data.name, data.percentage),
+    onSuccess: () => {
+      toast.success("Tax setting created successfully")
+      setTaxName("")
+      setTaxPercentage("")
+      queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
+    },
+    onError: (error: any) => toast.error(error.message)
+  })
+
+  const updateTaxMutation = useMutation({
+    mutationFn: (data: { id: string, name: string, percentage: number }) => updateTaxSetting(data.id, data.name, data.percentage),
+    onSuccess: () => {
+      toast.success("Tax setting updated successfully")
+      setTaxName("")
+      setTaxPercentage("")
+      setEditingTaxId(null)
+      queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
+    },
+    onError: (error: any) => toast.error(error.message)
+  })
+
+  const activateTaxMutation = useMutation({
+    mutationFn: (id: string) => activateTaxSetting(id),
+    onSuccess: () => {
+      toast.success("Tax setting activated")
+      queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
+    },
+    onError: (error: any) => toast.error(error.message)
+  })
+
+  const deleteTaxMutation = useMutation({
+    mutationFn: (id: string) => deleteTaxSetting(id),
+    onSuccess: () => {
+      toast.success("Tax setting deleted")
+      queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
+    },
+    onError: (error: any) => toast.error(error.message)
+  })
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -115,6 +180,7 @@ export function SettingsForm() {
         <TabsList className="mb-4">
           <TabsTrigger value="general">General Configuration</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="tax">Tax Settings (VAT)</TabsTrigger>
           <TabsTrigger value="security">Account Security</TabsTrigger>
           <TabsTrigger value="database">Database Management</TabsTrigger>
         </TabsList>
@@ -342,6 +408,152 @@ export function SettingsForm() {
                     ))}
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tax">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tax Settings (VAT)</CardTitle>
+              <CardDescription>Manage tax rates. Only one tax rate can be active at a time.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              
+              {/* Form to Create/Edit Tax Rate */}
+              <div className="border p-4 rounded-md bg-muted/20 space-y-4">
+                <h4 className="font-semibold text-sm">{editingTaxId ? "Edit Tax Rate" : "Add New Tax Rate"}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                  <div className="space-y-2">
+                    <Label htmlFor="taxName">Name</Label>
+                    <Input 
+                      id="taxName" 
+                      placeholder="e.g. VAT 5%" 
+                      value={taxName}
+                      onChange={(e) => setTaxName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="taxPercentage">Percentage (%)</Label>
+                    <Input 
+                      id="taxPercentage" 
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 5" 
+                      value={taxPercentage}
+                      onChange={(e) => setTaxPercentage(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        if (!taxName || taxPercentage === "") {
+                          toast.error("Please fill all fields")
+                          return
+                        }
+                        const pct = parseFloat(taxPercentage)
+                        if (isNaN(pct) || pct < 0) {
+                          toast.error("Please enter a valid percentage")
+                          return
+                        }
+                        if (editingTaxId) {
+                          updateTaxMutation.mutate({ id: editingTaxId, name: taxName, percentage: pct })
+                        } else {
+                          createTaxMutation.mutate({ name: taxName, percentage: pct })
+                        }
+                      }}
+                      disabled={createTaxMutation.isPending || updateTaxMutation.isPending}
+                    >
+                      {editingTaxId ? "Update" : "Add Rate"}
+                    </Button>
+                    {editingTaxId && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => {
+                          setEditingTaxId(null)
+                          setTaxName("")
+                          setTaxPercentage("")
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Table of Tax Rates */}
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Percentage</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {taxSettingsLoading ? (
+                      <TableRow><TableCell colSpan={4} className="text-center">Loading tax settings...</TableCell></TableRow>
+                    ) : taxSettings.length === 0 ? (
+                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No tax rates defined. Oman standard is 5% VAT.</TableCell></TableRow>
+                    ) : (
+                      taxSettings.map((tax: any) => (
+                        <TableRow key={tax.id}>
+                          <TableCell className="font-medium">{tax.name}</TableCell>
+                          <TableCell>{tax.percentage}%</TableCell>
+                          <TableCell>
+                            {tax.isActive ? (
+                              <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
+                            ) : (
+                              <Badge variant="secondary">Inactive</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right space-x-2">
+                            {!tax.isActive && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => activateTaxMutation.mutate(tax.id)}
+                                disabled={activateTaxMutation.isPending}
+                              >
+                                <Check className="mr-1 h-3.5 w-3.5" /> Activate
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => {
+                                setEditingTaxId(tax.id)
+                                setTaxName(tax.name)
+                                setTaxPercentage(String(tax.percentage))
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (window.confirm("Are you sure you want to delete this tax setting?")) {
+                                  deleteTaxMutation.mutate(tax.id)
+                                }
+                              }}
+                              disabled={deleteTaxMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

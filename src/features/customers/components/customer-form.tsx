@@ -12,7 +12,7 @@ import { toast } from "sonner"
 
 interface CustomerFormProps {
   initialData?: CustomerFormValues & { id?: string }
-  onSuccess?: () => void
+  onSuccess?: (customer?: any) => void
 }
 
 export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
@@ -35,10 +35,10 @@ export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
       }
       return createCustomer(data)
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success(initialData?.id ? "Customer updated!" : "Customer created!")
       queryClient.invalidateQueries({ queryKey: ['customers'] })
-      onSuccess?.()
+      onSuccess?.(data)
     },
     onError: () => {
       toast.error("Something went wrong.")

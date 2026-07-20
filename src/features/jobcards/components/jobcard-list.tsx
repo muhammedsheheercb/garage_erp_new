@@ -97,7 +97,12 @@ export function JobCardList() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col items-start gap-1">
-                      <Badge variant={job.status === 'COMPLETED' ? 'default' : job.status === 'IN_PROGRESS' ? 'secondary' : 'outline'}>
+                      <Badge variant={
+                        job.status === 'COMPLETED' ? 'default' :
+                        job.status === 'WORKING' || job.status === 'IN_PROGRESS' ? 'secondary' :
+                        job.status === 'CANCELLED' ? 'destructive' :
+                        'outline'
+                      }>
                         {job.status === 'IN_PROGRESS' ? 'WORKING' : job.status}
                       </Badge>
                       <span className="text-xs text-muted-foreground">

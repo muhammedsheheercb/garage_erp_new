@@ -21,15 +21,27 @@ export async function getInventory(page = 1, search = "") {
       skip,
       take: limit,
       include: {
-        supplier: { select: { id: true, name: true } }
+        batches: { orderBy: { createdAt: 'desc' } }
       },
       orderBy: { itemName: 'asc' }
     }),
     prisma.inventory.count({ where })
   ]);
 
+  const mappedData = data.map(item => {
+    const totalQuantity = item.batches.reduce((sum, b) => sum + b.quantity, 0)
+    const currentPurchasePrice = item.batches.length > 0 ? item.batches[0].purchasePrice : 0
+    const currentSellingPrice = item.batches.length > 0 ? item.batches[0].sellingPrice : 0
+    return {
+      ...item,
+      quantity: totalQuantity,
+      purchasePrice: currentPurchasePrice,
+      sellingPrice: currentSellingPrice
+    }
+  })
+
   return {
-    data,
+    data: mappedData,
     meta: {
       total,
       page,
@@ -39,25 +51,31 @@ export async function getInventory(page = 1, search = "") {
   }
 }
 
-export async function getSuppliersDropdown() {
-  return prisma.supplier.findMany({
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' }
+
+export async function getNextPartNumber() {
+  const latestItem = await prisma.inventory.findFirst({
+    orderBy: { partNumber: 'desc' }
   })
+  
+  let nextNum = 1
+  if (latestItem && latestItem.partNumber) {
+    const match = latestItem.partNumber.match(/PART-(\d+)/)
+    if (match) {
+      nextNum = parseInt(match[1], 10) + 1
+    }
+  }
+  
+  return `PART-${String(nextNum).padStart(6, '0')}`
 }
 
 export async function createInventoryItem(data: InventoryFormValues) {
-  const parsed = inventorySchema.parse(data)
+  const partNumber = await getNextPartNumber()
+  const parsed = inventorySchema.parse({ ...data, partNumber })
   
   const item = await prisma.inventory.create({
     data: {
       itemName: parsed.itemName,
       partNumber: parsed.partNumber,
-      quantity: parsed.quantity,
-      minStockLevel: parsed.minStockLevel,
-      purchasePrice: parsed.purchasePrice,
-      sellingPrice: parsed.sellingPrice,
-      supplierId: parsed.supplierId,
     }
   })
   
@@ -73,11 +91,6 @@ export async function updateInventoryItem(id: string, data: InventoryFormValues)
     data: {
       itemName: parsed.itemName,
       partNumber: parsed.partNumber,
-      quantity: parsed.quantity,
-      minStockLevel: parsed.minStockLevel,
-      purchasePrice: parsed.purchasePrice,
-      sellingPrice: parsed.sellingPrice,
-      supplierId: parsed.supplierId,
     }
   })
   

@@ -63,8 +63,8 @@ export function PartSelectionModal({ onSelect }: PartSelectionModalProps) {
               ) : (
                 parts?.map((part: any) => (
                   <TableRow key={part.id}>
-                    <TableCell className="font-medium">{part.itemName}</TableCell>
-                    <TableCell>{part.partNumber}</TableCell>
+                    <TableCell className="font-medium">{part.inventory.itemName}</TableCell>
+                    <TableCell>{part.inventory.partNumber}</TableCell>
                     <TableCell>{part.quantity}</TableCell>
                     <TableCell className="text-right">{part.sellingPrice.toFixed(3)} OMR</TableCell>
                     <TableCell className="text-right">

@@ -24,12 +24,12 @@ export default async function DashboardPage() {
   const recentActivities = await getRecentActivities();
 
   const stats = [
-    { title: "Total Customers", value: realStats.totalCustomers.toString(), icon: Users, description: "All registered clients" },
-    { title: "Total Vehicles", value: realStats.totalVehicles.toString(), icon: Car, description: "Across all customers" },
-    { title: "Today's Revenue", value: <Currency amount={realStats.dailyRevenue} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Income for today" },
+    { title: "Today's Income", value: <Currency amount={realStats.dailyRevenue} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Payments received today" },
+    { title: "Today's Expense", value: <Currency amount={realStats.dailyExpense} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Expenses + Purchases today" },
+    { title: "Today's Revenue", value: <Currency amount={realStats.dailyProfit} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Income − Expense" },
     { title: "Pending Jobs", value: realStats.pendingJobs.toString(), icon: Clock, description: "Needs attention" },
     { title: "Completed Jobs (Month)", value: realStats.completedJobs.toString(), icon: CheckCircle2, description: "This month" },
-    { title: "Monthly Profit", value: <Currency amount={realStats.profit} size={1.2} />, icon: Activity, description: "Revenue minus expenses" },
+    { title: "Monthly Profit", value: <Currency amount={realStats.profit} size={1.2} />, icon: Activity, description: "Income − All expenses" },
   ];
 
 
@@ -66,19 +66,19 @@ export default async function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <Link href="/customers" passHref className="flex-1 md:flex-auto">
+            <Link href="/jobcards" passHref className="flex-1 md:flex-auto">
               <Button size="sm" className="gap-1.5 w-full">
+                <Wrench className="h-4 w-4" /> Create Job Card
+              </Button>
+            </Link>
+            <Link href="/customers" passHref className="flex-1 md:flex-auto">
+              <Button size="sm" variant="secondary" className="gap-1.5 w-full">
                 <Users className="h-4 w-4" /> Add Customer
               </Button>
             </Link>
             <Link href="/vehicles" passHref className="flex-1 md:flex-auto">
               <Button size="sm" variant="secondary" className="gap-1.5 w-full">
                 <Car className="h-4 w-4" /> Add Vehicle
-              </Button>
-            </Link>
-            <Link href="/jobcards" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Wrench className="h-4 w-4" /> Create Job Card
               </Button>
             </Link>
             <Link href="/mechanics" passHref className="flex-1 md:flex-auto">
@@ -114,6 +114,16 @@ export default async function DashboardPage() {
             <Link href="/expenses" passHref className="flex-1 md:flex-auto">
               <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
                 <CreditCard className="h-4 w-4" /> Expenses
+              </Button>
+            </Link>
+            <Link href="/paymeters" passHref className="flex-1 md:flex-auto">
+              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
+                <CreditCard className="h-4 w-4" /> Paymeters
+              </Button>
+            </Link>
+            <Link href="/purchases" passHref className="flex-1 md:flex-auto">
+              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
+                <Package className="h-4 w-4" /> Purchases
               </Button>
             </Link>
             <Link href="/reports" passHref className="flex-1 md:flex-auto">

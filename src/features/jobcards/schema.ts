@@ -8,7 +8,7 @@ export const jobCardServiceSchema = z.object({
 })
 
 export const jobCardPartSchema = z.object({
-  inventoryId: z.string(),
+  batchId: z.string(),
   name: z.string(),
   quantity: z.number().min(1),
   price: z.number().min(0),
@@ -20,7 +20,7 @@ export const jobCardSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   vehicleId: z.string().min(1, "Vehicle is required"),
   mechanicId: z.string().min(1, "Mechanic is required"),
-  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]),
+  status: z.enum(["PENDING", "WORKING", "COMPLETED", "CANCELLED"]),
   complaint: z.string().min(3, "Complaint description is required"),
   workDone: z.string().optional(),
   notes: z.string().optional(),

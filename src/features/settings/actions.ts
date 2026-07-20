@@ -161,3 +161,65 @@ export async function updateAdminCredentials(currentPassword: string, newEmail: 
   
   return { success: true, message: "Account credentials updated successfully" }
 }
+
+export async function getTaxSettings() {
+  return prisma.taxSetting.findMany({
+    orderBy: { createdAt: 'desc' }
+  })
+}
+
+export async function getActiveTaxSetting() {
+  return prisma.taxSetting.findFirst({
+    where: { isActive: true }
+  })
+}
+
+export async function createTaxSetting(name: string, percentage: number, isActive = false) {
+  if (isActive) {
+    // Deactivate all others first
+    await prisma.taxSetting.updateMany({
+      data: { isActive: false }
+    })
+  }
+  
+  const taxSetting = await prisma.taxSetting.create({
+    data: { name, percentage, isActive }
+  })
+  
+  revalidatePath('/settings')
+  return taxSetting
+}
+
+export async function updateTaxSetting(id: string, name: string, percentage: number) {
+  const taxSetting = await prisma.taxSetting.update({
+    where: { id },
+    data: { name, percentage }
+  })
+  
+  revalidatePath('/settings')
+  return taxSetting
+}
+
+export async function activateTaxSetting(id: string) {
+  await prisma.$transaction([
+    prisma.taxSetting.updateMany({
+      data: { isActive: false }
+    }),
+    prisma.taxSetting.update({
+      where: { id },
+      data: { isActive: true }
+    })
+  ])
+  
+  revalidatePath('/settings')
+  return { success: true }
+}
+
+export async function deleteTaxSetting(id: string) {
+  await prisma.taxSetting.delete({
+    where: { id }
+  })
+  
+  revalidatePath('/settings')
+  return { success: true }
+}

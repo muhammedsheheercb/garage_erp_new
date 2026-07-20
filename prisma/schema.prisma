@@ -107,17 +107,17 @@ model JobCardService {
 }
 
 model JobCardPart {
-  id          String    @id @default(uuid())
+  id          String         @id @default(uuid())
   jobCardId   String
-  jobCard     JobCard   @relation(fields: [jobCardId], references: [id])
-  inventoryId String
-  inventory   Inventory @relation(fields: [inventoryId], references: [id])
-  quantity    Int       @default(1)
-  price       Float     // Selling price at the time of use
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  jobCard     JobCard        @relation(fields: [jobCardId], references: [id])
+  batchId     String
+  batch       InventoryBatch @relation(fields: [batchId], references: [id])
+  quantity    Int            @default(1)
+  price       Float          // Selling price at the time of use
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
-  @@unique([jobCardId, inventoryId])
+  @@unique([jobCardId, batchId])
 }
 
 model Invoice {
@@ -130,6 +130,7 @@ model Invoice {
   tax             Float     @default(0)
   subTotal        Float     @default(0)
   grandTotal      Float     @default(0)
+  otherCharges    String?   // JSON string of other charges
   servicesDetails String?   // Text to store services details
   partsDetails    String?   // Text or JSON string to store parts used
   status          String    @default("UNPAID") // UNPAID, PARTIAL, PAID
@@ -158,8 +159,8 @@ model Supplier {
   contact   String
   email     String?
   address   String?
-  inventory Inventory[]
   payments  SupplierPayment[]
+  purchases Purchase[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 }
@@ -167,17 +168,26 @@ model Supplier {
 model Inventory {
   id            String    @id @default(uuid())
   itemName      String
-  partNumber    String
-  quantity      Int       @default(0)
-  minStockLevel Int       @default(5)
-  purchasePrice Float     @default(0)
-  sellingPrice  Float     @default(0)
-  supplierId    String
-  supplier      Supplier  @relation(fields: [supplierId], references: [id])
-  supplierPayments SupplierPayment[]
+  partNumber    String    @unique
+  purchaseItems PurchaseItem[]
+  batches       InventoryBatch[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model InventoryBatch {
+  id            String    @id @default(uuid())
+  inventoryId   String
+  inventory     Inventory @relation(fields: [inventoryId], references: [id])
+  batchNumber   String    
+  quantity      Int       @default(0) // Available quantity
+  purchasePrice Float
+  sellingPrice  Float
+  purchaseId    String?
+  purchase      Purchase? @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   jobCardParts  JobCardPart[]
   createdAt     DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  updatedAt     DateTime  @updatedAt
 }
 
 model Expense {
@@ -198,8 +208,6 @@ model SupplierPayment {
   reference   String?
   supplierId  String
   supplier    Supplier @relation(fields: [supplierId], references: [id])
-  inventoryId String?
-  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -208,4 +216,72 @@ model Setting {
   id    String @id @default(uuid())
   key   String @unique
   value String
+}
+
+model TaxSetting {
+  id         String   @id @default(uuid())
+  name       String
+  percentage Float
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Paymeter {
+  id                 String            @id @default(uuid())
+  name               String            @unique
+  spentAmount        Float             @default(0)
+  initialSpentAmount Float             @default(0)
+  purchases          Purchase[]
+  purchasePayments   PurchasePayment[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+
+model Purchase {
+  id               String            @id @default(uuid())
+  purchaseNumber   String            @unique
+  purchaseDate     DateTime          @default(now())
+  supplierId       String
+  supplier         Supplier          @relation(fields: [supplierId], references: [id])
+  paymentMethodId  String
+  paymentMethod    Paymeter          @relation(fields: [paymentMethodId], references: [id])
+  subTotal         Float             @default(0)
+  taxRate          Float             @default(0)
+  taxAmount        Float             @default(0)
+  discount         Float             @default(0)
+  grandTotal       Float             @default(0)
+  paidAmount       Float             @default(0)
+  pendingAmount    Float             @default(0)
+  items            PurchaseItem[]
+  batches          InventoryBatch[]
+  purchasePayments PurchasePayment[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model PurchaseItem {
+  id            String    @id @default(uuid())
+  purchaseId    String
+  purchase      Purchase  @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  inventoryId   String
+  inventory     Inventory @relation(fields: [inventoryId], references: [id])
+  quantity      Int
+  purchasePrice Float
+  sellingPrice  Float
+  itemTotal     Float
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model PurchasePayment {
+  id         String   @id @default(uuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  paymeterId String
+  paymeter   Paymeter @relation(fields: [paymeterId], references: [id])
+  amount     Float
+  date       DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

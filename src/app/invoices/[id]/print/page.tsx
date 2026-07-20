@@ -67,6 +67,22 @@ export default async function PrintInvoicePage({ params }: { params: { id: strin
                   <td className="py-2 text-gray-600">Parts Cost:</td>
                   <td className="py-2 font-medium">{invoice.partsCost.toFixed(3)} OMR</td>
                 </tr>
+                {(() => {
+                  if (invoice.otherCharges) {
+                    try {
+                      const charges = JSON.parse(invoice.otherCharges)
+                      if (Array.isArray(charges)) {
+                        return charges.map((oc: any, index: number) => (
+                          <tr key={index} className="border-b">
+                            <td className="py-2 text-gray-600">{oc.name || 'Other Charge'}:</td>
+                            <td className="py-2 font-medium">+{oc.amount.toFixed(3)} OMR</td>
+                          </tr>
+                        ))
+                      }
+                    } catch(e) {}
+                  }
+                  return null
+                })()}
                 <tr className="border-b">
                   <td className="py-2 text-gray-600">Subtotal:</td>
                   <td className="py-2 font-medium">{invoice.subTotal.toFixed(3)} OMR</td>

@@ -60,13 +60,13 @@ export function ReportsDashboard() {
   }
 
   const kpis = [
-    { title: "Today's Revenue", value: stats?.dailyRevenue.toFixed(3) || "0.000", icon: DollarSign, color: "text-green-500" },
-    { title: "Monthly Revenue", value: stats?.monthlyRevenue.toFixed(3) || "0.000", icon: TrendingUp, color: "text-blue-500" },
-    { title: "Monthly Profit", value: stats?.profit.toFixed(3) || "0.000", icon: Activity, color: stats?.profit && stats.profit >= 0 ? "text-primary" : "text-destructive" },
-    { title: "Pending Jobs", value: stats?.pendingJobs || 0, icon: Wrench, color: "text-orange-500" },
-    { title: "Completed Jobs", value: stats?.completedJobs || 0, icon: CheckCircle, color: "text-green-500" },
-    { title: "Total Customers", value: stats?.totalCustomers || 0, icon: Users, color: "text-indigo-500" },
-    { title: "Total Vehicles", value: stats?.totalVehicles || 0, icon: Car, color: "text-purple-500" },
+    { title: "Monthly Income", value: `${stats?.monthlyRevenue.toFixed(3) || "0.000"} OMR`, icon: DollarSign, color: "text-green-500", desc: "Invoice payments collected" },
+    { title: "Monthly Expenses", value: `${stats?.monthlyExpenses.toFixed(3) || "0.000"} OMR`, icon: TrendingUp, color: "text-red-500", desc: "Expenses + Purchases" },
+    { title: "Monthly Revenue", value: `${stats?.profit.toFixed(3) || "0.000"} OMR`, icon: Activity, color: stats?.profit != null && stats.profit >= 0 ? "text-primary" : "text-destructive", desc: "Income − Expenses" },
+    { title: "Pending Jobs", value: stats?.pendingJobs || 0, icon: Wrench, color: "text-orange-500", desc: "" },
+    { title: "Completed Jobs", value: stats?.completedJobs || 0, icon: CheckCircle, color: "text-green-500", desc: "This month" },
+    { title: "Total Customers", value: stats?.totalCustomers || 0, icon: Users, color: "text-indigo-500", desc: "" },
+    { title: "Total Vehicles", value: stats?.totalVehicles || 0, icon: Car, color: "text-purple-500", desc: "" },
   ]
 
   return (
@@ -104,7 +104,8 @@ export function ReportsDashboard() {
                 <Icon className={`h-4 w-4 ${kpi.color}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{kpi.value}</div>
+                <div className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                {kpi.desc && <p className="text-xs text-muted-foreground mt-1">{kpi.desc}</p>}
               </CardContent>
             </Card>
           )

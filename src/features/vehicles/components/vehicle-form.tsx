@@ -13,7 +13,7 @@ import { toast } from "sonner"
 
 interface VehicleFormProps {
   initialData?: VehicleFormValues & { id?: string }
-  onSuccess?: () => void
+  onSuccess?: (vehicle?: any) => void
 }
 
 export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
@@ -44,10 +44,10 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
       }
       return createVehicle(data)
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success(initialData?.id ? "Vehicle updated!" : "Vehicle added!")
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
-      onSuccess?.()
+      onSuccess?.(data)
     },
     onError: () => {
       toast.error("Something went wrong.")

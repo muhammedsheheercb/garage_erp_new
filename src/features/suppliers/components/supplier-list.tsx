@@ -54,7 +54,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
   if (!details) return <div className="p-8 text-center text-destructive">Supplier not found.</div>
 
   const totalPaid = details.payments.reduce((acc: number, p: any) => acc + p.amount, 0)
-  const totalPurchaseCost = details.inventory.reduce((acc: number, item: any) => acc + (item.quantity * item.purchasePrice), 0)
+  const totalPurchaseCost = details.purchases.reduce((acc: number, p: any) => acc + p.grandTotal, 0)
   const pendingAmount = totalPurchaseCost - totalPaid
   
   // Quick overview stats
@@ -62,8 +62,8 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground mb-1 flex items-center"><Package className="h-4 w-4 mr-1" /> Supplied Parts</div>
-          <div className="text-xl font-bold">{details.inventory.length}</div>
+          <div className="text-sm text-muted-foreground mb-1 flex items-center"><Package className="h-4 w-4 mr-1" /> Purchases</div>
+          <div className="text-xl font-bold">{details.purchases.length}</div>
         </div>
         <div className="bg-muted/50 p-4 rounded-lg">
           <div className="text-sm text-muted-foreground mb-1 flex items-center"><DollarSign className="h-4 w-4 mr-1" /> Total Paid</div>
@@ -76,34 +76,32 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
       </div>
 
       <SimpleTabs 
-        tabs={[{ id: 'inventory', label: 'Supplied Parts' }, { id: 'payments', label: 'Payment History' }]} 
+        tabs={[{ id: 'purchases', label: 'Purchases' }, { id: 'payments', label: 'Payment History' }]} 
         active={activeTab} 
         onChange={setActiveTab} 
       />
 
-      {activeTab === 'inventory' && (
+      {activeTab === 'purchases' && (
         <div className="border rounded-md max-h-80 overflow-y-auto">
           <Table>
             <TableHeader className="sticky top-0 bg-background">
               <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Part No.</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead className="text-right">Unit Price</TableHead>
-                <TableHead className="text-right">Total Price</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Ref No.</TableHead>
+                <TableHead>Items</TableHead>
+                <TableHead className="text-right">Grand Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {details.inventory.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No parts supplied yet.</TableCell></TableRow>
+              {details.purchases.length === 0 ? (
+                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No purchases yet.</TableCell></TableRow>
               ) : (
-                details.inventory.map((item: any) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.itemName}</TableCell>
-                    <TableCell>{item.partNumber || '-'}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell className="text-right">{item.purchasePrice.toFixed(3)}</TableCell>
-                    <TableCell className="text-right font-medium">{(item.quantity * item.purchasePrice).toFixed(3)} OMR</TableCell>
+                details.purchases.map((purchase: any) => (
+                  <TableRow key={purchase.id}>
+                    <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-medium">{purchase.purchaseNumber}</TableCell>
+                    <TableCell>{purchase.items.length} items</TableCell>
+                    <TableCell className="text-right font-medium">{purchase.grandTotal.toFixed(3)} OMR</TableCell>
                   </TableRow>
                 ))
               )}
@@ -116,12 +114,12 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="font-medium">Payment History</h3>
-            {details.inventory.length > 0 && pendingAmount > 0 && (
+            {details.purchases.length > 0 && pendingAmount > 0 && (
               <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
                 <DialogTrigger render={<Button size="sm"><Plus className="h-4 w-4 mr-2" /> Add Payment</Button>} />
                 <DialogContent className="max-w-2xl">
                   <DialogHeader><DialogTitle>Record Payment to {details.name}</DialogTitle></DialogHeader>
-                  <SupplierPaymentForm supplierId={details.id} inventoryItems={details.inventory} payments={details.payments} onSuccess={() => setIsPaymentOpen(false)} />
+                  <SupplierPaymentForm supplierId={details.id} purchases={details.purchases} payments={details.payments} onSuccess={() => setIsPaymentOpen(false)} />
                 </DialogContent>
               </Dialog>
             )}
@@ -236,7 +234,7 @@ export function SupplierList() {
               <TableHead>Name</TableHead>
               <TableHead>Contact Info</TableHead>
               <TableHead>Address</TableHead>
-              <TableHead className="text-center">Parts Supplied</TableHead>
+              <TableHead className="text-center">Purchases</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -257,7 +255,7 @@ export function SupplierList() {
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate">{supplier.address || '-'}</TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="secondary">{supplier._count.inventory}</Badge>
+                    <Badge variant="secondary">{supplier._count.purchases}</Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     

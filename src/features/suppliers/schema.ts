@@ -13,7 +13,6 @@ export const supplierPaymentSchema = z.object({
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   method: z.enum(["CASH", "CARD", "UPI", "TRANSFER"]),
   reference: z.string().optional(),
-  inventoryId: z.string().optional(),
 })
 
 export type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>
