@@ -25,12 +25,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Save, Database, Download, RotateCcw, AlertTriangle, ShieldCheck, Eye, EyeOff, Plus, Check, Trash2, Edit } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LanguageToggle } from "@/components/language-toggle"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
+import { useTranslation } from "@/i18n"
 
 export function SettingsForm() {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
   
   // Security Form State
   const [currentPassword, setCurrentPassword] = useState("")
@@ -54,7 +57,7 @@ export function SettingsForm() {
   const createTaxMutation = useMutation({
     mutationFn: (data: { name: string, percentage: number }) => createTaxSetting(data.name, data.percentage),
     onSuccess: () => {
-      toast.success("Tax setting created successfully")
+      toast.success(t.settings.taxCreated)
       setTaxName("")
       setTaxPercentage("")
       queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
@@ -65,7 +68,7 @@ export function SettingsForm() {
   const updateTaxMutation = useMutation({
     mutationFn: (data: { id: string, name: string, percentage: number }) => updateTaxSetting(data.id, data.name, data.percentage),
     onSuccess: () => {
-      toast.success("Tax setting updated successfully")
+      toast.success(t.settings.taxUpdated)
       setTaxName("")
       setTaxPercentage("")
       setEditingTaxId(null)
@@ -77,7 +80,7 @@ export function SettingsForm() {
   const activateTaxMutation = useMutation({
     mutationFn: (id: string) => activateTaxSetting(id),
     onSuccess: () => {
-      toast.success("Tax setting activated")
+      toast.success(t.settings.taxActivated)
       queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
     },
     onError: (error: any) => toast.error(error.message)
@@ -86,7 +89,7 @@ export function SettingsForm() {
   const deleteTaxMutation = useMutation({
     mutationFn: (id: string) => deleteTaxSetting(id),
     onSuccess: () => {
-      toast.success("Tax setting deleted")
+      toast.success(t.settings.taxDeleted)
       queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
     },
     onError: (error: any) => toast.error(error.message)
@@ -118,11 +121,11 @@ export function SettingsForm() {
   const mutation = useMutation({
     mutationFn: updateSettings,
     onSuccess: () => {
-      toast.success("Settings saved successfully")
+      toast.success(t.settings.settingsSaved)
       queryClient.invalidateQueries({ queryKey: ['settings'] })
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to save settings")
+      toast.error(error.message || t.settings.failedToSave)
     }
   })
 
@@ -161,7 +164,7 @@ export function SettingsForm() {
   }
 
   const handleRestore = (filename: string) => {
-    if (window.confirm("WARNING: This will overwrite your current database with the backup. Any changes made since this backup will be lost. Continue?")) {
+    if (window.confirm(t.settings.restoreWarning)) {
       restoreMutation.mutate(filename)
     }
   }
@@ -178,61 +181,61 @@ export function SettingsForm() {
     <div className="w-full">
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="general">General Configuration</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-          <TabsTrigger value="tax">Tax Settings (VAT)</TabsTrigger>
-          <TabsTrigger value="security">Account Security</TabsTrigger>
-          <TabsTrigger value="database">Database Management</TabsTrigger>
+          <TabsTrigger value="general">{t.settings.generalConfig}</TabsTrigger>
+          <TabsTrigger value="appearance">{t.settings.appearance}</TabsTrigger>
+          <TabsTrigger value="tax">{t.settings.taxSettings}</TabsTrigger>
+          <TabsTrigger value="security">{t.settings.accountSecurity}</TabsTrigger>
+          <TabsTrigger value="database">{t.settings.databaseManagement}</TabsTrigger>
         </TabsList>
         
         <TabsContent value="general">
           <Card>
             <CardHeader>
-              <CardTitle>General Settings</CardTitle>
-              <CardDescription>Update your garage details used in invoices and reports.</CardDescription>
+              <CardTitle>{t.settings.generalSettings}</CardTitle>
+              <CardDescription>{t.settings.generalDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="garageName">Garage Name <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="garageName">{t.settings.garageName} <span className="text-destructive">*</span></Label>
                     <Input id="garageName" {...register("garageName")} />
                     {errors.garageName && <p className="text-sm text-destructive">{errors.garageName.message}</p>}
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="ownerName">Owner Name <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="ownerName">{t.settings.ownerName} <span className="text-destructive">*</span></Label>
                     <Input id="ownerName" {...register("ownerName")} />
                     {errors.ownerName && <p className="text-sm text-destructive">{errors.ownerName.message}</p>}
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="phone">{t.settings.phoneNumber} <span className="text-destructive">*</span></Label>
                     <Input id="phone" {...register("phone")} />
                     {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="email">{t.common.email} <span className="text-destructive">*</span></Label>
                     <Input id="email" type="email" {...register("email")} />
                     {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="gstNumber">GST / Tax Number</Label>
+                    <Label htmlFor="gstNumber">{t.settings.gstNumber}</Label>
                     <Input id="gstNumber" {...register("gstNumber")} />
                     {errors.gstNumber && <p className="text-sm text-destructive">{errors.gstNumber.message}</p>}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="invoicePrefix">Invoice Prefix <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="invoicePrefix">{t.settings.invoicePrefix} <span className="text-destructive">*</span></Label>
                     <Input id="invoicePrefix" {...register("invoicePrefix")} />
                     {errors.invoicePrefix && <p className="text-sm text-destructive">{errors.invoicePrefix.message}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address">Address <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="address">{t.common.address} <span className="text-destructive">*</span></Label>
                   <Input id="address" {...register("address")} />
                   {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
                 </div>
@@ -240,7 +243,7 @@ export function SettingsForm() {
                 <div className="flex justify-end pt-4">
                   <Button type="submit" disabled={!isDirty || mutation.isPending}>
                     {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Changes
+                    {t.settings.saveChanges}
                   </Button>
                 </div>
               </form>
@@ -251,17 +254,26 @@ export function SettingsForm() {
         <TabsContent value="appearance">
           <Card>
             <CardHeader>
-              <CardTitle>Appearance Settings</CardTitle>
-              <CardDescription>Customize the look and feel of the application.</CardDescription>
+              <CardTitle>{t.settings.appearanceSettings}</CardTitle>
+              <CardDescription>{t.settings.appearanceDescription}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between border rounded-md p-4">
                 <div className="space-y-0.5">
-                  <Label className="text-base">Dark Mode</Label>
-                  <p className="text-sm text-muted-foreground">Toggle between light and dark themes.</p>
+                  <Label className="text-base">{t.settings.darkMode}</Label>
+                  <p className="text-sm text-muted-foreground">{t.settings.darkModeDescription}</p>
                 </div>
                 <div>
                   <ThemeToggle />
+                </div>
+              </div>
+              <div className="flex items-center justify-between border rounded-md p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base">{t.settings.language}</Label>
+                  <p className="text-sm text-muted-foreground">{t.settings.languageDescription}</p>
+                </div>
+                <div>
+                  <LanguageToggle />
                 </div>
               </div>
             </CardContent>
@@ -272,16 +284,16 @@ export function SettingsForm() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-primary" /> Account Security
+                <ShieldCheck className="h-5 w-5 text-primary" /> {t.settings.accountSecurity}
               </CardTitle>
-              <CardDescription>Update your admin email and password securely.</CardDescription>
+              <CardDescription>{t.settings.securityDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               <form 
                 onSubmit={(e) => {
                   e.preventDefault()
                   if (!currentPassword || !newEmail) {
-                    toast.error("Current password and new email are required")
+                    toast.error(t.settings.currentPasswordRequired)
                     return
                   }
                   securityMutation.mutate()
@@ -289,12 +301,12 @@ export function SettingsForm() {
                 className="space-y-4 max-w-md"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="currentPassword">{t.settings.currentPassword} <span className="text-destructive">*</span></Label>
                   <div className="relative">
                     <Input 
                       id="currentPassword" 
                       type={showCurrentPassword ? "text" : "password"} 
-                      placeholder="Enter your current password to verify"
+                      placeholder={t.settings.currentPasswordPlaceholder}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       required
@@ -311,7 +323,7 @@ export function SettingsForm() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="newEmail">New Email Address <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="newEmail">{t.settings.newEmailAddress} <span className="text-destructive">*</span></Label>
                   <Input 
                     id="newEmail" 
                     type="email" 
@@ -319,16 +331,16 @@ export function SettingsForm() {
                     onChange={(e) => setNewEmail(e.target.value)}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">This is the email you will use to log in.</p>
+                  <p className="text-xs text-muted-foreground">{t.settings.newEmailDescription}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password (Optional)</Label>
+                  <Label htmlFor="newPassword">{t.settings.newPassword}</Label>
                   <div className="relative">
                     <Input 
                       id="newPassword" 
                       type={showNewPassword ? "text" : "password"} 
-                      placeholder="Leave blank to keep current password"
+                      placeholder={t.settings.newPasswordPlaceholder}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="pr-10"
@@ -346,7 +358,7 @@ export function SettingsForm() {
                 <div className="flex pt-4">
                   <Button type="submit" disabled={securityMutation.isPending || !currentPassword || !newEmail}>
                     {securityMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Update Credentials
+                    {t.settings.updateCredentials}
                   </Button>
                 </div>
               </form>
@@ -358,18 +370,18 @@ export function SettingsForm() {
           <Card className="mb-4 border-destructive/20">
             <CardHeader className="bg-destructive/5 border-b border-destructive/10">
               <CardTitle className="text-destructive flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" /> Database Management
+                <AlertTriangle className="h-5 w-5" /> {t.settings.databaseManagement}
               </CardTitle>
               <CardDescription>
-                Backup and restore your local SQLite database. Please be careful as restoring a database is irreversible.
+                {t.settings.databaseDescription}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border p-4 rounded-md bg-muted/20">
                 <div>
-                  <h4 className="font-medium">Create Backup</h4>
-                  <p className="text-sm text-muted-foreground mt-1">Create a snapshot of your current database state.</p>
+                  <h4 className="font-medium">{t.settings.createBackup}</h4>
+                  <p className="text-sm text-muted-foreground mt-1">{t.settings.createBackupDescription}</p>
                 </div>
                 <Button 
                   onClick={() => backupMutation.mutate()} 
@@ -377,16 +389,16 @@ export function SettingsForm() {
                   className="w-full sm:w-auto"
                 >
                   {backupMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                  Backup Now
+                  {t.settings.backupNow}
                 </Button>
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-medium">Available Backups</h4>
+                <h4 className="font-medium">{t.settings.availableBackups}</h4>
                 {backupsLoading ? (
-                  <div className="flex items-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading backups...</div>
+                  <div className="flex items-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t.settings.loadingBackups}</div>
                 ) : !backups || backups.length === 0 ? (
-                  <div className="text-sm border p-4 text-center rounded-md text-muted-foreground">No backups found</div>
+                  <div className="text-sm border p-4 text-center rounded-md text-muted-foreground">{t.settings.noBackups}</div>
                 ) : (
                   <div className="border rounded-md overflow-hidden">
                     {backups.map((filename: string, index: number) => (
@@ -402,7 +414,7 @@ export function SettingsForm() {
                           disabled={restoreMutation.isPending}
                           className="shrink-0 ml-4"
                         >
-                          <RotateCcw className="mr-2 h-4 w-4 hidden sm:inline" /> Restore
+                          <RotateCcw className="mr-2 h-4 w-4 hidden sm:inline" /> {t.common.restore}
                         </Button>
                       </div>
                     ))}
@@ -416,17 +428,17 @@ export function SettingsForm() {
         <TabsContent value="tax">
           <Card>
             <CardHeader>
-              <CardTitle>Tax Settings (VAT)</CardTitle>
-              <CardDescription>Manage tax rates. Only one tax rate can be active at a time.</CardDescription>
+              <CardTitle>{t.settings.taxSettings}</CardTitle>
+              <CardDescription>{t.settings.taxDescription}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               
               {/* Form to Create/Edit Tax Rate */}
               <div className="border p-4 rounded-md bg-muted/20 space-y-4">
-                <h4 className="font-semibold text-sm">{editingTaxId ? "Edit Tax Rate" : "Add New Tax Rate"}</h4>
+                <h4 className="font-semibold text-sm">{editingTaxId ? t.settings.editTaxRate : t.settings.addNewTaxRate}</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                   <div className="space-y-2">
-                    <Label htmlFor="taxName">Name</Label>
+                    <Label htmlFor="taxName">{t.common.name}</Label>
                     <Input 
                       id="taxName" 
                       placeholder="e.g. VAT 5%" 
@@ -435,7 +447,7 @@ export function SettingsForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="taxPercentage">Percentage (%)</Label>
+                    <Label htmlFor="taxPercentage">{t.settings.percentage}</Label>
                     <Input 
                       id="taxPercentage" 
                       type="number"
@@ -450,12 +462,12 @@ export function SettingsForm() {
                       type="button" 
                       onClick={() => {
                         if (!taxName || taxPercentage === "") {
-                          toast.error("Please fill all fields")
+                          toast.error(t.settings.fillAllFields)
                           return
                         }
                         const pct = parseFloat(taxPercentage)
                         if (isNaN(pct) || pct < 0) {
-                          toast.error("Please enter a valid percentage")
+                          toast.error(t.settings.validPercentage)
                           return
                         }
                         if (editingTaxId) {
@@ -466,7 +478,7 @@ export function SettingsForm() {
                       }}
                       disabled={createTaxMutation.isPending || updateTaxMutation.isPending}
                     >
-                      {editingTaxId ? "Update" : "Add Rate"}
+                      {editingTaxId ? t.common.update : t.settings.addRate}
                     </Button>
                     {editingTaxId && (
                       <Button 
@@ -478,7 +490,7 @@ export function SettingsForm() {
                           setTaxPercentage("")
                         }}
                       >
-                        Cancel
+                        {t.common.cancel}
                       </Button>
                     )}
                   </div>
@@ -490,17 +502,17 @@ export function SettingsForm() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Percentage</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t.common.name}</TableHead>
+                      <TableHead>{t.settings.percentage}</TableHead>
+                      <TableHead>{t.common.status}</TableHead>
+                      <TableHead className="text-right">{t.common.actions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {taxSettingsLoading ? (
-                      <TableRow><TableCell colSpan={4} className="text-center">Loading tax settings...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={4} className="text-center">{t.settings.loadingTaxSettings}</TableCell></TableRow>
                     ) : taxSettings.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No tax rates defined. Oman standard is 5% VAT.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">{t.settings.noTaxRates}</TableCell></TableRow>
                     ) : (
                       taxSettings.map((tax: any) => (
                         <TableRow key={tax.id}>
@@ -508,9 +520,9 @@ export function SettingsForm() {
                           <TableCell>{tax.percentage}%</TableCell>
                           <TableCell>
                             {tax.isActive ? (
-                              <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
+                              <Badge className="bg-green-500 hover:bg-green-600">{t.common.active}</Badge>
                             ) : (
-                              <Badge variant="secondary">Inactive</Badge>
+                              <Badge variant="secondary">{t.common.inactive}</Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-right space-x-2">
@@ -521,7 +533,7 @@ export function SettingsForm() {
                                 onClick={() => activateTaxMutation.mutate(tax.id)}
                                 disabled={activateTaxMutation.isPending}
                               >
-                                <Check className="mr-1 h-3.5 w-3.5" /> Activate
+                                <Check className="mr-1 h-3.5 w-3.5" /> {t.settings.activate}
                               </Button>
                             )}
                             <Button 
@@ -540,7 +552,7 @@ export function SettingsForm() {
                               size="icon" 
                               className="text-destructive hover:text-destructive"
                               onClick={() => {
-                                if (window.confirm("Are you sure you want to delete this tax setting?")) {
+                                if (window.confirm(t.settings.deleteTaxConfirm)) {
                                   deleteTaxMutation.mutate(tax.id)
                                 }
                               }}

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import dynamic from "next/dynamic"
+import { useTranslation } from "@/i18n"
 
 // Lazy Loading: The form is only loaded when a dialog is opened, reducing initial JS bundle size.
 const CustomerForm = dynamic(() => import("./customer-form").then(mod => mod.CustomerForm), {
@@ -32,22 +33,24 @@ const CustomerRow = memo(({
   customer, 
   onEdit, 
   onDelete, 
-  isEditing 
+  isEditing,
+  t
 }: { 
   customer: any, 
   onEdit: (customer: any) => void, 
   onDelete: (id: string) => void,
-  isEditing: boolean 
+  isEditing: boolean,
+  t: any
 }) => (
   <TableRow>
     <TableCell className="font-medium">{customer.name}</TableCell>
     <TableCell>
       <div className="flex flex-col">
-        <span className="text-sm">{customer.phone || 'N/A'}</span>
+        <span className="text-sm">{customer.phone || t.common.NA}</span>
         <span className="text-xs text-muted-foreground">{customer.email}</span>
       </div>
     </TableCell>
-    <TableCell className="max-w-[200px] truncate">{customer.address || 'N/A'}</TableCell>
+    <TableCell className="max-w-[200px] truncate">{customer.address || t.common.NA}</TableCell>
     <TableCell className="text-right space-x-2">
       <Dialog open={isEditing} onOpenChange={(open) => !open && onEdit(null)}>
         <DialogTrigger render={
@@ -58,7 +61,7 @@ const CustomerRow = memo(({
         {isEditing && (
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Customer</DialogTitle>
+              <DialogTitle>{t.customers.editCustomer}</DialogTitle>
             </DialogHeader>
             <CustomerForm 
               initialData={customer} 
@@ -76,15 +79,15 @@ const CustomerRow = memo(({
         } />
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t.customers.deleteCustomer}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this customer and all their associated records.
+              {t.customers.deleteConfirm}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={() => onDelete(customer.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -100,6 +103,7 @@ export function CustomerList() {
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<any>(null)
+  const { t } = useTranslation()
 
   // Debounce Search: Prevents hitting the API on every single keystroke.
   const debouncedSearch = useDebounce(search, 400)
@@ -115,7 +119,7 @@ export function CustomerList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCustomer(id),
     onSuccess: () => {
-      toast.success("Customer deleted")
+      toast.success(t.customers.customerDeleted)
       queryClient.invalidateQueries({ queryKey: ['customers'] })
     }
   })
@@ -132,7 +136,7 @@ export function CustomerList() {
   // useMemo: Memoizes the list rendering so it doesn't recalculate unless data or editing state changes.
   const renderedCustomers = useMemo(() => {
     if (!data?.data || data.data.length === 0) {
-      return <TableRow><TableCell colSpan={4} className="text-center h-24">No customers found.</TableCell></TableRow>
+      return <TableRow><TableCell colSpan={4} className="text-center h-24">{t.customers.noCustomers}</TableCell></TableRow>
     }
     return data.data.map((customer: any) => (
       <CustomerRow 
@@ -141,9 +145,10 @@ export function CustomerList() {
         onEdit={handleEdit} 
         onDelete={handleDelete} 
         isEditing={editingCustomer?.id === customer.id}
+        t={t}
       />
     ))
-  }, [data?.data, handleEdit, handleDelete, editingCustomer?.id])
+  }, [data?.data, handleEdit, handleDelete, editingCustomer?.id, t])
 
   return (
     <div className="space-y-4">
@@ -151,7 +156,7 @@ export function CustomerList() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search customers..." 
+            placeholder={t.customers.searchCustomers}
             className="pl-8" 
             value={search}
             onChange={(e) => {
@@ -163,11 +168,11 @@ export function CustomerList() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger render={
-            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Add Customer</Button>
+            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.customers.addCustomer}</Button>
           } />
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Customer</DialogTitle>
+              <DialogTitle>{t.customers.addNewCustomer}</DialogTitle>
             </DialogHeader>
             <CustomerForm onSuccess={() => setIsAddOpen(false)} />
           </DialogContent>
@@ -178,15 +183,15 @@ export function CustomerList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t.common.name}</TableHead>
+              <TableHead>{t.customers.contact}</TableHead>
+              <TableHead>{t.common.address}</TableHead>
+              <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : renderedCustomers}
           </TableBody>
         </Table>
@@ -201,10 +206,10 @@ export function CustomerList() {
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
           >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+            <ChevronLeft className="h-4 w-4 mr-1" /> {t.common.previous}
           </Button>
           <div className="text-sm text-muted-foreground">
-            Page {page} of {data.meta.totalPages}
+            {t.common.page} {page} {t.common.of} {data.meta.totalPages}
           </div>
           <Button
             variant="outline"
@@ -212,7 +217,7 @@ export function CustomerList() {
             onClick={() => setPage(p => Math.min(data.meta.totalPages, p + 1))}
             disabled={page === data.meta.totalPages}
           >
-            Next <ChevronRight className="h-4 w-4 ml-1" />
+            {t.common.next} <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       )}

@@ -14,6 +14,7 @@ import { SupplierPaymentForm } from "./supplier-payment-form"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useTranslation } from "@/i18n"
 
 // Using a custom Tabs implementation since we don't have the shadcn tabs component installed yet.
 function SimpleTabs({ tabs, active, onChange }: { tabs: { id: string, label: string }[], active: string, onChange: (id: string) => void }) {
@@ -36,6 +37,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState("inventory")
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
+  const { t } = useTranslation()
 
   const { data: details, isLoading } = useQuery({
     queryKey: ['supplier', supplierId],
@@ -45,13 +47,13 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
   const deletePaymentMutation = useMutation({
     mutationFn: (id: string) => deleteSupplierPayment(id),
     onSuccess: () => {
-      toast.success("Payment deleted")
+      toast.success(t.suppliers.paymentDeleted)
       queryClient.invalidateQueries({ queryKey: ['supplier', supplierId] })
     }
   })
 
-  if (isLoading) return <div className="p-8 text-center">Loading details...</div>
-  if (!details) return <div className="p-8 text-center text-destructive">Supplier not found.</div>
+  if (isLoading) return <div className="p-8 text-center">{t.common.loading}</div>
+  if (!details) return <div className="p-8 text-center text-destructive">{t.suppliers.supplierNotFound}</div>
 
   const totalPaid = details.payments.reduce((acc: number, p: any) => acc + p.amount, 0)
   const totalPurchaseCost = details.purchases.reduce((acc: number, p: any) => acc + p.grandTotal, 0)
@@ -62,21 +64,21 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground mb-1 flex items-center"><Package className="h-4 w-4 mr-1" /> Purchases</div>
+          <div className="text-sm text-muted-foreground mb-1 flex items-center"><Package className="h-4 w-4 mr-1" /> {t.suppliers.purchases}</div>
           <div className="text-xl font-bold">{details.purchases.length}</div>
         </div>
         <div className="bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground mb-1 flex items-center"><DollarSign className="h-4 w-4 mr-1" /> Total Paid</div>
+          <div className="text-sm text-muted-foreground mb-1 flex items-center"><DollarSign className="h-4 w-4 mr-1" /> {t.suppliers.totalPaid}</div>
           <div className="text-xl font-bold text-green-600">{totalPaid.toFixed(3)} OMR</div>
         </div>
         <div className="bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground mb-1 flex items-center"><DollarSign className="h-4 w-4 mr-1" /> Pending Amount</div>
+          <div className="text-sm text-muted-foreground mb-1 flex items-center"><DollarSign className="h-4 w-4 mr-1" /> {t.suppliers.pendingAmount}</div>
           <div className="text-xl font-bold text-destructive">{pendingAmount.toFixed(3)} OMR</div>
         </div>
       </div>
 
       <SimpleTabs 
-        tabs={[{ id: 'purchases', label: 'Purchases' }, { id: 'payments', label: 'Payment History' }]} 
+        tabs={[{ id: 'purchases', label: t.suppliers.purchases }, { id: 'payments', label: t.suppliers.paymentHistory }]} 
         active={activeTab} 
         onChange={setActiveTab} 
       />
@@ -86,21 +88,21 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
           <Table>
             <TableHeader className="sticky top-0 bg-background">
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Ref No.</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead className="text-right">Grand Total</TableHead>
+                <TableHead>{t.expensesMod.date}</TableHead>
+                <TableHead>{t.suppliers.refNo}</TableHead>
+                <TableHead>{t.suppliers.items}</TableHead>
+                <TableHead className="text-right">{t.suppliers.grandTotal}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {details.purchases.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No purchases yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t.suppliers.noPurchases}</TableCell></TableRow>
               ) : (
                 details.purchases.map((purchase: any) => (
                   <TableRow key={purchase.id}>
                     <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
                     <TableCell className="font-medium">{purchase.purchaseNumber}</TableCell>
-                    <TableCell>{purchase.items.length} items</TableCell>
+                    <TableCell>{purchase.items.length} {t.suppliers.items}</TableCell>
                     <TableCell className="text-right font-medium">{purchase.grandTotal.toFixed(3)} OMR</TableCell>
                   </TableRow>
                 ))
@@ -113,12 +115,12 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
       {activeTab === 'payments' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-medium">Payment History</h3>
+            <h3 className="font-medium">{t.suppliers.paymentHistory}</h3>
             {details.purchases.length > 0 && pendingAmount > 0 && (
               <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
-                <DialogTrigger render={<Button size="sm"><Plus className="h-4 w-4 mr-2" /> Add Payment</Button>} />
+                <DialogTrigger render={<Button size="sm"><Plus className="h-4 w-4 mr-2" /> {t.suppliers.addPayment}</Button>} />
                 <DialogContent className="max-w-2xl">
-                  <DialogHeader><DialogTitle>Record Payment to {details.name}</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{t.suppliers.recordPayment} {details.name}</DialogTitle></DialogHeader>
                   <SupplierPaymentForm supplierId={details.id} purchases={details.purchases} payments={details.payments} onSuccess={() => setIsPaymentOpen(false)} />
                 </DialogContent>
               </Dialog>
@@ -129,16 +131,16 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
             <Table>
               <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>{t.expensesMod.date}</TableHead>
+                  <TableHead>{t.suppliers.reference}</TableHead>
+                  <TableHead>{t.suppliers.method}</TableHead>
+                  <TableHead className="text-right">{t.expensesMod.amount}</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {details.payments.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No payments recorded yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t.suppliers.noPayments}</TableCell></TableRow>
                 ) : (
                   details.payments.map((payment: any) => (
                     <TableRow key={payment.id}>
@@ -155,12 +157,12 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
                           } />
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Payment?</AlertDialogTitle>
-                              <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                              <AlertDialogTitle>{t.suppliers.deletePaymentTitle}</AlertDialogTitle>
+                              <AlertDialogDescription>{t.suppliers.deletePaymentConfirm}</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deletePaymentMutation.mutate(payment.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deletePaymentMutation.mutate(payment.id)} className="bg-destructive text-destructive-foreground">{t.common.delete}</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -184,6 +186,7 @@ export function SupplierList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingSupplier, setEditingSupplier] = useState<any>(null)
   const [viewingSupplier, setViewingSupplier] = useState<string | null>(null)
+  const { t } = useTranslation()
 
   const { data, isLoading } = useQuery({
     queryKey: ['suppliers', page, search],
@@ -193,7 +196,7 @@ export function SupplierList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteSupplier(id),
     onSuccess: () => {
-      toast.success("Supplier deleted")
+      toast.success(t.suppliers.supplierDeleted)
       queryClient.invalidateQueries({ queryKey: ['suppliers'] })
     }
   })
@@ -204,7 +207,7 @@ export function SupplierList() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search suppliers..." 
+            placeholder={t.suppliers.searchSuppliers}
             className="pl-8" 
             value={search}
             onChange={(e) => {
@@ -216,11 +219,11 @@ export function SupplierList() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger render={
-            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Add Supplier</Button>
+            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.suppliers.addSupplier}</Button>
           } />
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Supplier</DialogTitle>
+              <DialogTitle>{t.suppliers.addNewSupplier}</DialogTitle>
             </DialogHeader>
             <SupplierForm onSuccess={() => setIsAddOpen(false)} />
           </DialogContent>
@@ -231,18 +234,18 @@ export function SupplierList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Contact Info</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead className="text-center">Purchases</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t.common.name}</TableHead>
+              <TableHead>{t.suppliers.contactInfo}</TableHead>
+              <TableHead>{t.common.address}</TableHead>
+              <TableHead className="text-center">{t.suppliers.purchases}</TableHead>
+              <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : data?.data.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center h-24">No suppliers found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center h-24">{t.suppliers.noSuppliers}</TableCell></TableRow>
             ) : (
               data?.data.map((supplier) => (
                 <TableRow key={supplier.id}>
@@ -268,7 +271,7 @@ export function SupplierList() {
                       {viewingSupplier === supplier.id && (
                         <DialogContent className="max-w-3xl">
                           <DialogHeader>
-                            <DialogTitle>{supplier.name} - Details</DialogTitle>
+                            <DialogTitle>{supplier.name} - {t.suppliers.details}</DialogTitle>
                           </DialogHeader>
                           <SupplierDetails supplierId={supplier.id} />
                         </DialogContent>
@@ -284,7 +287,7 @@ export function SupplierList() {
                       {editingSupplier?.id === supplier.id && (
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Edit Supplier</DialogTitle>
+                            <DialogTitle>{t.suppliers.editSupplier}</DialogTitle>
                           </DialogHeader>
                           <SupplierForm 
                             initialData={editingSupplier} 
@@ -302,15 +305,15 @@ export function SupplierList() {
                       } />
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogTitle>{t.suppliers.deleteSupplier}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will permanently delete this supplier. Inventory items linked to this supplier will be retained but unlinked.
+                            {t.suppliers.deleteConfirm}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                           <AlertDialogAction onClick={() => deleteMutation.mutate(supplier.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
+                            {t.common.delete}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -327,24 +330,14 @@ export function SupplierList() {
       {/* Pagination */}
       {data?.meta && data.meta.totalPages > 1 && (
         <div className="flex items-center justify-end space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> {t.common.previous}
           </Button>
           <div className="text-sm text-muted-foreground">
-            Page {page} of {data.meta.totalPages}
+            {t.common.page} {page} {t.common.of} {data.meta.totalPages}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.min(data.meta.totalPages, p + 1))}
-            disabled={page === data.meta.totalPages}
-          >
-            Next <ChevronRight className="h-4 w-4 ml-1" />
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(data.meta.totalPages, p + 1))} disabled={page === data.meta.totalPages}>
+            {t.common.next} <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       )}

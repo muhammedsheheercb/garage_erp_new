@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Loader2, Download, Printer, DollarSign, TrendingUp, Users, Car, Wrench, CheckCircle, Activity } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useTranslation } from "@/i18n"
 
 export function ReportsDashboard() {
+  const { t } = useTranslation()
   const [chartPeriod, setChartPeriod] = useState<'daily' | 'monthly'>('daily')
   const [reportType, setReportType] = useState<'revenue' | 'expenses' | 'jobs' | 'customers' | 'vehicles'>('revenue')
 
@@ -60,13 +62,13 @@ export function ReportsDashboard() {
   }
 
   const kpis = [
-    { title: "Monthly Income", value: `${stats?.monthlyRevenue.toFixed(3) || "0.000"} OMR`, icon: DollarSign, color: "text-green-500", desc: "Invoice payments collected" },
-    { title: "Monthly Expenses", value: `${stats?.monthlyExpenses.toFixed(3) || "0.000"} OMR`, icon: TrendingUp, color: "text-red-500", desc: "Expenses + Purchases" },
-    { title: "Monthly Revenue", value: `${stats?.profit.toFixed(3) || "0.000"} OMR`, icon: Activity, color: stats?.profit != null && stats.profit >= 0 ? "text-primary" : "text-destructive", desc: "Income − Expenses" },
-    { title: "Pending Jobs", value: stats?.pendingJobs || 0, icon: Wrench, color: "text-orange-500", desc: "" },
-    { title: "Completed Jobs", value: stats?.completedJobs || 0, icon: CheckCircle, color: "text-green-500", desc: "This month" },
-    { title: "Total Customers", value: stats?.totalCustomers || 0, icon: Users, color: "text-indigo-500", desc: "" },
-    { title: "Total Vehicles", value: stats?.totalVehicles || 0, icon: Car, color: "text-purple-500", desc: "" },
+    { title: t.dashboard.monthlyIncome, value: `${stats?.monthlyRevenue.toFixed(3) || "0.000"} OMR`, icon: DollarSign, color: "text-green-500", desc: t.dashboard.paymentsReceivedToday },
+    { title: t.nav.expenses, value: `${stats?.monthlyExpenses.toFixed(3) || "0.000"} OMR`, icon: TrendingUp, color: "text-red-500", desc: t.dashboard.expensesPurchasesToday },
+    { title: t.dashboard.monthlyProfit, value: `${stats?.profit.toFixed(3) || "0.000"} OMR`, icon: Activity, color: stats?.profit != null && stats.profit >= 0 ? "text-primary" : "text-destructive", desc: t.dashboard.incomeMinusAllExpenses },
+    { title: t.dashboard.pendingJobs, value: stats?.pendingJobs || 0, icon: Wrench, color: "text-orange-500", desc: "" },
+    { title: t.dashboard.completedJobsMonth, value: stats?.completedJobs || 0, icon: CheckCircle, color: "text-green-500", desc: t.dashboard.thisMonth },
+    { title: t.nav.customers, value: stats?.totalCustomers || 0, icon: Users, color: "text-indigo-500", desc: "" },
+    { title: t.nav.vehicles, value: stats?.totalVehicles || 0, icon: Car, color: "text-purple-500", desc: "" },
   ]
 
   return (
@@ -74,23 +76,23 @@ export function ReportsDashboard() {
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Reports & Analytics</h2>
-          <p className="text-muted-foreground mt-1">Comprehensive overview of your garage's performance.</p>
+          <h2 className="text-3xl font-bold tracking-tight">{t.nav.reports}</h2>
+          <p className="text-muted-foreground mt-1">{t.nav.reports}</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <Button variant="outline" className="flex-1 sm:flex-none" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" /> Print
+            <Printer className="mr-2 h-4 w-4" /> {t.invoicesMod.print}
           </Button>
           <Button className="flex-1 sm:flex-none" onClick={handleExportCSV} disabled={detailLoading || !detailData?.length}>
-            <Download className="mr-2 h-4 w-4" /> Export CSV
+            <Download className="mr-2 h-4 w-4" /> {t.jobcards.download}
           </Button>
         </div>
       </div>
 
       {/* Print Title (Only visible when printing) */}
       <div className="hidden print:block mb-6">
-        <h1 className="text-2xl font-bold text-center">Garage ERP - Master Report</h1>
-        <p className="text-center text-sm text-muted-foreground">Generated on {new Date().toLocaleDateString()}</p>
+        <h1 className="text-2xl font-bold text-center">{t.common.appName} - {t.nav.reports}</h1>
+        <p className="text-center text-sm text-muted-foreground">{t.payments.date}: {new Date().toLocaleDateString()}</p>
       </div>
 
       {/* KPIs Grid */}
@@ -116,13 +118,13 @@ export function ReportsDashboard() {
       <Card className="shadow-sm print:break-inside-avoid">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4">
           <div>
-            <CardTitle>Financial Overview</CardTitle>
-            <CardDescription>Revenue vs Expenses over time</CardDescription>
+            <CardTitle>{t.nav.reports}</CardTitle>
+            <CardDescription>{t.nav.reports}</CardDescription>
           </div>
           <Tabs value={chartPeriod} onValueChange={(v: any) => setChartPeriod(v)} className="w-full sm:w-[200px] print:hidden">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="daily">Daily</TabsTrigger>
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+              <TabsTrigger value="daily">{t.dashboard.todaysIncome}</TabsTrigger>
+              <TabsTrigger value="monthly">{t.common.month}</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
@@ -140,8 +142,8 @@ export function ReportsDashboard() {
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dx={-10} />
                   <RechartsTooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                   <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                  <Bar dataKey="revenue" name="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                  <Bar dataKey="expense" name="Expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  <Bar dataKey="revenue" name={t.dashboard.todaysIncome} fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  <Bar dataKey="expense" name={t.nav.expenses} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={50} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -154,17 +156,17 @@ export function ReportsDashboard() {
         <CardHeader className="border-b pb-4 print:hidden">
           <Tabs value={reportType} onValueChange={(v: any) => setReportType(v)} className="w-full">
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-[600px]">
-              <TabsTrigger value="revenue">Revenue</TabsTrigger>
-              <TabsTrigger value="expenses">Expenses</TabsTrigger>
-              <TabsTrigger value="jobs">Job Cards</TabsTrigger>
-              <TabsTrigger value="customers">Customers</TabsTrigger>
-              <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
+              <TabsTrigger value="revenue">{t.dashboard.todaysIncome}</TabsTrigger>
+              <TabsTrigger value="expenses">{t.nav.expenses}</TabsTrigger>
+              <TabsTrigger value="jobs">{t.nav.createJobCard}</TabsTrigger>
+              <TabsTrigger value="customers">{t.nav.customers}</TabsTrigger>
+              <TabsTrigger value="vehicles">{t.nav.vehicles}</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
         
         <div className="hidden print:block border-b p-4 font-bold text-lg">
-          Detailed Report: {reportType.toUpperCase()}
+          {t.nav.reports}: {reportType.toUpperCase()}
         </div>
 
         <CardContent className="pt-4 p-0 sm:p-6">
@@ -173,7 +175,7 @@ export function ReportsDashboard() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : detailData?.length === 0 ? (
-            <div className="text-center text-muted-foreground py-10">No data available for this period.</div>
+            <div className="text-center text-muted-foreground py-10">{t.common.noResults}</div>
           ) : (
             <div className="overflow-x-auto">
               <Table>

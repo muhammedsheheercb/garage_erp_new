@@ -11,9 +11,17 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useEffect } from "react"
+import { useTranslation } from "@/i18n"
 
 export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () => void, initialInvoiceId?: string }) {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
+  const paymentMethodLabels: Record<string, string> = {
+    CASH: t.payments.cash,
+    CARD: t.payments.card,
+    UPI: t.payments.upi,
+    TRANSFER: t.payments.bankTransfer,
+  }
   
   const { data: invoices, isLoading } = useQuery({
     queryKey: ['pending-invoices-dropdown'],
@@ -43,7 +51,7 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
   const mutation = useMutation({
     mutationFn: (data: PaymentFormValues) => createPayment(data),
     onSuccess: () => {
-      toast.success("Payment recorded successfully")
+      toast.success(t.payments.paymentRecordedSuccess)
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['pending-invoices'] })
       queryClient.invalidateQueries({ queryKey: ['pending-invoices-dropdown'] })
@@ -51,7 +59,7 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to save payment")
+      toast.error(error.message || t.common.somethingWrong)
     }
   })
 
@@ -59,7 +67,7 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
     if (watchInvoiceId && invoices) {
       const inv = invoices.find(i => i.id === watchInvoiceId)
       if (inv && data.amount > inv.dueAmount) {
-        toast.error(`Amount cannot exceed due amount of ${inv.dueAmount.toFixed(3)}`)
+        toast.error(`${t.payments.amountExceedsDue} ${inv.dueAmount.toFixed(3)}`)
         return
       }
     }
@@ -69,22 +77,22 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="invoiceId">Invoice <span className="text-destructive">*</span></Label>
+        <Label htmlFor="invoiceId">{t.payments.invoice} <span className="text-destructive">*</span></Label>
         <Controller
           control={control}
           name="invoiceId"
           render={({ field }) => (
             <Select onValueChange={field.onChange} value={field.value} disabled={!!initialInvoiceId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select Pending Invoice">
+                <SelectValue placeholder={t.payments.selectPendingInvoice}>
                   {(val: string) => invoices?.find((i: any) => i.id === val)?.label || null}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {isLoading ? (
-                  <SelectItem value="loading" disabled>Loading...</SelectItem>
+                  <SelectItem value="loading" disabled>{t.common.loading}</SelectItem>
                 ) : invoices?.length === 0 ? (
-                  <SelectItem value="none" disabled>No pending invoices</SelectItem>
+                  <SelectItem value="none" disabled>{t.payments.noPendingInvoices}</SelectItem>
                 ) : (
                   invoices?.map((inv: any) => (
                     <SelectItem key={inv.id} value={inv.id}>
@@ -101,7 +109,7 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="amount">Amount (OMR) <span className="text-destructive">*</span></Label>
+          <Label htmlFor="amount">{t.payments.amount} (OMR) <span className="text-destructive">*</span></Label>
           <Input 
             id="amount" 
             type="number" 
@@ -113,20 +121,22 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="method">Payment Method <span className="text-destructive">*</span></Label>
+          <Label htmlFor="method">{t.payments.paymentMethod} <span className="text-destructive">*</span></Label>
           <Controller
             control={control}
             name="method"
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Method" />
+                  <SelectValue placeholder={t.payments.selectMethod}>
+                    {(value: string) => paymentMethodLabels[value] || value}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CASH">Cash</SelectItem>
-                  <SelectItem value="CARD">Card</SelectItem>
-                  <SelectItem value="UPI">UPI</SelectItem>
-                  <SelectItem value="TRANSFER">Bank Transfer</SelectItem>
+                  <SelectItem value="CASH">{t.payments.cash}</SelectItem>
+                  <SelectItem value="CARD">{t.payments.card}</SelectItem>
+                  <SelectItem value="UPI">{t.payments.upi}</SelectItem>
+                  <SelectItem value="TRANSFER">{t.payments.bankTransfer}</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -136,9 +146,9 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={() => onSuccess?.()}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={() => onSuccess?.()}>{t.common.cancel}</Button>
         <Button type="submit" disabled={mutation.isPending || invoices?.length === 0}>
-          {mutation.isPending ? "Saving..." : "Record Payment"}
+          {mutation.isPending ? t.common.saving : t.payments.recordPayment}
         </Button>
       </div>
     </form>

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEffect, useState } from "react"
 import { Plus, Trash2, Loader2 } from "lucide-react"
+import { useTranslation } from "@/i18n"
 
 interface PurchaseFormProps {
   onSuccess?: () => void
@@ -21,7 +22,8 @@ interface PurchaseFormProps {
 
 export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
   const queryClient = useQueryClient()
-  const [purchaseNumber, setPurchaseNumber] = useState("Generating...")
+  const { t } = useTranslation()
+  const [purchaseNumber, setPurchaseNumber] = useState<string>(t.inventoryMod.generatingPartNo)
 
   const { data: dropdownData, isLoading: dropdownsLoading } = useQuery({
     queryKey: ['purchase-dropdowns'],
@@ -34,7 +36,7 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
   })
 
   const activeTaxRate = activeTax ? activeTax.percentage : 0
-  const activeTaxName = activeTax ? activeTax.name : "VAT"
+  const activeTaxName = activeTax ? activeTax.name : t.settings.taxTab.taxName
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<PurchaseFormValues>({
     resolver: zodResolver(purchaseSchema),
@@ -60,14 +62,14 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
   const mutation = useMutation({
     mutationFn: (data: PurchaseFormValues) => createPurchase(data),
     onSuccess: () => {
-      toast.success("Purchase registered successfully")
+      toast.success(t.purchases.purchaseRegisteredSuccess)
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to save purchase")
+      toast.error(error.message || t.common.somethingWrong)
     }
   })
 
@@ -87,7 +89,7 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
 
   const onSubmit = (data: PurchaseFormValues) => {
     if (data.paidAmount > grandTotal) {
-      toast.error("Paid amount cannot exceed Grand Total")
+      toast.error(t.purchases.paidExceedsGrand)
       return
     }
     mutation.mutate(data)
@@ -105,25 +107,25 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="space-y-2">
-          <Label>Purchase Number</Label>
+          <Label>{t.purchases.purchaseNumber}</Label>
           <Input value={purchaseNumber} readOnly className="bg-muted" />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="purchaseDate">Purchase Date <span className="text-destructive">*</span></Label>
+          <Label htmlFor="purchaseDate">{t.purchases.purchaseDate} <span className="text-destructive">*</span></Label>
           <Input id="purchaseDate" type="date" {...register("purchaseDate")} />
           {errors.purchaseDate && <p className="text-sm text-destructive">{errors.purchaseDate.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="supplierId">Supplier <span className="text-destructive">*</span></Label>
+          <Label htmlFor="supplierId">{t.suppliers.supplierTitle} <span className="text-destructive">*</span></Label>
           <Controller
             control={control}
             name="supplierId"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger id="supplierId">
-                  <SelectValue placeholder="Select Supplier">
+                  <SelectValue placeholder={t.suppliers.selectSupplier}>
                     {(val: string) => dropdownData?.suppliers.find((s: any) => s.id === val)?.name || null}
                   </SelectValue>
                 </SelectTrigger>
@@ -139,14 +141,14 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="paymentMethodId">Paymeter / Ledger <span className="text-destructive">*</span></Label>
+          <Label htmlFor="paymentMethodId">{t.purchases.paymeterLedger} <span className="text-destructive">*</span></Label>
           <Controller
             control={control}
             name="paymentMethodId"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger id="paymentMethodId">
-                  <SelectValue placeholder="Select Paymeter">
+                  <SelectValue placeholder={t.purchases.selectPaymeter}>
                     {(val: string) => dropdownData?.paymeters.find((p: any) => p.id === val)?.name || null}
                   </SelectValue>
                 </SelectTrigger>
@@ -164,14 +166,14 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
 
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <Label className="text-base font-semibold">Purchase Items</Label>
+          <Label className="text-base font-semibold">{t.purchases.purchaseItems}</Label>
           <Button 
             type="button" 
             variant="outline" 
             size="sm"
             onClick={() => append({ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0 })}
           >
-            <Plus className="mr-1 h-4 w-4" /> Add Item
+            <Plus className="mr-1 h-4 w-4" /> {t.purchases.addItem}
           </Button>
         </div>
 
@@ -179,11 +181,11 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[30%]">Item / Part</TableHead>
-                <TableHead className="w-[15%]">Qty</TableHead>
-                <TableHead className="w-[20%]">Purchase Price (OMR)</TableHead>
-                <TableHead className="w-[20%]">Selling Price (OMR)</TableHead>
-                <TableHead className="w-[10%]">Total</TableHead>
+                <TableHead className="w-[30%]">{t.purchases.itemPart}</TableHead>
+                <TableHead className="w-[15%]">{t.invoicesMod.qty}</TableHead>
+                <TableHead className="w-[20%]">{t.purchases.purchasePrice} (OMR)</TableHead>
+                <TableHead className="w-[20%]">{t.purchases.sellingPrice} (OMR)</TableHead>
+                <TableHead className="w-[10%]">{t.purchases.totalAmount}</TableHead>
                 <TableHead className="w-[5%] text-right"></TableHead>
               </TableRow>
             </TableHeader>
@@ -213,7 +215,7 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
                             }}
                           >
                           <SelectTrigger>
-                              <SelectValue placeholder="Select Item">
+                              <SelectValue placeholder={t.inventoryMod.selectItem}>
                                 {(val: string) => {
                                   const inv = dropdownData?.inventory.find((i: any) => i.id === val)
                                   return inv ? `${inv.itemName} (${inv.partNumber})` : null
@@ -288,7 +290,7 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="discount">Discount Amount (OMR)</Label>
+              <Label htmlFor="discount">{t.jobcards.discountAmount}</Label>
               <Input 
                 id="discount" 
                 type="number" 
@@ -299,7 +301,7 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="paidAmount">Paid Amount (OMR) <span className="text-destructive">*</span></Label>
+              <Label htmlFor="paidAmount">{t.purchases.paidAmount} (OMR) <span className="text-destructive">*</span></Label>
               <Input 
                 id="paidAmount" 
                 type="number" 
@@ -315,41 +317,41 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
 
         <div className="bg-muted/30 p-4 rounded-lg space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal:</span>
+            <span className="text-muted-foreground">{t.invoicesMod.subTotal}:</span>
             <span className="font-medium">{subTotal.toFixed(3)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Discount:</span>
+            <span className="text-muted-foreground">{t.invoicesMod.discount}:</span>
             <span className="font-medium">-{discountVal.toFixed(3)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Tax ({activeTaxName} {activeTaxRate}%):</span>
+            <span className="text-muted-foreground">{t.invoicesMod.tax} ({activeTaxName} {activeTaxRate}%):</span>
             <span className="font-medium">+{taxAmount.toFixed(3)} OMR</span>
           </div>
 
           <div className="flex justify-between border-t pt-2 text-base font-bold">
-            <span>Grand Total:</span>
+            <span>{t.invoicesMod.grandTotal}:</span>
             <span className="text-primary">{grandTotal.toFixed(3)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm pt-1">
-            <span className="text-muted-foreground font-semibold">Paid Amount:</span>
+            <span className="text-muted-foreground font-semibold">{t.purchases.paidAmount}:</span>
             <span className="text-green-600 font-semibold">{paidVal.toFixed(3)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm border-t border-dashed pt-2 font-bold text-destructive">
-            <span>Pending Amount:</span>
+            <span>{t.purchases.pendingAmount}:</span>
             <span>{pendingAmount.toFixed(3)} OMR</span>
           </div>
         </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onSuccess}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={onSuccess}>{t.common.cancel}</Button>
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving..." : "Save Purchase"}
+          {mutation.isPending ? t.common.saving : t.purchases.savePurchase}
         </Button>
       </div>
     </form>

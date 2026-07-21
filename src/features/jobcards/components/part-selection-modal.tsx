@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Search, Plus } from "lucide-react"
+import { useTranslation } from "@/i18n"
 
 interface PartSelectionModalProps {
   onSelect: (part: any) => void
@@ -16,6 +17,7 @@ interface PartSelectionModalProps {
 export function PartSelectionModal({ onSelect }: PartSelectionModalProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
+  const { t } = useTranslation()
 
   const { data: parts, isLoading } = useQuery({
     queryKey: ['parts-list', search],
@@ -26,18 +28,18 @@ export function PartSelectionModal({ onSelect }: PartSelectionModalProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={
         <Button variant="outline" size="sm" type="button">
-          <Plus className="h-4 w-4 mr-2" /> Add Part
+          <Plus className="h-4 w-4 mr-2" /> {t.jobcards.addPart}
         </Button>
       } />
       <DialogContent className="max-w-3xl sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Select Part</DialogTitle>
+          <DialogTitle>{t.jobcards.selectPart}</DialogTitle>
         </DialogHeader>
         
         <div className="relative mb-4">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search parts..." 
+            placeholder={t.jobcards.searchParts}
             className="pl-8" 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -48,18 +50,18 @@ export function PartSelectionModal({ onSelect }: PartSelectionModalProps) {
           <Table>
             <TableHeader className="sticky top-0 bg-background">
               <TableRow>
-                <TableHead>Part Name</TableHead>
-                <TableHead>Part No.</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="w-[100px] text-right">Action</TableHead>
+                <TableHead>{t.purchases.partName}</TableHead>
+                <TableHead>{t.inventoryMod.partNo}</TableHead>
+                <TableHead>{t.inventoryMod.stock}</TableHead>
+                <TableHead className="text-right">{t.invoicesMod.price}</TableHead>
+                <TableHead className="w-[100px] text-right">{t.common.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center">{t.common.loading}</TableCell></TableRow>
               ) : parts?.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center">No parts found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center">{t.jobcards.noPartsFound}</TableCell></TableRow>
               ) : (
                 parts?.map((part: any) => (
                   <TableRow key={part.id}>
@@ -72,7 +74,7 @@ export function PartSelectionModal({ onSelect }: PartSelectionModalProps) {
                         onSelect(part)
                         setOpen(false)
                       }}>
-                        {part.quantity <= 0 ? 'Out of Stock' : 'Select'}
+                        {part.quantity <= 0 ? t.jobcards.outOfStock : t.jobcards.select}
                       </Button>
                     </TableCell>
                   </TableRow>

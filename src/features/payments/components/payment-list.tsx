@@ -11,14 +11,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { PaymentForm } from "./payment-form"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
+import { useTranslation } from "@/i18n"
 
 export function PaymentList() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"history" | "pending">("history")
+  const paymentMethodLabels: Record<string, string> = {
+    CASH: t.payments.cash,
+    CARD: t.payments.card,
+    UPI: t.payments.upi,
+    TRANSFER: t.payments.bankTransfer,
+  }
 
   const { data: historyData, isLoading: historyLoading } = useQuery({
     queryKey: ['payments', page, search],
@@ -49,14 +57,14 @@ export function PaymentList() {
             onClick={() => setActiveTab("history")}
             className="flex-1 sm:flex-none"
           >
-            Payment History
+            {t.payments.paymentHistory}
           </Button>
           <Button 
             variant={activeTab === "pending" ? "default" : "outline"} 
             onClick={() => setActiveTab("pending")}
             className="flex-1 sm:flex-none relative"
           >
-            Pending Invoices
+            {t.payments.pendingInvoices}
             {pendingData && pendingData.length > 0 && (
               <span className="absolute -top-2 -right-2 bg-destructive text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 {pendingData.length}
@@ -70,7 +78,7 @@ export function PaymentList() {
             <div className="relative w-full sm:max-w-xs">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Search payments..." 
+                placeholder={t.payments.searchPayments} 
                 className="pl-8" 
                 value={search}
                 onChange={(e) => {
@@ -83,11 +91,11 @@ export function PaymentList() {
 
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger render={
-              <Button className="w-full sm:w-auto whitespace-nowrap"><Plus className="mr-2 h-4 w-4" /> Record Payment</Button>
+              <Button className="w-full sm:w-auto whitespace-nowrap"><Plus className="mr-2 h-4 w-4" /> {t.payments.recordPayment}</Button>
             } />
             <DialogContent className="max-w-xl">
               <DialogHeader>
-                <DialogTitle>Record Payment</DialogTitle>
+                <DialogTitle>{t.payments.recordPayment}</DialogTitle>
               </DialogHeader>
               <PaymentForm onSuccess={() => setIsAddOpen(false)} />
             </DialogContent>
@@ -101,18 +109,18 @@ export function PaymentList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead className="text-right">Amount (OMR)</TableHead>
+                  <TableHead>{t.payments.date}</TableHead>
+                  <TableHead>{t.jobcards.customer}</TableHead>
+                  <TableHead>{t.payments.invoice}</TableHead>
+                  <TableHead>{t.payments.method}</TableHead>
+                  <TableHead className="text-right">{t.payments.amount} (OMR)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historyLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center h-24">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
                 ) : historyData?.data.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center h-24">No payments found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center h-24">{t.payments.noPayments}</TableCell></TableRow>
                 ) : (
                   historyData?.data.map((payment) => (
                     <TableRow key={payment.id}>
@@ -130,7 +138,7 @@ export function PaymentList() {
                       <TableCell>
                         <div className="flex items-center">
                           {getMethodIcon(payment.method)}
-                          {payment.method}
+                          {paymentMethodLabels[payment.method] || payment.method}
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-medium text-green-600">
@@ -152,10 +160,10 @@ export function PaymentList() {
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
-                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                <ChevronLeft className="h-4 w-4 mr-1" /> {t.common.previous}
               </Button>
               <div className="text-sm text-muted-foreground">
-                Page {page} of {historyData.meta.totalPages}
+                {t.common.page} {page} {t.common.of} {historyData.meta.totalPages}
               </div>
               <Button
                 variant="outline"
@@ -163,7 +171,7 @@ export function PaymentList() {
                 onClick={() => setPage(p => Math.min(historyData.meta.totalPages, p + 1))}
                 disabled={page === historyData.meta.totalPages}
               >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+                {t.common.next} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
           )}
@@ -173,9 +181,9 @@ export function PaymentList() {
       {activeTab === "pending" && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {pendingLoading ? (
-            <div className="col-span-full text-center py-12 text-muted-foreground">Loading pending invoices...</div>
+            <div className="col-span-full text-center py-12 text-muted-foreground">{t.common.loading}</div>
           ) : pendingData?.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-muted-foreground">No pending payments! All caught up.</div>
+            <div className="col-span-full text-center py-12 text-muted-foreground">{t.payments.allCaughtUp}</div>
           ) : (
             pendingData?.map((inv) => {
               const paidAmount = inv.payments.reduce((acc, p) => acc + p.amount, 0)
@@ -198,15 +206,15 @@ export function PaymentList() {
                     
                     <div className="space-y-1 text-sm mb-6">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total:</span>
+                        <span className="text-muted-foreground">{t.payments.total}:</span>
                         <span>{inv.grandTotal.toFixed(3)} OMR</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Paid:</span>
+                        <span className="text-muted-foreground">{t.payments.paid}:</span>
                         <span className="text-green-600">{paidAmount.toFixed(3)} OMR</span>
                       </div>
                       <div className="flex justify-between font-bold border-t pt-1 mt-1">
-                        <span>Due:</span>
+                        <span>{t.payments.due}:</span>
                         <span className="text-destructive">{due.toFixed(3)} OMR</span>
                       </div>
                     </div>
@@ -218,16 +226,16 @@ export function PaymentList() {
                       className="flex-1"
                       onClick={() => router.push(`/invoices/${inv.id}/print`)}
                     >
-                      <FileText className="h-4 w-4 mr-2" /> View
+                      <FileText className="h-4 w-4 mr-2" /> {t.payments.view}
                     </Button>
                     <Dialog open={payingInvoiceId === inv.id} onOpenChange={(open) => setPayingInvoiceId(open ? inv.id : null)}>
                       <DialogTrigger render={
-                        <Button className="flex-1"><Plus className="h-4 w-4 mr-2" /> Pay</Button>
+                        <Button className="flex-1"><Plus className="h-4 w-4 mr-2" /> {t.payments.pay}</Button>
                       } />
                       {payingInvoiceId === inv.id && (
                         <DialogContent className="max-w-xl">
                           <DialogHeader>
-                            <DialogTitle>Record Payment for {inv.customer.name}</DialogTitle>
+                            <DialogTitle>{t.payments.recordPaymentFor} {inv.customer.name}</DialogTitle>
                           </DialogHeader>
                           <PaymentForm initialInvoiceId={inv.id} onSuccess={() => setPayingInvoiceId(null)} />
                         </DialogContent>

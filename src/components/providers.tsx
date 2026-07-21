@@ -4,6 +4,7 @@ import * as React from "react"
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "@/components/ui/sonner"
+import { LanguageInitializer } from "@/components/language-initializer"
 
 // Filter out the React 19 script tag warning in development (caused by next-themes)
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
@@ -23,10 +24,10 @@ export function Providers({ children, ...props }: React.ComponentProps<typeof Ne
   return (
     <NextThemesProvider {...props}>
       <QueryClientProvider client={queryClient}>
+        <LanguageInitializer />
         {children}
         <Toaster />
       </QueryClientProvider>
     </NextThemesProvider>
   )
 }
-

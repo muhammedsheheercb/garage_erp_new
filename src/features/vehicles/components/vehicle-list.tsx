@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { VehicleForm } from "./vehicle-form"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { useTranslation } from "@/i18n"
 
 export function VehicleList() {
   const queryClient = useQueryClient()
@@ -20,6 +21,20 @@ export function VehicleList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<any>(null)
   const [viewingHistory, setViewingHistory] = useState<any>(null)
+  const { t } = useTranslation()
+  const fuelTypeLabels: Record<string, string> = {
+    Petrol: t.vehicles.fuelPetrol,
+    Diesel: t.vehicles.fuelDiesel,
+    Electric: t.vehicles.fuelElectric,
+    Hybrid: t.vehicles.fuelHybrid,
+  }
+  const jobStatusLabels: Record<string, string> = {
+    PENDING: t.jobcards.statusPending,
+    IN_PROGRESS: t.jobcards.statusInProgress,
+    WORKING: t.jobcards.statusInProgress,
+    COMPLETED: t.jobcards.statusCompleted,
+    CANCELLED: t.jobcards.statusCancelled,
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['vehicles', page, search],
@@ -29,7 +44,7 @@ export function VehicleList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteVehicle(id),
     onSuccess: () => {
-      toast.success("Vehicle deleted")
+      toast.success(t.vehicles.vehicleDeleted)
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
     }
   })
@@ -40,7 +55,7 @@ export function VehicleList() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search vehicles..." 
+            placeholder={t.vehicles.searchVehicles}
             className="pl-8" 
             value={search}
             onChange={(e) => {
@@ -52,11 +67,11 @@ export function VehicleList() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger render={
-            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Add Vehicle</Button>
+            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.vehicles.addVehicle}</Button>
           } />
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Vehicle</DialogTitle>
+              <DialogTitle>{t.vehicles.addNewVehicle}</DialogTitle>
             </DialogHeader>
             <VehicleForm onSuccess={() => setIsAddOpen(false)} />
           </DialogContent>
@@ -67,17 +82,17 @@ export function VehicleList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Plate No.</TableHead>
-              <TableHead>Vehicle Details</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t.vehicles.plateNumber}</TableHead>
+              <TableHead>{t.vehicles.make}</TableHead>
+              <TableHead>{t.dashboard.customer}</TableHead>
+              <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : data?.data.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center h-24">No vehicles found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.vehicles.noVehicles}</TableCell></TableRow>
             ) : (
               data?.data.map((vehicle) => (
                 <TableRow key={vehicle.id}>
@@ -87,7 +102,7 @@ export function VehicleList() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium">{vehicle.brand} {vehicle.model}</span>
-                      <span className="text-xs text-muted-foreground">{vehicle.year} • {vehicle.fuelType}</span>
+                      <span className="text-xs text-muted-foreground">{vehicle.year} • {fuelTypeLabels[vehicle.fuelType ?? ""] || vehicle.fuelType}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -120,8 +135,8 @@ export function VehicleList() {
                                         {new Date(job.createdAt).toLocaleDateString()}
                                       </p>
                                     </div>
-                                    <Badge variant={job.status === 'Completed' ? 'default' : 'secondary'}>
-                                      {job.status}
+                                    <Badge variant={job.status === 'COMPLETED' ? 'default' : 'secondary'}>
+                                      {jobStatusLabels[job.status] || job.status}
                                     </Badge>
                                   </div>
                                 ))}
@@ -147,7 +162,7 @@ export function VehicleList() {
                       {editingVehicle?.id === vehicle.id && (
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Edit Vehicle</DialogTitle>
+                            <DialogTitle>{t.vehicles.editVehicle}</DialogTitle>
                           </DialogHeader>
                           <VehicleForm 
                             initialData={editingVehicle} 
@@ -165,15 +180,15 @@ export function VehicleList() {
                       } />
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Vehicle?</AlertDialogTitle>
+                          <AlertDialogTitle>{t.vehicles.deleteVehicle}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will permanently delete {vehicle.plateNumber} and all its job cards. This action cannot be undone.
+                            {t.vehicles.deleteConfirm}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                           <AlertDialogAction onClick={() => deleteMutation.mutate(vehicle.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
+                            {t.common.delete}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -190,24 +205,14 @@ export function VehicleList() {
       {/* Pagination */}
       {data?.meta && data.meta.totalPages > 1 && (
         <div className="flex items-center justify-end space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> {t.common.previous}
           </Button>
           <div className="text-sm text-muted-foreground">
-            Page {page} of {data.meta.totalPages}
+            {t.common.page} {page} {t.common.of} {data.meta.totalPages}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.min(data.meta.totalPages, p + 1))}
-            disabled={page === data.meta.totalPages}
-          >
-            Next <ChevronRight className="h-4 w-4 ml-1" />
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(data.meta.totalPages, p + 1))} disabled={page === data.meta.totalPages}>
+            {t.common.next} <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       )}

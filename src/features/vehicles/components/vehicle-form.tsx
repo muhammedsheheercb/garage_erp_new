@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import { createVehicle, updateVehicle, getCustomersForDropdown } from "../actions"
 import { toast } from "sonner"
+import { useTranslation } from "@/i18n"
 
 interface VehicleFormProps {
   initialData?: VehicleFormValues & { id?: string }
@@ -18,6 +19,13 @@ interface VehicleFormProps {
 
 export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
+  const fuelTypeLabels: Record<string, string> = {
+    Petrol: t.vehicles.fuelPetrol,
+    Diesel: t.vehicles.fuelDiesel,
+    Electric: t.vehicles.fuelElectric,
+    Hybrid: t.vehicles.fuelHybrid,
+  }
   
   const { register, handleSubmit, control, formState: { errors } } = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
@@ -45,12 +53,12 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
       return createVehicle(data)
     },
     onSuccess: (data) => {
-      toast.success(initialData?.id ? "Vehicle updated!" : "Vehicle added!")
+      toast.success(initialData?.id ? t.vehicles.vehicleUpdated : t.vehicles.vehicleCreated)
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
       onSuccess?.(data)
     },
     onError: () => {
-      toast.error("Something went wrong.")
+      toast.error(t.common.somethingWrong)
     }
   })
 
@@ -61,20 +69,20 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="plateNumber">Plate Number <span className="text-destructive">*</span></Label>
+        <Label htmlFor="plateNumber">{t.vehicles.plateNumber} <span className="text-destructive">*</span></Label>
         <Input id="plateNumber" placeholder="e.g. ABC 1234" {...register("plateNumber")} />
         {errors.plateNumber && <p className="text-sm text-destructive">{errors.plateNumber.message}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="brand">Brand <span className="text-destructive">*</span></Label>
+          <Label htmlFor="brand">{t.vehicles.make} <span className="text-destructive">*</span></Label>
           <Input id="brand" placeholder="Toyota" {...register("brand")} />
           {errors.brand && <p className="text-sm text-destructive">{errors.brand.message}</p>}
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="model">Model <span className="text-destructive">*</span></Label>
+          <Label htmlFor="model">{t.vehicles.model} <span className="text-destructive">*</span></Label>
           <Input id="model" placeholder="Camry" {...register("model")} />
           {errors.model && <p className="text-sm text-destructive">{errors.model.message}</p>}
         </div>
@@ -82,26 +90,28 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="year">Year <span className="text-destructive">*</span></Label>
+          <Label htmlFor="year">{t.vehicles.year} <span className="text-destructive">*</span></Label>
           <Input id="year" type="number" {...register("year", { valueAsNumber: true })} />
           {errors.year && <p className="text-sm text-destructive">{errors.year.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="fuelType">Fuel Type <span className="text-destructive">*</span></Label>
+          <Label htmlFor="fuelType">{t.vehicles.fuelType} <span className="text-destructive">*</span></Label>
           <Controller
             control={control}
             name="fuelType"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select fuel type" />
+                  <SelectValue placeholder={t.vehicles.selectFuelType}>
+                    {(value: string) => fuelTypeLabels[value] || value}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Petrol">Petrol</SelectItem>
-                  <SelectItem value="Diesel">Diesel</SelectItem>
-                  <SelectItem value="Electric">Electric</SelectItem>
-                  <SelectItem value="Hybrid">Hybrid</SelectItem>
+                  <SelectItem value="Petrol">{t.vehicles.fuelPetrol}</SelectItem>
+                  <SelectItem value="Diesel">{t.vehicles.fuelDiesel}</SelectItem>
+                  <SelectItem value="Electric">{t.vehicles.fuelElectric}</SelectItem>
+                  <SelectItem value="Hybrid">{t.vehicles.fuelHybrid}</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -111,14 +121,14 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="customerId">Owner (Customer) <span className="text-destructive">*</span></Label>
+        <Label htmlFor="customerId">{t.vehicles.owner} <span className="text-destructive">*</span></Label>
         <Controller
           control={control}
           name="customerId"
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange} disabled={customers.length === 0}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={customers.length > 0 ? "Select a customer" : "Loading customers..."} />
+                <SelectValue placeholder={customers.length > 0 ? t.vehicles.selectCustomer : t.common.loading} />
               </SelectTrigger>
               <SelectContent>
                 {customers.map((customer) => (
@@ -135,7 +145,7 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
 
       <div className="pt-4 flex justify-end">
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving..." : "Save Vehicle"}
+          {mutation.isPending ? t.common.saving : t.vehicles.saveVehicle}
         </Button>
       </div>
     </form>

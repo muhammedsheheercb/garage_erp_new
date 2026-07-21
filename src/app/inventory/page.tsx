@@ -1,9 +1,7 @@
 import { InventoryList } from "@/features/inventory/components/inventory-list"
 import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { ModulePageWrapper } from "@/components/module-page-wrapper"
 
 export const metadata = {
   title: "Inventory | Garage ERP",
@@ -18,26 +16,8 @@ export default async function InventoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/40 p-4 md:p-8">
-      <div className="max-w-screen-2xl mx-auto space-y-6">
-        <div className="flex flex-col gap-4">
-          <div>
-            <Link href="/" passHref>
-              <Button variant="ghost" size="sm" className="pl-0 gap-1 text-muted-foreground hover:text-foreground">
-                <ArrowLeft className="h-4 w-4" /> Back to Dashboard
-              </Button>
-            </Link>
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage parts, track stock levels, and monitor purchase and selling prices.
-            </p>
-          </div>
-        </div>
-        
-        <InventoryList />
-      </div>
-    </div>
+    <ModulePageWrapper titleKey="inventoryMod.title" descriptionKey="inventoryMod.description">
+      <InventoryList />
+    </ModulePageWrapper>
   )
 }

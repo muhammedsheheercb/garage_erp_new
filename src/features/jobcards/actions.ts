@@ -65,10 +65,36 @@ export async function getJobCardById(id: string) {
 export async function getDropdownData() {
   const [customers, vehicles, mechanics] = await Promise.all([
     prisma.customer.findMany({ select: { id: true, name: true, phone: true }, orderBy: { name: 'asc' } }),
-    prisma.vehicle.findMany({ select: { id: true, plateNumber: true, brand: true, customerId: true }, orderBy: { plateNumber: 'asc' } }),
+    prisma.vehicle.findMany({
+      select: {
+        id: true,
+        plateNumber: true,
+        brand: true,
+        model: true,
+        year: true,
+        fuelType: true,
+        customerId: true,
+        customer: { select: { name: true, phone: true } },
+      },
+      orderBy: { plateNumber: 'asc' },
+    }),
     prisma.mechanic.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } })
   ])
   return { customers, vehicles, mechanics }
+}
+
+export async function getVehicleHistory(vehicleId: string, excludeJobCardId?: string) {
+  return prisma.jobCard.findMany({
+    where: {
+      vehicleId,
+      ...(excludeJobCardId ? { id: { not: excludeJobCardId } } : {}),
+    },
+    include: {
+      mechanic: { select: { name: true } },
+      services: { include: { service: { select: { name: true } } } },
+    },
+    orderBy: { createdAt: "desc" },
+  })
 }
 
 export async function getServicesList(search = "") {

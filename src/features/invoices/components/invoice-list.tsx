@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { InvoiceForm } from "./invoice-form"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { useTranslation } from "@/i18n"
 
 export function InvoiceList() {
   const queryClient = useQueryClient()
@@ -21,6 +22,7 @@ export function InvoiceList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingInvoice, setEditingInvoice] = useState<any>(null)
   const [viewingJobCard, setViewingJobCard] = useState<any>(null)
+  const { t } = useTranslation()
 
   const { data, isLoading } = useQuery({
     queryKey: ['invoices', page, search],
@@ -30,7 +32,7 @@ export function InvoiceList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteInvoice(id),
     onSuccess: () => {
-      toast.success("Invoice deleted")
+      toast.success(t.invoicesMod.invoiceDeleted)
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
     }
   })
@@ -41,7 +43,7 @@ export function InvoiceList() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search invoices..." 
+            placeholder={t.invoicesMod.searchInvoices}
             className="pl-8" 
             value={search}
             onChange={(e) => {
@@ -53,11 +55,11 @@ export function InvoiceList() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger render={
-            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Create Invoice</Button>
+            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.invoicesMod.createInvoice}</Button>
           } />
           <DialogContent className="max-w-5xl sm:max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New Invoice</DialogTitle>
+              <DialogTitle>{t.invoicesMod.createNewInvoice}</DialogTitle>
             </DialogHeader>
             <InvoiceForm onSuccess={() => setIsAddOpen(false)} />
           </DialogContent>
@@ -68,19 +70,19 @@ export function InvoiceList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Invoice ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Vehicle</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t.invoicesMod.invoiceID}</TableHead>
+              <TableHead>{t.jobcards.customer}</TableHead>
+              <TableHead>{t.jobcards.vehicle}</TableHead>
+              <TableHead>{t.invoicesMod.amount}</TableHead>
+              <TableHead>{t.common.status}</TableHead>
+              <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : data?.data.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center h-24">No invoices found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center h-24">{t.invoicesMod.noInvoices}</TableCell></TableRow>
             ) : (
               data?.data.map((invoice) => (
                 <TableRow key={invoice.id}>
@@ -98,45 +100,45 @@ export function InvoiceList() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button variant="ghost" size="icon" onClick={() => router.push(`/invoices/${invoice.id}/print`)} title="Print/Download Invoice">
+                    <Button variant="ghost" size="icon" onClick={() => router.push(`/invoices/${invoice.id}/print`)} title={t.invoicesMod.printInvoice}>
                       <Printer className="h-4 w-4" />
                     </Button>
                     
                     {invoice.jobCard?.id && (
                       <Dialog open={viewingJobCard?.id === invoice.jobCard.id} onOpenChange={(open) => !open && setViewingJobCard(null)}>
                         <DialogTrigger render={
-                          <Button variant="ghost" size="icon" onClick={() => setViewingJobCard(invoice.jobCard)} title="View Job Card">
+                          <Button variant="ghost" size="icon" onClick={() => setViewingJobCard(invoice.jobCard)} title={t.invoicesMod.viewJobCardDetails}>
                             <ClipboardList className="h-4 w-4" />
                           </Button>
                         } />
                         {viewingJobCard?.id === invoice.jobCard.id && (
                           <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
                             <DialogHeader>
-                              <DialogTitle>Job Card Details</DialogTitle>
+                              <DialogTitle>{t.invoicesMod.jobCardDetailsTitle}</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-6 mt-4 text-left">
                               <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Vehicle</p>
+                                  <p className="text-sm text-muted-foreground">{t.jobcards.vehicle}</p>
                                   <p className="font-medium">{viewingJobCard.vehicle?.plateNumber} ({viewingJobCard.vehicle?.brand} {viewingJobCard.vehicle?.model})</p>
                                 </div>
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Customer</p>
+                                  <p className="text-sm text-muted-foreground">{t.jobcards.customer}</p>
                                   <p className="font-medium">{viewingJobCard.customer?.name} - {viewingJobCard.customer?.phone}</p>
                                 </div>
                                 <div className="col-span-2">
-                                  <p className="text-sm text-muted-foreground">Complaint</p>
+                                  <p className="text-sm text-muted-foreground">{t.jobcards.complaintIssue}</p>
                                   <p className="font-medium whitespace-pre-wrap">{viewingJobCard.complaint}</p>
                                 </div>
                                 {viewingJobCard.workDone && (
                                   <div className="col-span-2">
-                                    <p className="text-sm text-muted-foreground">Work Done</p>
+                                    <p className="text-sm text-muted-foreground">{t.jobcards.workDone}</p>
                                     <p className="font-medium whitespace-pre-wrap">{viewingJobCard.workDone}</p>
                                   </div>
                                 )}
                                 {viewingJobCard.notes && (
                                   <div className="col-span-2">
-                                    <p className="text-sm text-muted-foreground">Notes / Description</p>
+                                    <p className="text-sm text-muted-foreground">{t.jobcards.notesRemarks}</p>
                                     <p className="font-medium whitespace-pre-wrap">{viewingJobCard.notes}</p>
                                   </div>
                                 )}
@@ -144,13 +146,13 @@ export function InvoiceList() {
                               
                               {viewingJobCard.services && viewingJobCard.services.length > 0 && (
                                 <div>
-                                  <h4 className="font-semibold mb-2">Services</h4>
+                                  <h4 className="font-semibold mb-2">{t.jobcards.services}</h4>
                                   <Table>
                                     <TableHeader>
                                       <TableRow>
-                                        <TableHead>Service</TableHead>
-                                        <TableHead>Qty</TableHead>
-                                        <TableHead className="text-right">Price</TableHead>
+                                        <TableHead>{t.services.serviceName}</TableHead>
+                                        <TableHead>{t.invoicesMod.qty}</TableHead>
+                                        <TableHead className="text-right">{t.invoicesMod.price}</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -168,13 +170,13 @@ export function InvoiceList() {
 
                               {viewingJobCard.parts && viewingJobCard.parts.length > 0 && (
                                 <div>
-                                  <h4 className="font-semibold mb-2">Parts Used</h4>
+                                  <h4 className="font-semibold mb-2">{t.jobcards.parts}</h4>
                                   <Table>
                                     <TableHeader>
                                       <TableRow>
-                                        <TableHead>Part / Item</TableHead>
-                                        <TableHead>Qty</TableHead>
-                                        <TableHead className="text-right">Price</TableHead>
+                                        <TableHead>{t.inventoryMod.item}</TableHead>
+                                        <TableHead>{t.invoicesMod.qty}</TableHead>
+                                        <TableHead className="text-right">{t.invoicesMod.price}</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -204,7 +206,7 @@ export function InvoiceList() {
                       {editingInvoice?.id === invoice.id && (
                         <DialogContent className="max-w-5xl sm:max-w-5xl max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
-                            <DialogTitle>Edit Invoice</DialogTitle>
+                            <DialogTitle>{t.invoicesMod.editInvoice}</DialogTitle>
                           </DialogHeader>
                           <InvoiceForm 
                             initialData={editingInvoice} 
@@ -222,15 +224,15 @@ export function InvoiceList() {
                       } />
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogTitle>{t.invoicesMod.deleteInvoiceTitle}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will permanently delete this invoice.
+                            {t.invoicesMod.deleteInvoiceConfirm}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                           <AlertDialogAction onClick={() => deleteMutation.mutate(invoice.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
+                            {t.common.delete}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -253,10 +255,10 @@ export function InvoiceList() {
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
           >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+            <ChevronLeft className="h-4 w-4 mr-1" /> {t.common.previous}
           </Button>
           <div className="text-sm text-muted-foreground">
-            Page {page} of {data.meta.totalPages}
+            {t.common.page} {page} {t.common.of} {data.meta.totalPages}
           </div>
           <Button
             variant="outline"
@@ -264,7 +266,7 @@ export function InvoiceList() {
             onClick={() => setPage(p => Math.min(data.meta.totalPages, p + 1))}
             disabled={page === data.meta.totalPages}
           >
-            Next <ChevronRight className="h-4 w-4 ml-1" />
+            {t.common.next} <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       )}

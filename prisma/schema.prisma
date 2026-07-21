@@ -22,6 +22,7 @@ model Customer {
   email     String?   @unique
   phone     String?
   address   String?
+  type      String?   @default("Individual")
   vehicles  Vehicle[]
   jobCards  JobCard[]
   invoices  Invoice[]

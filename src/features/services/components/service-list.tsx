@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ServiceForm } from "./service-form"
 import { toast } from "sonner"
 import { Currency } from "@/components/currency"
+import { useTranslation } from "@/i18n"
 
 export function ServiceList() {
   const queryClient = useQueryClient()
@@ -19,6 +20,7 @@ export function ServiceList() {
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingService, setEditingService] = useState<any>(null)
+  const { t } = useTranslation()
 
   const { data, isLoading } = useQuery({
     queryKey: ['services', page, search],
@@ -28,11 +30,11 @@ export function ServiceList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteService(id),
     onSuccess: () => {
-      toast.success("Service deleted")
+      toast.success(t.services.serviceDeleted)
       queryClient.invalidateQueries({ queryKey: ['services'] })
     },
     onError: () => {
-      toast.error("Cannot delete a service that is linked to existing job cards.")
+      toast.error(t.common.somethingWrong)
     }
   })
 
@@ -42,7 +44,7 @@ export function ServiceList() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search services..." 
+            placeholder={t.services.searchServices}
             className="pl-8" 
             value={search}
             onChange={(e) => {
@@ -53,10 +55,10 @@ export function ServiceList() {
         </div>
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={<Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Add Service</Button>} />
+          <DialogTrigger render={<Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.services.addService}</Button>} />
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Service</DialogTitle>
+              <DialogTitle>{t.services.addNewService}</DialogTitle>
             </DialogHeader>
             <ServiceForm onSuccess={() => setIsAddOpen(false)} />
           </DialogContent>
@@ -67,18 +69,18 @@ export function ServiceList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Service Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Est. Time</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t.services.serviceName}</TableHead>
+              <TableHead>{t.services.category}</TableHead>
+              <TableHead>{t.services.estimatedTime}</TableHead>
+              <TableHead>{t.services.price}</TableHead>
+              <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : data?.data.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center h-24">No services found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.services.noServices}</TableCell></TableRow>
             ) : (
               data?.data.map((service) => (
                 <TableRow key={service.id}>
@@ -114,7 +116,7 @@ export function ServiceList() {
                       {editingService?.id === service.id && (
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Edit Service</DialogTitle>
+                            <DialogTitle>{t.services.editService}</DialogTitle>
                           </DialogHeader>
                           <ServiceForm 
                             initialData={editingService} 
@@ -132,15 +134,15 @@ export function ServiceList() {
                       } />
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Service?</AlertDialogTitle>
+                          <AlertDialogTitle>{t.services.deleteService}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will permanently delete this service catalog item. Existing job cards containing this service may be affected if not configured to retain snapshot prices.
+                            {t.services.deleteConfirm}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                           <AlertDialogAction onClick={() => deleteMutation.mutate(service.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
+                            {t.common.delete}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -157,24 +159,14 @@ export function ServiceList() {
       {/* Pagination */}
       {data?.meta && data.meta.totalPages > 1 && (
         <div className="flex items-center justify-end space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> {t.common.previous}
           </Button>
           <div className="text-sm text-muted-foreground">
-            Page {page} of {data.meta.totalPages}
+            {t.common.page} {page} {t.common.of} {data.meta.totalPages}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.min(data.meta.totalPages, p + 1))}
-            disabled={page === data.meta.totalPages}
-          >
-            Next <ChevronRight className="h-4 w-4 ml-1" />
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(data.meta.totalPages, p + 1))} disabled={page === data.meta.totalPages}>
+            {t.common.next} <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       )}

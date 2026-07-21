@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Wrench, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
+import { useTranslation } from "@/i18n"
+import { LanguageToggle } from "@/components/language-toggle"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -14,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const { t } = useTranslation()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,16 +26,16 @@ export default function LoginPage() {
       const result = await loginAction(email, password)
 
       if (!result?.success) {
-        toast.error(result?.error || "Invalid email or password")
+        toast.error(result?.error || t.login.invalidCredentials)
         return
       }
 
-      toast.success("Logged in successfully")
+      toast.success(t.login.success)
       const from = searchParams.get("from") || "/"
       router.push(from)
       router.refresh()
     } catch (error) {
-      toast.error("Something went wrong. Please try again.")
+      toast.error(t.login.tryAgain)
     } finally {
       setIsLoading(false)
     }
@@ -52,13 +55,13 @@ export default function LoginPage() {
 
         <div className="absolute bottom-8 left-8 lg:bottom-24 lg:left-16 z-20">
           <h1 className="text-3xl lg:text-[42px] font-semibold leading-tight tracking-tight mb-2 drop-shadow-md">
-            Journey Beyond
+            {t.login.journeyTitle}
           </h1>
           <p className="text-base lg:text-lg text-white/90 mb-6 lg:mb-8 drop-shadow-md">
-            Explore the advanced Garage ERP system.
+            {t.login.journeySubtitle}
           </p>
           <button className="bg-white text-black px-6 lg:px-8 py-2 lg:py-3 font-semibold text-sm hover:bg-gray-200 transition-colors">
-            Explore
+            {t.login.explore}
           </button>
         </div>
       </div>
@@ -66,29 +69,32 @@ export default function LoginPage() {
       {/* Right side - Login Form */}
       <div className="flex w-full flex-col lg:w-1/2 min-h-[60vh] lg:h-screen px-6 sm:px-12 lg:px-24 py-12 lg:py-16 bg-[#1a1a1a] relative overflow-y-auto">
 
-
+        {/* Language Toggle in top right */}
+        <div className="absolute top-4 right-4 z-20">
+          <LanguageToggle />
+        </div>
 
         <div className="w-full max-w-[440px] mx-auto mt-auto mb-auto relative z-10 flex flex-col">
           {/* Brand / Logo */}
           <div className="flex items-center gap-2 mb-16">
             <Wrench className="h-6 w-6 text-white" />
-            <span className="font-bold text-xl uppercase tracking-widest font-serif">Garage ERP</span>
+            <span className="font-bold text-xl uppercase tracking-widest font-serif">{t.common.appName}</span>
           </div>
 
           <h2 className="text-4xl font-medium mb-10 tracking-tight">
-            PLEASE LOG IN
+            {t.login.title}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Custom Input: Email */}
             <div className="bg-[#2a2a2a] border border-[#3a3a3a] px-4 py-3 focus-within:border-[#e32400] transition-colors group">
               <label className="block text-[13px] text-gray-400 font-medium mb-1" htmlFor="email">
-                Email
+                {t.login.email}
               </label>
               <input
                 id="email"
                 type="email"
-                placeholder="John Doe"
+                placeholder={t.login.emailPlaceholder}
                 required
                 className="w-full bg-transparent text-white text-base placeholder:text-transparent focus:placeholder:text-gray-500 focus:outline-none"
                 value={email}
@@ -100,7 +106,7 @@ export default function LoginPage() {
             {/* Custom Input: Password */}
             <div className="bg-[#2a2a2a] border border-[#3a3a3a] px-4 py-3 focus-within:border-[#e32400] transition-colors group relative">
               <label className="block text-[13px] text-gray-400 font-medium mb-1" htmlFor="password">
-                Password
+                {t.login.password}
               </label>
               <div className="flex items-center">
                 <input
@@ -129,7 +135,7 @@ export default function LoginPage() {
               className="w-full bg-[#e32400] hover:bg-[#d02000] text-white font-semibold py-4 text-[15px] transition-colors mt-2"
               disabled={isLoading}
             >
-              {isLoading ? "LOGGING IN..." : "LOG IN"}
+              {isLoading ? t.login.submitting : t.login.submit}
             </button>
 
 
@@ -137,7 +143,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <div className="mt-12 flex items-center justify-between text-xs font-medium text-[#e32400]">
-            <a href="#" className="hover:underline">Sign up</a>
+            <a href="#" className="hover:underline">{t.login.signUp}</a>
             <div className="h-[1px] flex-1 bg-[#3a3a3a] mx-4 relative">
               {/* Red line indicator mimicking the screenshot */}
               <div className="absolute top-0 left-0 h-[1px] w-full bg-[#e32400]/40"></div>

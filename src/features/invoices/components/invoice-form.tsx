@@ -15,9 +15,11 @@ import { useEffect, useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Trash, Trash2, Loader2, ClipboardList, AlertTriangle } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { useTranslation } from "@/i18n"
 
 export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onSuccess?: () => void }) {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
   const isPaidLock = initialData?.status === "PAID"
 
   const [otherChargesList, setOtherChargesList] = useState<Array<{ name: string; amount: number | string }>>(() => {
@@ -85,32 +87,32 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         
         // Auto-generate details text
         if (jc.services && jc.services.length > 0) {
-          const servicesText = jc.services.map((s: any) => `${s.service.name} (Qty: ${s.quantity})`).join(", ")
+          const servicesText = jc.services.map((s: any) => `${s.service.name} (${t.invoicesMod.qty}: ${s.quantity})`).join(", ")
           setValue("servicesDetails", servicesText)
         }
         if (jc.parts && jc.parts.length > 0) {
-          const partsText = jc.parts.map((p: any) => `${p.batch.inventory.itemName} (Qty: ${p.quantity})`).join(", ")
+          const partsText = jc.parts.map((p: any) => `${p.batch.inventory.itemName} (${t.invoicesMod.qty}: ${p.quantity})`).join(", ")
           setValue("partsDetails", partsText)
         }
       }
     }
-  }, [watchJobCardId, dropdownData, setValue, getValues])
+  }, [watchJobCardId, dropdownData, setValue, getValues, t])
 
   const mutation = useMutation({
     mutationFn: (data: InvoiceFormValues) => 
       initialData ? updateInvoice(initialData.id, data) : createInvoice(data),
     onSuccess: () => {
-      toast.success(initialData ? "Invoice updated successfully" : "Invoice created successfully")
+      toast.success(initialData ? t.invoicesMod.invoiceUpdated : t.invoicesMod.invoiceCreated)
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       queryClient.invalidateQueries({ queryKey: ['invoice-dropdowns'] })
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to save invoice")
+      toast.error(error.message || t.common.somethingWrong)
     }
   })
 
-  if (dropdownLoading) return <div>Loading...</div>
+  if (dropdownLoading) return <div>{t.common.loading}</div>
 
   const availableJobCards = dropdownData?.jobCards || []
   if (initialData?.jobCard && !availableJobCards.find((jc: any) => jc.id === initialData.jobCard.id)) {
@@ -129,8 +131,8 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md border border-destructive/20 mb-4">
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <div>
-            <p className="font-semibold text-sm">Invoice fully PAID (Locked)</p>
-            <p className="text-xs">This invoice cannot be edited because it is fully paid.</p>
+            <p className="font-semibold text-sm">{t.invoicesMod.invoiceLockedTitle}</p>
+            <p className="text-xs">{t.invoicesMod.invoiceLockedDesc}</p>
           </div>
         </div>
       )}
@@ -138,7 +140,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         
         <div className="space-y-2 col-span-1">
-          <Label htmlFor="jobCardId">Job Card / Vehicle <span className="text-destructive">*</span></Label>
+          <Label htmlFor="jobCardId">{t.invoicesMod.jobCardVehicle} <span className="text-destructive">*</span></Label>
           <div className="flex items-center gap-2">
             <Controller
               control={control}
@@ -146,7 +148,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value} disabled={!!initialData || isPaidLock}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select Job Card">
+                    <SelectValue placeholder={t.invoicesMod.selectJobCard}>
                       {(val: string) => {
                         const jc = availableJobCards.find((j: any) => j.id === val)
                         return jc ? `${jc.vehicle?.plateNumber} - ${jc.customer?.name}` : null
@@ -171,38 +173,38 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                     variant="outline" 
                     size="icon" 
                     className="shrink-0"
-                    title="View Job Card Details"
+                    title={t.invoicesMod.viewJobCardDetails}
                   >
                     <ClipboardList className="h-4 w-4" />
                   </Button>
                 } />
                 <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Job Card Details</DialogTitle>
+                    <DialogTitle>{t.invoicesMod.jobCardDetailsTitle}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-6 mt-4">
                     <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
                       <div>
-                        <p className="text-sm text-muted-foreground">Vehicle</p>
+                        <p className="text-sm text-muted-foreground">{t.jobcards.vehicle}</p>
                         <p className="font-medium">{selectedJobCardDetails.vehicle?.plateNumber} ({selectedJobCardDetails.vehicle?.brand} {selectedJobCardDetails.vehicle?.model})</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Customer</p>
+                        <p className="text-sm text-muted-foreground">{t.jobcards.customer}</p>
                         <p className="font-medium">{selectedJobCardDetails.customer?.name} - {selectedJobCardDetails.customer?.phone}</p>
                       </div>
                       <div className="col-span-2">
-                        <p className="text-sm text-muted-foreground">Complaint</p>
+                        <p className="text-sm text-muted-foreground">{t.jobcards.complaintIssue}</p>
                         <p className="font-medium whitespace-pre-wrap">{selectedJobCardDetails.complaint}</p>
                       </div>
                       {selectedJobCardDetails.workDone && (
                         <div className="col-span-2">
-                          <p className="text-sm text-muted-foreground">Work Done</p>
+                          <p className="text-sm text-muted-foreground">{t.jobcards.workDone}</p>
                           <p className="font-medium whitespace-pre-wrap">{selectedJobCardDetails.workDone}</p>
                         </div>
                       )}
                       {selectedJobCardDetails.notes && (
                         <div className="col-span-2">
-                          <p className="text-sm text-muted-foreground">Notes / Description</p>
+                          <p className="text-sm text-muted-foreground">{t.jobcards.notesRemarks}</p>
                           <p className="font-medium whitespace-pre-wrap">{selectedJobCardDetails.notes}</p>
                         </div>
                       )}
@@ -210,13 +212,13 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                     
                     {selectedJobCardDetails.services && selectedJobCardDetails.services.length > 0 && (
                       <div>
-                        <h4 className="font-semibold mb-2">Services</h4>
+                        <h4 className="font-semibold mb-2">{t.jobcards.services}</h4>
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Service</TableHead>
-                              <TableHead>Qty</TableHead>
-                              <TableHead className="text-right">Price</TableHead>
+                              <TableHead>{t.services.serviceName}</TableHead>
+                              <TableHead>{t.invoicesMod.qty}</TableHead>
+                              <TableHead className="text-right">{t.invoicesMod.price}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -234,13 +236,13 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
 
                     {selectedJobCardDetails.parts && selectedJobCardDetails.parts.length > 0 && (
                       <div>
-                        <h4 className="font-semibold mb-2">Parts Used</h4>
+                        <h4 className="font-semibold mb-2">{t.jobcards.parts}</h4>
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Part / Item</TableHead>
-                              <TableHead>Qty</TableHead>
-                              <TableHead className="text-right">Price</TableHead>
+                              <TableHead>{t.inventoryMod.item}</TableHead>
+                              <TableHead>{t.invoicesMod.qty}</TableHead>
+                              <TableHead className="text-right">{t.invoicesMod.price}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -264,14 +266,14 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="customerId">Customer</Label>
+          <Label htmlFor="customerId">{t.jobcards.customer}</Label>
           <Controller
             control={control}
             name="customerId"
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value} disabled>
                 <SelectTrigger>
-                  <SelectValue placeholder="Auto-filled from Job Card">
+                  <SelectValue placeholder={t.invoicesMod.autoFilledJobCard}>
                     {(val: string) => dropdownData?.customers.find((c: any) => c.id === val)?.name || null}
                   </SelectValue>
                 </SelectTrigger>
@@ -287,7 +289,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="serviceCharge">Service Charge (OMR)</Label>
+          <Label htmlFor="serviceCharge">{t.invoicesMod.serviceCharge} (OMR)</Label>
           <Input 
             id="serviceCharge" 
             type="number" 
@@ -299,7 +301,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="labourCharge">Labour Charge (OMR)</Label>
+          <Label htmlFor="labourCharge">{t.invoicesMod.labourCharge} (OMR)</Label>
           <Input 
             id="labourCharge" 
             type="number" 
@@ -311,7 +313,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="partsCost">Parts Cost (OMR)</Label>
+          <Label htmlFor="partsCost">{t.invoicesMod.partsCost} (OMR)</Label>
           <Input 
             id="partsCost" 
             type="number" 
@@ -323,7 +325,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="discount">Discount (OMR)</Label>
+          <Label htmlFor="discount">{t.invoicesMod.discount} (OMR)</Label>
           <Input 
             id="discount" 
             type="number" 
@@ -335,7 +337,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="tax">Tax (OMR)</Label>
+          <Label htmlFor="tax">{t.invoicesMod.tax} (OMR)</Label>
           <Input 
             id="tax" 
             type="number" 
@@ -351,7 +353,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
       {/* Other Amounts List Builder */}
       <div className="space-y-3 border p-4 rounded-md bg-muted/20">
         <div className="flex justify-between items-center">
-          <Label className="text-base font-semibold">Other Charges / Amounts</Label>
+          <Label className="text-base font-semibold">{t.invoicesMod.otherCharges}</Label>
           {!isPaidLock && (
             <Button
               type="button"
@@ -359,18 +361,18 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               size="sm"
               onClick={() => setOtherChargesList(prev => [...prev, { name: "", amount: 0 }])}
             >
-              <Plus className="mr-1 h-3.5 w-3.5" /> Add Charge
+              <Plus className="mr-1 h-3.5 w-3.5" /> {t.invoicesMod.addCharge}
             </Button>
           )}
         </div>
         {otherChargesList.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No other charges added.</p>
+          <p className="text-xs text-muted-foreground">{t.invoicesMod.noOtherCharges}</p>
         ) : (
           <div className="space-y-2">
             {otherChargesList.map((charge, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <Input
-                  placeholder="Charge Name (e.g. Consumables)"
+                  placeholder={t.invoicesMod.chargeName}
                   value={charge.name}
                   onChange={(e) => {
                     const newList = [...otherChargesList]
@@ -384,7 +386,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                   type="number"
                   step="0.001"
                   min="0"
-                  placeholder="Amount"
+                  placeholder={t.invoicesMod.amount}
                   value={charge.amount}
                   onChange={(e) => {
                     const newList = [...otherChargesList]
@@ -415,10 +417,10 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="servicesDetails">Services Details</Label>
+        <Label htmlFor="servicesDetails">{t.invoicesMod.servicesDetails}</Label>
         <Textarea 
           id="servicesDetails" 
-          placeholder="Describe services provided..." 
+          placeholder={t.invoicesMod.servicesDetailsDesc}
           disabled={isPaidLock}
           {...register("servicesDetails")} 
         />
@@ -426,10 +428,10 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="partsDetails">Parts Details</Label>
+        <Label htmlFor="partsDetails">{t.invoicesMod.partsDetails}</Label>
         <Textarea 
           id="partsDetails" 
-          placeholder="List parts used..." 
+          placeholder={t.invoicesMod.partsDetailsDesc}
           disabled={isPaidLock}
           {...register("partsDetails")} 
         />
@@ -438,19 +440,19 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
 
       <div className="bg-muted p-4 rounded-md space-y-2 mt-4 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Subtotal:</span>
+          <span className="text-muted-foreground">{t.invoicesMod.subTotal}:</span>
           <span>{subTotal.toFixed(3)} OMR</span>
         </div>
         <div className="flex justify-between font-bold text-base border-t pt-2 border-border">
-          <span>Grand Total:</span>
+          <span>{t.invoicesMod.grandTotal}:</span>
           <span>{grandTotal.toFixed(3)} OMR</span>
         </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={() => onSuccess?.()}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={() => onSuccess?.()}>{t.common.cancel}</Button>
         <Button type="submit" disabled={mutation.isPending || isPaidLock}>
-          {mutation.isPending ? "Saving..." : "Save Invoice"}
+          {mutation.isPending ? t.common.saving : t.invoicesMod.saveInvoice}
         </Button>
       </div>
     </form>

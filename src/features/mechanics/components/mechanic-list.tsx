@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { MechanicForm } from "./mechanic-form"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { useTranslation } from "@/i18n"
 
 export function MechanicList() {
   const queryClient = useQueryClient()
@@ -19,6 +20,7 @@ export function MechanicList() {
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingMechanic, setEditingMechanic] = useState<any>(null)
+  const { t } = useTranslation()
 
   const { data, isLoading } = useQuery({
     queryKey: ['mechanics', page, search],
@@ -28,11 +30,11 @@ export function MechanicList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteMechanic(id),
     onSuccess: () => {
-      toast.success("Mechanic deleted")
+      toast.success(t.mechanics.mechanicDeleted)
       queryClient.invalidateQueries({ queryKey: ['mechanics'] })
     },
     onError: () => {
-      toast.error("Cannot delete mechanic with assigned job cards.")
+      toast.error(t.mechanics.cannotDelete)
     }
   })
 
@@ -42,7 +44,7 @@ export function MechanicList() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search mechanics..." 
+            placeholder={t.mechanics.searchMechanics}
             className="pl-8" 
             value={search}
             onChange={(e) => {
@@ -53,10 +55,10 @@ export function MechanicList() {
         </div>
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={<Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Add Mechanic</Button>} />
+          <DialogTrigger render={<Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.mechanics.addMechanic}</Button>} />
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Mechanic</DialogTitle>
+              <DialogTitle>{t.mechanics.addNewMechanic}</DialogTitle>
             </DialogHeader>
             <MechanicForm onSuccess={() => setIsAddOpen(false)} />
           </DialogContent>
@@ -67,17 +69,17 @@ export function MechanicList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Mechanic Name</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Active Jobs</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t.mechanics.mechanicName}</TableHead>
+              <TableHead>{t.mechanics.contact}</TableHead>
+              <TableHead>{t.mechanics.activeJobs}</TableHead>
+              <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center h-24">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : data?.data.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center h-24">No mechanics found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.mechanics.noMechanics}</TableCell></TableRow>
             ) : (
               data?.data.map((mechanic) => (
                 <TableRow key={mechanic.id}>
@@ -86,14 +88,14 @@ export function MechanicList() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-sm">{mechanic.phone || 'N/A'}</span>
+                      <span className="text-sm">{mechanic.phone || t.common.NA}</span>
                       <span className="text-xs text-muted-foreground">{mechanic.email}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Badge variant={mechanic.jobCards.length > 0 ? "default" : "secondary"}>
-                        {mechanic.jobCards.length} Assigned
+                        {mechanic.jobCards.length} {t.common.assigned}
                       </Badge>
                       {mechanic.jobCards.length > 0 && (
                         <span className="text-xs text-muted-foreground truncate max-w-[150px] hidden md:inline-block">
@@ -113,7 +115,7 @@ export function MechanicList() {
                       {editingMechanic?.id === mechanic.id && (
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Edit Mechanic</DialogTitle>
+                            <DialogTitle>{t.mechanics.editMechanic}</DialogTitle>
                           </DialogHeader>
                           <MechanicForm 
                             initialData={editingMechanic} 
@@ -131,15 +133,15 @@ export function MechanicList() {
                       } />
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Mechanic?</AlertDialogTitle>
+                          <AlertDialogTitle>{t.mechanics.deleteMechanic}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will permanently remove {mechanic.name} from the system. If this mechanic is assigned to active jobs, you must unassign them first.
+                            {t.mechanics.deleteConfirm}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                           <AlertDialogAction onClick={() => deleteMutation.mutate(mechanic.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete
+                            {t.common.delete}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -162,10 +164,10 @@ export function MechanicList() {
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
           >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+            <ChevronLeft className="h-4 w-4 mr-1" /> {t.common.previous}
           </Button>
           <div className="text-sm text-muted-foreground">
-            Page {page} of {data.meta.totalPages}
+            {t.common.page} {page} {t.common.of} {data.meta.totalPages}
           </div>
           <Button
             variant="outline"
@@ -173,7 +175,7 @@ export function MechanicList() {
             onClick={() => setPage(p => Math.min(data.meta.totalPages, p + 1))}
             disabled={page === data.meta.totalPages}
           >
-            Next <ChevronRight className="h-4 w-4 ml-1" />
+            {t.common.next} <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       )}

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createService, updateService } from "../actions"
 import { toast } from "sonner"
+import { useTranslation } from "@/i18n"
 
 interface ServiceFormProps {
   initialData?: ServiceFormValues & { id?: string }
@@ -18,6 +19,7 @@ interface ServiceFormProps {
 
 export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
   
   const { register, handleSubmit, formState: { errors } } = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
@@ -37,12 +39,12 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
       return createService(data)
     },
     onSuccess: () => {
-      toast.success(initialData?.id ? "Service updated!" : "Service added!")
+      toast.success(initialData?.id ? t.services.serviceUpdated : t.services.serviceCreated)
       queryClient.invalidateQueries({ queryKey: ['services'] })
       onSuccess?.()
     },
     onError: () => {
-      toast.error("Something went wrong.")
+      toast.error(t.common.somethingWrong)
     }
   })
 
@@ -63,7 +65,7 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Service Name <span className="text-destructive">*</span></Label>
+        <Label htmlFor="name">{t.services.serviceName} <span className="text-destructive">*</span></Label>
         <Input id="name" placeholder="E.g. Oil Change" {...register("name")} list="common-services" />
         <datalist id="common-services">
           {commonServices.map(service => (
@@ -74,26 +76,26 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="price">Price <span className="text-destructive">*</span></Label>
+        <Label htmlFor="price">{t.services.price} <span className="text-destructive">*</span></Label>
         <Input id="price" type="number" step="0.01" {...register("price", { valueAsNumber: true })} />
         {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="category">Category</Label>
+        <Label htmlFor="category">{t.services.category}</Label>
         <Input id="category" placeholder="E.g. Mechanical, Electrical..." {...register("category")} />
         {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="estimatedTime">Estimated Time</Label>
+        <Label htmlFor="estimatedTime">{t.services.estimatedTime}</Label>
         <Input id="estimatedTime" placeholder="E.g. 1 hour, 30 mins" {...register("estimatedTime")} />
         {errors.estimatedTime && <p className="text-sm text-destructive">{errors.estimatedTime.message}</p>}
       </div>
 
       <div className="pt-4 flex justify-end">
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving..." : "Save Service"}
+          {mutation.isPending ? t.common.saving : t.services.saveService}
         </Button>
       </div>
     </form>
