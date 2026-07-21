@@ -99,7 +99,7 @@ export function PurchaseList() {
                   <TableCell className={p.pendingAmount > 0 ? "text-destructive font-medium" : "text-muted-foreground"}>
                     {p.pendingAmount.toFixed(3)} OMR
                   </TableCell>
-                  <TableCell>{p.paymentMethod?.name}</TableCell>
+                  <TableCell>{p.paymentMethod?.name || '-'}</TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => setViewingPurchase(p)} title={t.purchases.viewDetails}>
                       <Eye className="h-4 w-4" />
@@ -177,7 +177,7 @@ export function PurchaseList() {
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground block">{t.purchases.ledgerAccount}</span>
-                  <span className="font-semibold">{viewingPurchase.paymentMethod?.name}</span>
+                  <span className="font-semibold">{viewingPurchase.paymentMethod?.name || '-'}</span>
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground block">{t.common.status}</span>

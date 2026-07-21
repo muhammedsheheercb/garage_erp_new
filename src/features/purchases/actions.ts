@@ -1,8 +1,27 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import type { Prisma } from "@prisma/client"
 import { PurchaseFormValues, purchaseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
+
+const directPaymentNames = {
+  CASH: "Direct Cash",
+  BANK_TRANSFER: "Direct Bank Transfer",
+  CARD: "Direct Card",
+  UPI: "Direct UPI",
+} as const
+
+async function getDirectPaymeterId(
+  tx: Prisma.TransactionClient,
+  method: keyof typeof directPaymentNames,
+) {
+  const name = directPaymentNames[method]
+  const existing = await tx.paymeter.findUnique({ where: { name } })
+  if (existing) return existing.id
+
+  return (await tx.paymeter.create({ data: { name } })).id
+}
 
 export async function getPurchases(page = 1, search = "") {
   const limit = 10;
@@ -84,6 +103,7 @@ export async function getNextPurchaseNumber() {
 
 export async function createPurchase(data: PurchaseFormValues) {
   const parsed = purchaseSchema.parse(data)
+  const paymentMethodId = parsed.paymentSource === "PAYMETER" ? parsed.paymentMethodId! : null
   
   // Calculate calculations
   let subTotal = 0
@@ -108,16 +128,25 @@ export async function createPurchase(data: PurchaseFormValues) {
   const grandTotal = subTotal + taxAmount - parsed.discount
   const pendingAmount = grandTotal - parsed.paidAmount
 
+  if (parsed.discount > subTotal) {
+    throw new Error("Discount cannot exceed the purchase subtotal.")
+  }
+
+  if (parsed.paidAmount > grandTotal) {
+    throw new Error("Paid amount cannot exceed the purchase grand total.")
+  }
+
   const purchaseNumber = await getNextPurchaseNumber()
 
   const result = await prisma.$transaction(async (tx) => {
+    const selectedPaymentMethodId = paymentMethodId || await getDirectPaymeterId(tx, parsed.directPaymentMethod!)
     // 1. Create the purchase
     const purchase = await tx.purchase.create({
       data: {
         purchaseNumber,
         purchaseDate: new Date(parsed.purchaseDate),
         supplierId: parsed.supplierId,
-        paymentMethodId: parsed.paymentMethodId,
+        paymentMethodId: selectedPaymentMethodId,
         subTotal,
         taxRate,
         taxAmount,
@@ -131,12 +160,10 @@ export async function createPurchase(data: PurchaseFormValues) {
       }
     })
 
-    // 2. Always increment Paymeter spentAmount by grandTotal (full purchase liability)
+    // 2. Record the purchase against its selected ledger or direct-payment ledger.
     await tx.paymeter.update({
-      where: { id: parsed.paymentMethodId },
-      data: {
-        spentAmount: { increment: grandTotal }
-      }
+      where: { id: selectedPaymentMethodId },
+      data: { spentAmount: { increment: grandTotal } }
     })
 
     // 3. If paidAmount > 0, create a PurchasePayment record
@@ -144,7 +171,7 @@ export async function createPurchase(data: PurchaseFormValues) {
       await tx.purchasePayment.create({
         data: {
           purchaseId: purchase.id,
-          paymeterId: parsed.paymentMethodId,
+          paymeterId: selectedPaymentMethodId,
           amount: parsed.paidAmount,
           date: new Date(parsed.purchaseDate)
         }
@@ -191,9 +218,7 @@ export async function deletePurchase(id: string) {
     // 2. Revert Paymeter spentAmount by full grandTotal (purchase commitment is cancelled)
     await tx.paymeter.update({
       where: { id: purchase.paymentMethodId },
-      data: {
-        spentAmount: { decrement: purchase.grandTotal }
-      }
+      data: { spentAmount: { decrement: purchase.grandTotal } }
     })
 
     // 3. Delete the purchase (cascades items and payments)
@@ -245,9 +270,7 @@ export async function payPurchase(purchaseId: string, amount: number) {
     // 3. Update Paymeter spent amount (settling the purchase reduces what's owed)
     await tx.paymeter.update({
       where: { id: purchase.paymentMethodId },
-      data: {
-        spentAmount: { decrement: amount }
-      }
+      data: { spentAmount: { decrement: amount } }
     })
 
     return updatedPurchase

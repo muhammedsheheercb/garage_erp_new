@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { getSuppliers, deleteSupplier, getSupplierDetails, deleteSupplierPayment } from "../actions"
+import { getSuppliers, deleteSupplier, getSupplierDetails } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -38,26 +38,27 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
   const [activeTab, setActiveTab] = useState("inventory")
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
   const { t } = useTranslation()
+  const getPaymentMethodLabel = (name: string) => ({
+    "Direct Cash": t.payments.cash,
+    "Direct Bank Transfer": t.payments.bankTransfer,
+    "Direct Card": t.payments.card,
+    "Direct UPI": t.payments.upi,
+  }[name] || name)
 
   const { data: details, isLoading } = useQuery({
     queryKey: ['supplier', supplierId],
     queryFn: () => getSupplierDetails(supplierId)
   })
 
-  const deletePaymentMutation = useMutation({
-    mutationFn: (id: string) => deleteSupplierPayment(id),
-    onSuccess: () => {
-      toast.success(t.suppliers.paymentDeleted)
-      queryClient.invalidateQueries({ queryKey: ['supplier', supplierId] })
-    }
-  })
-
   if (isLoading) return <div className="p-8 text-center">{t.common.loading}</div>
   if (!details) return <div className="p-8 text-center text-destructive">{t.suppliers.supplierNotFound}</div>
 
-  const totalPaid = details.payments.reduce((acc: number, p: any) => acc + p.amount, 0)
+  const totalPaid = details.purchases.reduce((acc: number, purchase: any) => acc + purchase.paidAmount, 0)
   const totalPurchaseCost = details.purchases.reduce((acc: number, p: any) => acc + p.grandTotal, 0)
-  const pendingAmount = totalPurchaseCost - totalPaid
+  const pendingAmount = details.purchases.reduce((acc: number, purchase: any) => acc + purchase.pendingAmount, 0)
+  const purchasePayments = details.purchases.flatMap((purchase: any) =>
+    purchase.purchasePayments.map((payment: any) => ({ ...payment, purchase }))
+  )
   
   // Quick overview stats
   return (
@@ -116,12 +117,12 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="font-medium">{t.suppliers.paymentHistory}</h3>
-            {details.purchases.length > 0 && pendingAmount > 0 && (
+            {details.purchases.some((purchase: any) => purchase.pendingAmount > 0) && (
               <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
                 <DialogTrigger render={<Button size="sm"><Plus className="h-4 w-4 mr-2" /> {t.suppliers.addPayment}</Button>} />
                 <DialogContent className="max-w-2xl">
                   <DialogHeader><DialogTitle>{t.suppliers.recordPayment} {details.name}</DialogTitle></DialogHeader>
-                  <SupplierPaymentForm supplierId={details.id} purchases={details.purchases} payments={details.payments} onSuccess={() => setIsPaymentOpen(false)} />
+                  <SupplierPaymentForm supplierId={details.id} purchases={details.purchases} paymentMethods={details.paymentMethods} onSuccess={() => setIsPaymentOpen(false)} />
                 </DialogContent>
               </Dialog>
             )}
@@ -135,38 +136,18 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
                   <TableHead>{t.suppliers.reference}</TableHead>
                   <TableHead>{t.suppliers.method}</TableHead>
                   <TableHead className="text-right">{t.expensesMod.amount}</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {details.payments.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t.suppliers.noPayments}</TableCell></TableRow>
+                {purchasePayments.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t.suppliers.noPayments}</TableCell></TableRow>
                 ) : (
-                  details.payments.map((payment: any) => (
+                  purchasePayments.map((payment: any) => (
                     <TableRow key={payment.id}>
                       <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{payment.reference || '-'}</TableCell>
-                      <TableCell>{payment.method}</TableCell>
+                      <TableCell className="font-medium">{payment.purchase.purchaseNumber}</TableCell>
+                      <TableCell>{payment.paymeter ? getPaymentMethodLabel(payment.paymeter.name) : '-'}</TableCell>
                       <TableCell className="text-right font-medium text-green-600">{payment.amount.toFixed(3)}</TableCell>
-                      <TableCell>
-                        <AlertDialog>
-                          <AlertDialogTrigger render={
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive">
-                              <Trash className="h-3 w-3" />
-                            </Button>
-                          } />
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>{t.suppliers.deletePaymentTitle}</AlertDialogTitle>
-                              <AlertDialogDescription>{t.suppliers.deletePaymentConfirm}</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deletePaymentMutation.mutate(payment.id)} className="bg-destructive text-destructive-foreground">{t.common.delete}</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -269,7 +250,7 @@ export function SupplierList() {
                         </Button>
                       } />
                       {viewingSupplier === supplier.id && (
-                        <DialogContent className="max-w-3xl">
+                        <DialogContent className="sm:max-w-7xl max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>{supplier.name} - {t.suppliers.details}</DialogTitle>
                           </DialogHeader>

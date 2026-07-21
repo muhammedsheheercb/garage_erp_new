@@ -99,6 +99,14 @@ export async function updateInventoryItem(id: string, data: InventoryFormValues)
 }
 
 export async function deleteInventoryItem(id: string) {
+  const [batchCount, purchaseItemCount] = await Promise.all([
+    prisma.inventoryBatch.count({ where: { inventoryId: id } }),
+    prisma.purchaseItem.count({ where: { inventoryId: id } }),
+  ])
+  if (batchCount > 0 || purchaseItemCount > 0) {
+    throw new Error("This inventory item cannot be deleted because it has purchase or stock history.")
+  }
+
   await prisma.inventory.delete({
     where: { id }
   })

@@ -11,8 +11,8 @@ export const expenseCategories = [
 export const expenseSchema = z.object({
   id: z.string().optional(),
   category: z.enum(expenseCategories),
-  amount: z.number().min(0.001, "Amount must be greater than 0"),
-  description: z.string().optional(),
+  amount: z.number().finite("Amount is required").min(0.001, "Amount must be greater than 0"),
+  description: z.string().trim().optional(),
   date: z.date(),
 })
 

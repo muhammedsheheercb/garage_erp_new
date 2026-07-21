@@ -20,6 +20,7 @@ export function PaymeterList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingPaymeter, setEditingPaymeter] = useState<any>(null)
   const [settlingPaymeter, setSettlingPaymeter] = useState<any>(null)
+  const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({})
 
   const { data: paymeters = [], isLoading } = useQuery({
     queryKey: ['paymeters'],
@@ -39,10 +40,11 @@ export function PaymeterList() {
 
   const payPurchaseMutation = useMutation({
     mutationFn: ({ purchaseId, amount }: { purchaseId: string, amount: number }) => payPurchase(purchaseId, amount),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success(t.purchases.purchasePaymentAdded)
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
+      setSettlementAmounts((amounts) => ({ ...amounts, [variables.purchaseId]: "0" }))
     },
     onError: (error: any) => {
       toast.error(error.message || t.common.somethingWrong)
@@ -122,13 +124,23 @@ export function PaymeterList() {
                                       <TableCell className="text-right">
                                         <form onSubmit={(e) => {
                                           e.preventDefault()
-                                          const formData = new FormData(e.currentTarget)
-                                          const amount = parseFloat(formData.get("amount") as string)
+                                          const amount = parseFloat(settlementAmounts[purchase.id] || "0")
                                           if (amount > 0 && amount <= purchase.pendingAmount) {
                                             payPurchaseMutation.mutate({ purchaseId: purchase.id, amount })
                                           }
                                         }} className="flex items-center gap-2 justify-end">
-                                          <Input name="amount" type="number" step="0.001" required min="0.001" max={purchase.pendingAmount} className="w-24 h-8" placeholder="0.000" />
+                                          <Input
+                                            name="amount"
+                                            type="number"
+                                            step="0.001"
+                                            required
+                                            min="0.001"
+                                            max={purchase.pendingAmount}
+                                            className="w-24 h-8"
+                                            placeholder="0.000"
+                                            value={settlementAmounts[purchase.id] ?? ""}
+                                            onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [purchase.id]: event.target.value }))}
+                                          />
                                           <Button type="submit" size="sm" disabled={payPurchaseMutation.isPending}>{t.payments.pay}</Button>
                                         </form>
                                       </TableCell>

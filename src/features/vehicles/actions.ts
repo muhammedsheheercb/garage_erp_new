@@ -92,6 +92,11 @@ export async function updateVehicle(id: string, data: VehicleFormValues) {
 }
 
 export async function deleteVehicle(id: string) {
+  const jobCardCount = await prisma.jobCard.count({ where: { vehicleId: id } })
+  if (jobCardCount > 0) {
+    throw new Error("This vehicle cannot be deleted because it has job card history.")
+  }
+
   await prisma.vehicle.delete({
     where: { id }
   })

@@ -70,6 +70,11 @@ export async function updateService(id: string, data: ServiceFormValues) {
 }
 
 export async function deleteService(id: string) {
+  const jobCardServiceCount = await prisma.jobCardService.count({ where: { serviceId: id } })
+  if (jobCardServiceCount > 0) {
+    throw new Error("This service cannot be deleted because it is used in job cards.")
+  }
+
   await prisma.service.delete({
     where: { id }
   })

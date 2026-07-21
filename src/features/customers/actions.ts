@@ -78,6 +78,16 @@ export async function updateCustomer(id: string, data: CustomerFormValues) {
 }
 
 export async function deleteCustomer(id: string) {
+  const [vehicleCount, jobCardCount, invoiceCount] = await Promise.all([
+    prisma.vehicle.count({ where: { customerId: id } }),
+    prisma.jobCard.count({ where: { customerId: id } }),
+    prisma.invoice.count({ where: { customerId: id } }),
+  ])
+
+  if (vehicleCount || jobCardCount || invoiceCount) {
+    throw new Error("This customer cannot be deleted because it has saved vehicles, job cards, or invoices.")
+  }
+
   await prisma.customer.delete({
     where: { id }
   })

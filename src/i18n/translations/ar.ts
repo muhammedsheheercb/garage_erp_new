@@ -361,6 +361,7 @@ export const ar: TranslationKeys = {
     searchPayments: "البحث عن مدفوعات...",
     noPayments: "لا توجد مدفوعات.",
     paymentMethod: "طريقة الدفع",
+    directPayment: "دفع مباشر",
     amount: "المبلغ",
     date: "التاريخ",
     invoice: "الفاتورة",

@@ -43,7 +43,9 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
     defaultValues: {
       purchaseDate: new Date().toISOString().split('T')[0],
       supplierId: "",
+      paymentSource: "PAYMETER",
       paymentMethodId: "",
+      directPaymentMethod: undefined,
       discount: 0,
       paidAmount: 0,
       items: [{ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0 }]
@@ -76,6 +78,7 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
   const items = watch("items") || []
   const discountVal = watch("discount") || 0
   const paidVal = watch("paidAmount") || 0
+  const paymentSource = watch("paymentSource")
 
   const subTotal = items.reduce((acc, item) => {
     const qty = Number(item.quantity) || 0
@@ -141,6 +144,28 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="paymentSource">{t.payments.paymentMethod} <span className="text-destructive">*</span></Label>
+          <Controller
+            control={control}
+            name="paymentSource"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={(value) => {
+                field.onChange(value)
+                setValue("paymentMethodId", "")
+                setValue("directPaymentMethod", undefined)
+              }}>
+                <SelectTrigger id="paymentSource"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PAYMETER">{t.purchases.paymeterLedger}</SelectItem>
+                  <SelectItem value="DIRECT">{t.payments.directPayment}</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
+        {paymentSource === "PAYMETER" ? (
+        <div className="space-y-2">
           <Label htmlFor="paymentMethodId">{t.purchases.paymeterLedger} <span className="text-destructive">*</span></Label>
           <Controller
             control={control}
@@ -162,6 +187,27 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
           />
           {errors.paymentMethodId && <p className="text-sm text-destructive">{errors.paymentMethodId.message}</p>}
         </div>
+        ) : (
+        <div className="space-y-2">
+          <Label htmlFor="directPaymentMethod">{t.payments.paymentMethod} <span className="text-destructive">*</span></Label>
+          <Controller
+            control={control}
+            name="directPaymentMethod"
+            render={({ field }) => (
+              <Select value={field.value || ""} onValueChange={field.onChange}>
+                <SelectTrigger id="directPaymentMethod"><SelectValue placeholder={t.payments.selectMethod} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CASH">{t.payments.cash}</SelectItem>
+                  <SelectItem value="BANK_TRANSFER">{t.payments.bankTransfer}</SelectItem>
+                  <SelectItem value="CARD">{t.payments.card}</SelectItem>
+                  <SelectItem value="UPI">{t.payments.upi}</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.directPaymentMethod && <p className="text-sm text-destructive">{errors.directPaymentMethod.message}</p>}
+        </div>
+        )}
       </div>
 
       <div className="space-y-2">

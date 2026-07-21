@@ -17,13 +17,8 @@ export default async function ReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/40 p-4 md:p-8 print:bg-white print:p-0">
-      <div className="max-w-screen-2xl mx-auto space-y-6 print:space-y-0">
-        <div className="flex flex-col gap-4 print:hidden">
-        </div>
-        
-        <ReportsDashboard />
-      </div>
-    </div>
+    <ModulePageWrapper titleKey="reportsMod.title" descriptionKey="reportsMod.description">
+      <ReportsDashboard />
+    </ModulePageWrapper>
   )
 }

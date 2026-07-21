@@ -16,7 +16,7 @@ export default async function SuppliersPage() {
   }
 
   return (
-    <ModulePageWrapper titleKey="suppliersMod.title" descriptionKey="suppliersMod.description">
+    <ModulePageWrapper titleKey="suppliers.title" descriptionKey="suppliers.description">
       <SupplierList />
     </ModulePageWrapper>
   )

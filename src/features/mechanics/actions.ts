@@ -75,6 +75,11 @@ export async function updateMechanic(id: string, data: MechanicFormValues) {
 }
 
 export async function deleteMechanic(id: string) {
+  const jobCardCount = await prisma.jobCard.count({ where: { mechanicId: id } })
+  if (jobCardCount > 0) {
+    throw new Error("This mechanic cannot be deleted because they are assigned to job cards.")
+  }
+
   await prisma.mechanic.delete({
     where: { id }
   })

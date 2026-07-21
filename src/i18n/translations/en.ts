@@ -363,6 +363,7 @@ export const en = {
     searchPayments: "Search payments...",
     noPayments: "No payments found.",
     paymentMethod: "Payment Method",
+    directPayment: "Direct Payment",
     amount: "Amount",
     date: "Date",
     invoice: "Invoice",

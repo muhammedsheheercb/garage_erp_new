@@ -85,6 +85,24 @@ export async function createPayment(data: PaymentFormValues) {
   const parsed = paymentSchema.parse(data)
   
   const result = await prisma.$transaction(async (tx) => {
+    const invoiceBeforePayment = await tx.invoice.findUnique({
+      where: { id: parsed.invoiceId },
+      include: { payments: true },
+    })
+
+    if (!invoiceBeforePayment) {
+      throw new Error("The selected invoice no longer exists.")
+    }
+
+    const alreadyPaid = invoiceBeforePayment.payments.reduce(
+      (total, payment) => total + payment.amount,
+      0,
+    )
+    const dueAmount = Math.max(0, invoiceBeforePayment.grandTotal - alreadyPaid)
+    if (parsed.amount > dueAmount) {
+      throw new Error(`Payment amount cannot exceed the outstanding balance of ${dueAmount.toFixed(3)} OMR.`)
+    }
+
     const payment = await tx.payment.create({
       data: parsed
     })

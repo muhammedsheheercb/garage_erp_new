@@ -76,8 +76,10 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
   useEffect(() => {
     if (watchJobCardId && dropdownData?.jobCards) {
       const jc = dropdownData.jobCards.find((jc: any) => jc.id === watchJobCardId)
-      if (jc && getValues("customerId") !== jc.customerId) {
-        setValue("customerId", jc.customerId)
+      if (jc && !initialData) {
+        if (getValues("customerId") !== jc.customerId) {
+          setValue("customerId", jc.customerId)
+        }
         // Auto-load totals
         setValue("serviceCharge", jc.serviceTotal || 0)
         setValue("labourCharge", 0) // Leave labour blank for manual entry
@@ -294,7 +296,9 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
             id="serviceCharge" 
             type="number" 
             step="0.001" 
-            disabled={isPaidLock}
+            readOnly
+            aria-readonly="true"
+            className="bg-muted cursor-not-allowed"
             {...register("serviceCharge", { valueAsNumber: true })} 
           />
           {errors.serviceCharge && <p className="text-sm text-destructive">{errors.serviceCharge.message}</p>}
@@ -318,7 +322,9 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
             id="partsCost" 
             type="number" 
             step="0.001" 
-            disabled={isPaidLock}
+            readOnly
+            aria-readonly="true"
+            className="bg-muted cursor-not-allowed"
             {...register("partsCost", { valueAsNumber: true })} 
           />
           {errors.partsCost && <p className="text-sm text-destructive">{errors.partsCost.message}</p>}

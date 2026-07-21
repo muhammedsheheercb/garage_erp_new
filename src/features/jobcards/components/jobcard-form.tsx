@@ -73,7 +73,10 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
       customerId: initialData?.customerId || "",
       vehicleId: initialData?.vehicleId || "",
       mechanicId: initialData?.mechanicId || "",
-      status: initialData?.status || "PENDING",
+      status:
+        initialData?.status === "WORKING"
+          ? "IN_PROGRESS"
+          : initialData?.status || "PENDING",
       complaint: initialData?.complaint || "",
       workDone: initialData?.workDone || "",
       notes: initialData?.notes || "",
@@ -88,11 +91,11 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
 
       parts:
         initialData?.parts?.map((p: any) => ({
-          inventoryId: p.inventoryId,
-          name: p.inventory?.itemName || t.common.unknown,
+          batchId: p.batchId,
+          name: p.batch?.inventory?.itemName || t.common.unknown,
           quantity: p.quantity,
           price: p.price,
-          maxStock: p.inventory?.quantity || 999, // We just need a default max for edit mode
+          maxStock: Math.max(p.batch?.quantity || 0, p.quantity),
         })) || [],
 
       serviceTotal: initialData?.serviceTotal || 0,
@@ -492,7 +495,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                       </SelectItem>
                       {initialData ? (
                         <>
-                          <SelectItem value="WORKING">
+                          <SelectItem value="IN_PROGRESS">
                             {t.jobcards.statusInProgress}
                           </SelectItem>
                           <SelectItem value="COMPLETED">
