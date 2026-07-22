@@ -33,6 +33,8 @@ export const en = {
     close: "Close",
     restore: "Restore",
     signOut: "Sign Out",
+    signOutConfirmTitle: "Sign out of Garage ERP?",
+    signOutConfirmDescription: "You will need to sign in again to continue.",
     toggleTheme: "Toggle theme",
     assigned: "Assigned",
     NA: "N/A",

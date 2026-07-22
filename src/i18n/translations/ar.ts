@@ -35,6 +35,8 @@ export const ar: TranslationKeys = {
     close: "إغلاق",
     restore: "استعادة",
     signOut: "تسجيل الخروج",
+    signOutConfirmTitle: "تسجيل الخروج من نظام إدارة الكراج؟",
+    signOutConfirmDescription: "ستحتاج إلى تسجيل الدخول مرة أخرى للمتابعة.",
     toggleTheme: "تبديل المظهر",
     assigned: "معيّن",
     NA: "غير متوفر",

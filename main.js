@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const fs = require('fs');
 const { spawn } = require('child_process');
 const http = require('http');
+const { dialog } = require('electron');
 
 const waitForServer = (url, timeout = 30000) => {
   return new Promise((resolve, reject) => {
@@ -25,6 +26,26 @@ const waitForServer = (url, timeout = 30000) => {
 
 let mainWindow;
 let nextProcess;
+
+function getDesktopServerEnv(port) {
+  const required = ['DATABASE_URL', 'AUTH_SECRET'];
+  const missing = required.filter((name) => !process.env[name]);
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing ${missing.join(', ')}. Configure the same Neon DATABASE_URL and AUTH_SECRET used by the web deployment before launching Garage ERP.`
+    );
+  }
+
+  return {
+    ...process.env,
+    NODE_ENV: 'production',
+    PORT: port.toString(),
+    HOSTNAME: '127.0.0.1',
+    ELECTRON_RUN_AS_NODE: '1',
+    ELECTRON_DESKTOP: '1',
+  };
+}
 
 async function createWindow() {
   mainWindow = new BrowserWindow({
@@ -70,29 +91,20 @@ async function createWindow() {
       console.error('Dev server timeout', err);
     }
   } else {
-    // Persistent database setup
-    const dbPath = path.join(app.getPath('userData'), 'database.db');
-    if (!fs.existsSync(dbPath)) {
-      const sourceDb = path.join(__dirname, 'prisma', 'dev.db');
-      if (fs.existsSync(sourceDb)) {
-        fs.copyFileSync(sourceDb, dbPath);
-      }
+    // The packaged app runs the same Next.js server as the website. It reads
+    // DATABASE_URL at runtime and never creates or uses a local database.
+    const serverPath = path.join(__dirname, '.next', 'standalone', 'server.js');
+
+    let env;
+    try {
+      env = getDesktopServerEnv(port);
+    } catch (error) {
+      dialog.showErrorBox('Garage ERP configuration required', error.message);
+      app.quit();
+      return;
     }
 
-    // In production, Next.js standalone server is run
-    const serverPath = path.join(__dirname, '.next', 'standalone', 'server.js');
-    
-    // Set environment variables for Next.js standalone
-    const env = {
-      ...process.env,
-      NODE_ENV: 'production',
-      PORT: port.toString(),
-      HOSTNAME: 'localhost',
-      ELECTRON_RUN_AS_NODE: '1',
-      DATABASE_URL: `file:${dbPath}`
-    };
-
-    nextProcess = spawn(process.execPath, [serverPath], { env });
+    nextProcess = spawn(process.execPath, [serverPath], { env, cwd: path.dirname(serverPath) });
 
     nextProcess.stdout.on('data', (data) => console.log(`Next.js: ${data}`));
     nextProcess.stderr.on('data', (data) => console.error(`Next.js Error: ${data}`));

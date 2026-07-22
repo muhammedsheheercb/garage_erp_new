@@ -1,6 +1,8 @@
 {
   "name": "garage_erp",
   "version": "0.1.0",
+  "description": "Garage ERP web and desktop application",
+  "author": "Garage ERP",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -8,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "electron:dev": "concurrently \"pnpm dev\" \"wait-on http://localhost:3000 && electron .\""
+    "electron:dev": "concurrently \"pnpm dev\" \"wait-on http://127.0.0.1:3000 && electron .\"",
+    "electron:prepare": "node scripts/prepare-electron.cjs",
+    "electron:build": "pnpm build && pnpm electron:prepare && electron-builder --win"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -58,6 +62,8 @@
     "appId": "com.garageerp.app",
     "productName": "Garage ERP",
     "asar": false,
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
     "directories": {
       "output": "dist"
     },
@@ -69,14 +75,7 @@
       "package.json",
       ".next/standalone/**/*",
       ".next/static/**/*",
-      "public/**/*",
-      "prisma/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "prisma/dev.db",
-        "to": "prisma/dev.db"
-      }
+      "public/**/*"
     ]
   }
 }

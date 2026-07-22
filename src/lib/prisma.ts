@@ -2,11 +2,8 @@ import { PrismaClient } from '@prisma/client'
 
 const prismaClientSingleton = () => {
   return new PrismaClient({
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL || "file:./dev.db",
-      },
-    },
+    // DATABASE_URL is intentionally read by Prisma from the runtime environment.
+    // The web server and the embedded Next.js server use the same value.
   })
 }
 

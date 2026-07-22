@@ -1,52 +1,52 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { loginAction } from "@/app/actions/auth"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Wrench, Eye, EyeOff } from "lucide-react"
-import { toast } from "sonner"
-import { useTranslation } from "@/i18n"
-import { LanguageToggle } from "@/components/language-toggle"
+import { useState } from "react";
+import { loginAction } from "@/app/actions/auth";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Wrench, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+import { useTranslation } from "@/i18n";
+import { LanguageToggle } from "@/components/language-toggle";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const { t } = useTranslation()
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
-      const result = await loginAction(email, password)
+      const result = await loginAction(email, password);
 
       if (!result?.success) {
-        toast.error(result?.error || t.login.invalidCredentials)
-        return
+        toast.error(result?.error || t.login.invalidCredentials);
+        return;
       }
 
-      toast.success(t.login.success)
-      const from = searchParams.get("from") || "/"
-      router.push(from)
-      router.refresh()
+      toast.success(t.login.success);
+      const from = searchParams.get("from") || "/";
+      router.push(from);
+      router.refresh();
     } catch (error) {
-      toast.error(t.login.tryAgain)
+      toast.error(t.login.tryAgain);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#1c1c1c] text-white font-sans selection:bg-[#e32400] selection:text-white">
       {/* Left side - Image */}
       <div className="relative w-full h-[40vh] lg:w-1/2 lg:h-screen">
         <img
-          src="https://images.unsplash.com/photo-1611760399750-bf3b95ac8f0a?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          src="https://images.unsplash.com/photo-1551522435-a13afa10f103?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Garage Background"
           className="absolute inset-0 h-full w-full object-cover"
         />
@@ -68,7 +68,6 @@ export default function LoginPage() {
 
       {/* Right side - Login Form */}
       <div className="flex w-full flex-col lg:w-1/2 min-h-[60vh] lg:h-screen px-6 sm:px-12 lg:px-24 py-12 lg:py-16 bg-[#1a1a1a] relative overflow-y-auto">
-
         {/* Language Toggle in top right */}
         <div className="absolute top-4 right-4 z-20">
           <LanguageToggle />
@@ -78,7 +77,9 @@ export default function LoginPage() {
           {/* Brand / Logo */}
           <div className="flex items-center gap-2 mb-16">
             <Wrench className="h-6 w-6 text-white" />
-            <span className="font-bold text-xl uppercase tracking-widest font-serif">{t.common.appName}</span>
+            <span className="font-bold text-xl uppercase tracking-widest font-serif">
+              {t.common.appName}
+            </span>
           </div>
 
           <h2 className="text-4xl font-medium mb-10 tracking-tight">
@@ -88,7 +89,10 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Custom Input: Email */}
             <div className="bg-[#2a2a2a] border border-[#3a3a3a] px-4 py-3 focus-within:border-[#e32400] transition-colors group">
-              <label className="block text-[13px] text-gray-400 font-medium mb-1" htmlFor="email">
+              <label
+                className="block text-[13px] text-gray-400 font-medium mb-1"
+                htmlFor="email"
+              >
                 {t.login.email}
               </label>
               <input
@@ -105,7 +109,10 @@ export default function LoginPage() {
 
             {/* Custom Input: Password */}
             <div className="bg-[#2a2a2a] border border-[#3a3a3a] px-4 py-3 focus-within:border-[#e32400] transition-colors group relative">
-              <label className="block text-[13px] text-gray-400 font-medium mb-1" htmlFor="password">
+              <label
+                className="block text-[13px] text-gray-400 font-medium mb-1"
+                htmlFor="password"
+              >
                 {t.login.password}
               </label>
               <div className="flex items-center">
@@ -124,7 +131,11 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 mt-2 text-gray-400 hover:text-white transition-colors"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -137,13 +148,13 @@ export default function LoginPage() {
             >
               {isLoading ? t.login.submitting : t.login.submit}
             </button>
-
-
           </form>
 
           {/* Footer */}
           <div className="mt-12 flex items-center justify-between text-xs font-medium text-[#e32400]">
-            <a href="#" className="hover:underline">{t.login.signUp}</a>
+            <a href="#" className="hover:underline">
+              {t.login.signUp}
+            </a>
             <div className="h-[1px] flex-1 bg-[#3a3a3a] mx-4 relative">
               {/* Red line indicator mimicking the screenshot */}
               <div className="absolute top-0 left-0 h-[1px] w-full bg-[#e32400]/40"></div>
@@ -153,5 +164,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -2,15 +2,22 @@ import { cookies } from "next/headers"
 import crypto from "crypto"
 
 const SESSION_COOKIE_NAME = "garage_session"
-const SESSION_SECRET = process.env.AUTH_SECRET || "default_super_secure_garage_erp_key_123456"
 
 // AES-256-GCM configuration
 const ALGORITHM = "aes-256-gcm"
 const IV_LENGTH = 12
 
+function getSessionSecret(): string {
+  const secret = process.env.AUTH_SECRET
+  if (!secret) {
+    throw new Error("AUTH_SECRET is required for Garage ERP sessions.")
+  }
+  return secret
+}
+
 function encrypt(text: string): string {
   const iv = crypto.randomBytes(IV_LENGTH)
-  const key = crypto.scryptSync(SESSION_SECRET, "salt", 32)
+  const key = crypto.scryptSync(getSessionSecret(), "salt", 32)
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
   
   let encrypted = cipher.update(text, "utf8", "hex")
@@ -31,7 +38,7 @@ export function decrypt(encryptedText: string): string | null {
     const encrypted = parts[1]
     const authTag = Buffer.from(parts[2], "hex")
     
-    const key = crypto.scryptSync(SESSION_SECRET, "salt", 32)
+    const key = crypto.scryptSync(getSessionSecret(), "salt", 32)
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
     decipher.setAuthTag(authTag)
     
@@ -62,7 +69,9 @@ export async function createSession(userId: string, email: string) {
   
   cookieStore.set(SESSION_COOKIE_NAME, encrypted, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // The Electron server is intentionally local HTTP. Secure cookies remain
+    // enabled for the hosted website while desktop sessions stay functional.
+    secure: process.env.NODE_ENV === "production" && process.env.ELECTRON_DESKTOP !== "1",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days

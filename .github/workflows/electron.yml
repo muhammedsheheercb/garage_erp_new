@@ -30,25 +30,10 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
 
-      - name: Build Next.js App
-        run: pnpm run build
+      - name: Build and package Electron Windows App
+        run: pnpm electron:build
         env:
           NEXT_TELEMETRY_DISABLED: 1
-
-      - name: Prepare Standalone Assets
-        shell: bash
-        run: |
-          cp -r public .next/standalone/
-          mkdir -p .next/standalone/.next
-          cp -r .next/static .next/standalone/.next/
-          mkdir -p .next/standalone/node_modules/
-          cp -r node_modules/.prisma .next/standalone/node_modules/ || true
-          cp -r node_modules/@prisma .next/standalone/node_modules/ || true
-          
-      - name: Build Electron Windows App
-        run: pnpm exec electron-builder --win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
