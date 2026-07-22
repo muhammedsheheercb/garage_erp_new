@@ -123,6 +123,13 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-attachment: fixed;
+    background-image:
+      linear-gradient(oklch(from var(--background) l c h / 92%), oklch(from var(--background) l c h / 92%)),
+      url("https://images.unsplash.com/photo-1551522435-a13afa10f103?q=80&w=1470&auto=format&fit=crop");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
   }
   html {
     @apply font-sans;
