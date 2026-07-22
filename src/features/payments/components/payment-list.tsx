@@ -73,13 +73,13 @@ export function PaymentList() {
           </Button>
         </div>
 
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {activeTab === "history" && (
             <div className="relative w-full sm:max-w-xs">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder={t.payments.searchPayments} 
-                className="pl-8" 
+                className="pl-8 w-full" 
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value)
@@ -105,7 +105,7 @@ export function PaymentList() {
 
       {activeTab === "history" && (
         <div className="space-y-4">
-          <div className="border rounded-md overflow-hidden bg-card">
+          <div className="border rounded-md overflow-x-auto bg-card">
             <Table>
               <TableHeader>
                 <TableRow>

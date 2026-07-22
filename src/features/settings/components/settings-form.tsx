@@ -180,7 +180,7 @@ export function SettingsForm() {
   return (
     <div className="w-full">
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 flex w-full justify-start overflow-x-auto h-auto p-1">
           <TabsTrigger value="general">{t.settings.generalConfig}</TabsTrigger>
           <TabsTrigger value="appearance">{t.settings.appearance}</TabsTrigger>
           <TabsTrigger value="tax">{t.settings.taxSettings}</TabsTrigger>
@@ -498,7 +498,7 @@ export function SettingsForm() {
               </div>
 
               {/* Table of Tax Rates */}
-              <div className="border rounded-md">
+              <div className="border rounded-md overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>

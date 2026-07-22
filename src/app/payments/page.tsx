@@ -11,7 +11,7 @@ export default async function PaymentsPage() {
   }
 
   return (
-    <ModulePageWrapper titleKey="paymentsMod.title" descriptionKey="paymentsMod.description">
+    <ModulePageWrapper titleKey="payments.title" descriptionKey="payments.description">
       <PaymentList />
     </ModulePageWrapper>
   )
