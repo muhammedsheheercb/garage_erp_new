@@ -43,7 +43,7 @@ export function ModulePageWrapper({
   };
 
   return (
-    <div className="min-h-screen bg-muted/40 p-4 md:p-8">
+    <div className="min-h-screen bg-white/60 p-4 md:p-8 dark:bg-background/60">
       <div className="max-w-screen-2xl mx-auto space-y-6">
         <div className="flex flex-col gap-4">
           <div suppressHydrationWarning>

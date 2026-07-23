@@ -44,7 +44,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
   ]
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/40 text-foreground">
+    <div className="min-h-screen flex flex-col bg-white/60 text-foreground dark:bg-background/60">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 max-w-screen-2xl items-center mx-auto px-4">
@@ -81,29 +81,9 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
                 <Wrench className="h-4 w-4" /> {t.nav.createJobCard}
               </Button>
             </Link>
-            <Link href="/customers" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="secondary" className="gap-1.5 w-full">
-                <Users className="h-4 w-4" /> {t.nav.addCustomer}
-              </Button>
-            </Link>
-            <Link href="/vehicles" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="secondary" className="gap-1.5 w-full">
-                <Car className="h-4 w-4" /> {t.nav.addVehicle}
-              </Button>
-            </Link>
-            <Link href="/mechanics" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Briefcase className="h-4 w-4" /> {t.nav.mechanics}
-              </Button>
-            </Link>
             <Link href="/invoices" passHref className="flex-1 md:flex-auto">
               <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
                 <FileText className="h-4 w-4" /> {t.nav.invoices}
-              </Button>
-            </Link>
-            <Link href="/services" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Activity className="h-4 w-4" /> {t.nav.serviceCatalog}
               </Button>
             </Link>
             <Link href="/payments" passHref className="flex-1 md:flex-auto">
@@ -116,14 +96,14 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
                 <Package className="h-4 w-4" /> {t.nav.inventory}
               </Button>
             </Link>
+            <Link href="/purchases" passHref className="flex-1 md:flex-auto">
+              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
+                <Package className="h-4 w-4" /> {t.nav.purchases}
+              </Button>
+            </Link>
             <Link href="/suppliers" passHref className="flex-1 md:flex-auto">
               <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
                 <Truck className="h-4 w-4" /> {t.nav.suppliers}
-              </Button>
-            </Link>
-            <Link href="/expenses" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <CreditCard className="h-4 w-4" /> {t.nav.expenses}
               </Button>
             </Link>
             <Link href="/paymeters" passHref className="flex-1 md:flex-auto">
@@ -131,9 +111,34 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
                 <CreditCard className="h-4 w-4" /> {t.nav.paymeters}
               </Button>
             </Link>
-            <Link href="/purchases" passHref className="flex-1 md:flex-auto">
+            <Link href="/customers" passHref className="flex-1 md:flex-auto">
+              <Button size="sm" variant="secondary" className="gap-1.5 w-full">
+                <Users className="h-4 w-4" /> {t.nav.addCustomer}
+              </Button>
+            </Link>
+            <Link href="/vehicles" passHref className="flex-1 md:flex-auto">
+              <Button size="sm" variant="secondary" className="gap-1.5 w-full">
+                <Car className="h-4 w-4" /> {t.nav.addVehicle}
+              </Button>
+            </Link>
+            <Link href="/vehicle-companies" passHref className="flex-1 md:flex-auto">
               <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Package className="h-4 w-4" /> {t.nav.purchases}
+                <Car className="h-4 w-4" /> {t.nav.vehicleCompanies}
+              </Button>
+            </Link>
+            <Link href="/mechanics" passHref className="flex-1 md:flex-auto">
+              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
+                <Briefcase className="h-4 w-4" /> {t.nav.mechanics}
+              </Button>
+            </Link>
+            <Link href="/services" passHref className="flex-1 md:flex-auto">
+              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
+                <Activity className="h-4 w-4" /> {t.nav.serviceCatalog}
+              </Button>
+            </Link>
+            <Link href="/expenses" passHref className="flex-1 md:flex-auto">
+              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
+                <CreditCard className="h-4 w-4" /> {t.nav.expenses}
               </Button>
             </Link>
             <Link href="/reports" passHref className="flex-1 md:flex-auto">

@@ -45,6 +45,25 @@ model Vehicle {
   updatedAt    DateTime  @updatedAt
 }
 
+model VehicleCompany {
+  id        String         @id @default(uuid())
+  name      String         @unique
+  models    VehicleModel[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model VehicleModel {
+  id        String         @id @default(uuid())
+  name      String
+  companyId String
+  company   VehicleCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([companyId, name])
+}
+
 model Mechanic {
   id        String    @id @default(uuid())
   name      String

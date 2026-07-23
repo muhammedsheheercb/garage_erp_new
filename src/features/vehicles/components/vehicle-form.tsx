@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
-import { createVehicle, updateVehicle, getCustomersForDropdown } from "../actions"
+import { createVehicle, updateVehicle, getCustomersForDropdown, getVehicleCatalog } from "../actions"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
 
@@ -27,7 +27,7 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
     Hybrid: t.vehicles.fuelHybrid,
   }
   
-  const { register, handleSubmit, control, formState: { errors } } = useForm<VehicleFormValues>({
+  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
       plateNumber: initialData?.plateNumber || "",
@@ -44,6 +44,20 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
     queryKey: ['customers-dropdown'],
     queryFn: getCustomersForDropdown
   })
+
+  const { data: savedVehicleCatalog = {} } = useQuery({
+    queryKey: ['vehicle-catalog'],
+    queryFn: getVehicleCatalog,
+  })
+  const vehicleCatalog = { ...savedVehicleCatalog }
+  if (initialData?.brand && initialData.model) {
+    const existingModels = vehicleCatalog[initialData.brand] || []
+    if (!existingModels.includes(initialData.model)) {
+      vehicleCatalog[initialData.brand] = [...existingModels, initialData.model]
+    }
+  }
+  const selectedBrand = watch("brand")
+  const availableModels = vehicleCatalog[selectedBrand] || []
 
   const mutation = useMutation({
     mutationFn: async (data: VehicleFormValues) => {
@@ -76,14 +90,31 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="brand">{t.vehicles.make} <span className="text-destructive">*</span></Label>
-          <Input id="brand" placeholder="Toyota" {...register("brand")} />
+          <Label htmlFor="brand">{t.vehicles.companyName} <span className="text-destructive">*</span></Label>
+          <Controller control={control} name="brand" render={({ field }) => (
+            <Select value={field.value} onValueChange={(brand) => {
+              field.onChange(brand)
+              setValue("model", "", { shouldValidate: true })
+            }}>
+              <SelectTrigger id="brand" className="w-full"><SelectValue placeholder={t.vehicles.selectCompany} /></SelectTrigger>
+              <SelectContent>
+                {Object.keys(vehicleCatalog).sort().map((brand) => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )} />
           {errors.brand && <p className="text-sm text-destructive">{errors.brand.message}</p>}
         </div>
         
         <div className="space-y-2">
           <Label htmlFor="model">{t.vehicles.model} <span className="text-destructive">*</span></Label>
-          <Input id="model" placeholder="Camry" {...register("model")} />
+          <Controller control={control} name="model" render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange} disabled={!selectedBrand}>
+              <SelectTrigger id="model" className="w-full"><SelectValue placeholder={selectedBrand ? t.vehicles.selectModel : t.vehicles.selectCompanyFirst} /></SelectTrigger>
+              <SelectContent>
+                {availableModels.map((model) => <SelectItem key={model} value={model}>{model}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )} />
           {errors.model && <p className="text-sm text-destructive">{errors.model.message}</p>}
         </div>
       </div>
@@ -128,7 +159,9 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange} disabled={customers.length === 0}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={customers.length > 0 ? t.vehicles.selectCustomer : t.common.loading} />
+                <SelectValue placeholder={customers.length > 0 ? t.vehicles.selectCustomer : t.common.loading}>
+                  {(value: string) => customers.find((customer) => customer.id === value)?.name || null}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {customers.map((customer) => (

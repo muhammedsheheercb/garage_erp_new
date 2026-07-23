@@ -6,7 +6,7 @@ import { getVehicles, deleteVehicle } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, CarFront, History } from "lucide-react"
+import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, CarFront, History, Eye } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { VehicleForm } from "./vehicle-form"
@@ -20,6 +20,7 @@ export function VehicleList() {
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<any>(null)
+  const [viewingVehicle, setViewingVehicle] = useState<any>(null)
   const [viewingHistory, setViewingHistory] = useState<any>(null)
   const { t } = useTranslation()
   const fuelTypeLabels: Record<string, string> = {
@@ -112,6 +113,26 @@ export function VehicleList() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right space-x-1 whitespace-nowrap">
+                    <Dialog open={viewingVehicle?.id === vehicle.id} onOpenChange={(open) => !open && setViewingVehicle(null)}>
+                      <DialogTrigger render={
+                        <Button variant="ghost" size="icon" onClick={() => setViewingVehicle(vehicle)} title={t.payments.view}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      } />
+                      {viewingVehicle?.id === vehicle.id && (
+                        <DialogContent>
+                          <DialogHeader><DialogTitle>{t.vehicles.vehicleDetails}</DialogTitle></DialogHeader>
+                          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                            <div><dt className="text-muted-foreground">{t.vehicles.plateNumber}</dt><dd className="font-medium mt-1">{viewingVehicle.plateNumber}</dd></div>
+                            <div><dt className="text-muted-foreground">{t.vehicles.companyName}</dt><dd className="font-medium mt-1">{viewingVehicle.brand}</dd></div>
+                            <div><dt className="text-muted-foreground">{t.vehicles.model}</dt><dd className="font-medium mt-1">{viewingVehicle.model}</dd></div>
+                            <div><dt className="text-muted-foreground">{t.vehicles.year}</dt><dd className="font-medium mt-1">{viewingVehicle.year}</dd></div>
+                            <div><dt className="text-muted-foreground">{t.vehicles.fuelType}</dt><dd className="font-medium mt-1">{fuelTypeLabels[viewingVehicle.fuelType] || viewingVehicle.fuelType}</dd></div>
+                            <div><dt className="text-muted-foreground">{t.vehicles.owner}</dt><dd className="font-medium mt-1">{viewingVehicle.customer.name}</dd></div>
+                          </dl>
+                        </DialogContent>
+                      )}
+                    </Dialog>
                     
                     <Dialog open={viewingHistory?.id === vehicle.id} onOpenChange={(open) => !open && setViewingHistory(null)}>
                       <DialogTrigger render={

@@ -18,6 +18,7 @@ export function PaymentList() {
   const { t } = useTranslation()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
+  const [pendingSearch, setPendingSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"history" | "pending">("history")
@@ -47,6 +48,15 @@ export function PaymentList() {
       default: return null
     }
   }
+
+  const pendingInvoices = pendingData?.filter((invoice) => {
+    const query = pendingSearch.trim().toLocaleLowerCase()
+    if (!query) return true
+
+    return [invoice.customer.name, invoice.jobCard?.vehicle?.plateNumber]
+      .filter(Boolean)
+      .some((value) => value!.toLocaleLowerCase().includes(query))
+  })
 
   return (
     <div className="space-y-4">
@@ -85,6 +95,17 @@ export function PaymentList() {
                   setSearch(e.target.value)
                   setPage(1)
                 }}
+              />
+            </div>
+          )}
+          {activeTab === "pending" && (
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t.payments.searchPendingInvoices}
+                className="pl-8 w-full"
+                value={pendingSearch}
+                onChange={(e) => setPendingSearch(e.target.value)}
               />
             </div>
           )}
@@ -184,8 +205,10 @@ export function PaymentList() {
             <div className="col-span-full text-center py-12 text-muted-foreground">{t.common.loading}</div>
           ) : pendingData?.length === 0 ? (
             <div className="col-span-full text-center py-12 text-muted-foreground">{t.payments.allCaughtUp}</div>
+          ) : pendingInvoices?.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-muted-foreground">{t.common.noResults}</div>
           ) : (
-            pendingData?.map((inv) => {
+            pendingInvoices?.map((inv) => {
               const paidAmount = inv.payments.reduce((acc, p) => acc + p.amount, 0)
               const due = inv.grandTotal - paidAmount
               
@@ -197,6 +220,9 @@ export function PaymentList() {
                         <h3 className="font-semibold text-lg">{inv.customer.name}</h3>
                         <p className="text-sm text-muted-foreground">
                           INV-{inv.id.split('-')[0].toUpperCase()}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {t.vehicles.plateNumber}: {inv.jobCard?.vehicle?.plateNumber || t.common.NA}
                         </p>
                       </div>
                       <Badge variant={inv.status === 'PARTIAL' ? 'secondary' : 'destructive'}>

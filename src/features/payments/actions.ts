@@ -66,6 +66,7 @@ export async function getPendingInvoicesDropdown() {
     include: {
       customer: true,
       payments: true,
+      jobCard: { include: { vehicle: { select: { plateNumber: true } } } },
     },
     orderBy: { createdAt: 'asc' }
   })
@@ -75,7 +76,7 @@ export async function getPendingInvoicesDropdown() {
     const due = inv.grandTotal - paidAmount
     return {
       id: inv.id,
-      label: `INV-${inv.id.split('-')[0].toUpperCase()} - ${inv.customer.name} - Due: ${due.toFixed(3)} OMR`,
+      label: `INV-${inv.id.split('-')[0].toUpperCase()} - ${inv.customer.name} - ${inv.jobCard.vehicle.plateNumber} - Due: ${due.toFixed(3)} OMR`,
       dueAmount: due
     }
   })

@@ -89,6 +89,64 @@ export default async function PrintJobCardPage({ params }: { params: Promise<{ i
           </div>
         )}
 
+        {(job.services.length > 0 || job.parts.length > 0) && (
+          <div className="mb-8 border-t border-gray-200 pt-8">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Services &amp; Parts Used</h3>
+
+            {job.services.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-semibold text-gray-900 mb-2">Services</h4>
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="py-3 px-4 font-semibold text-gray-900">Service</th>
+                      <th className="py-3 px-4 font-semibold text-gray-900 text-right">Qty.</th>
+                      <th className="py-3 px-4 font-semibold text-gray-900 text-right">Time Used</th>
+                      <th className="py-3 px-4 font-semibold text-gray-900 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {job.services.map((item) => (
+                      <tr key={item.id} className="border-b border-gray-100">
+                        <td className="py-3 px-4 text-gray-800">{item.service.name}</td>
+                        <td className="py-3 px-4 text-right text-gray-800">{item.quantity}</td>
+                        <td className="py-3 px-4 text-right text-gray-800">{item.service.estimatedTime || '-'}</td>
+                        <td className="py-3 px-4 text-right font-medium"><Currency amount={item.price * item.quantity} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {job.parts.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Parts Used</h4>
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="py-3 px-4 font-semibold text-gray-900">Part</th>
+                      <th className="py-3 px-4 font-semibold text-gray-900">Part No.</th>
+                      <th className="py-3 px-4 font-semibold text-gray-900 text-right">Qty.</th>
+                      <th className="py-3 px-4 font-semibold text-gray-900 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {job.parts.map((item) => (
+                      <tr key={item.id} className="border-b border-gray-100">
+                        <td className="py-3 px-4 text-gray-800">{item.batch.inventory.itemName}</td>
+                        <td className="py-3 px-4 text-gray-800">{item.batch.inventory.partNumber}</td>
+                        <td className="py-3 px-4 text-right text-gray-800">{item.quantity}</td>
+                        <td className="py-3 px-4 text-right font-medium"><Currency amount={item.price * item.quantity} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Footer Signatures */}
         <div className="grid grid-cols-2 gap-8 mt-16 pt-8 border-t border-gray-200">
           <div className="text-center">

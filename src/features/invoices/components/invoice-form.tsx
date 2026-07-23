@@ -427,7 +427,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         <Textarea 
           id="servicesDetails" 
           placeholder={t.invoicesMod.servicesDetailsDesc}
-          disabled={isPaidLock}
+          readOnly
           {...register("servicesDetails")} 
         />
         {errors.servicesDetails && <p className="text-sm text-destructive">{errors.servicesDetails.message}</p>}
@@ -438,7 +438,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         <Textarea 
           id="partsDetails" 
           placeholder={t.invoicesMod.partsDetailsDesc}
-          disabled={isPaidLock}
+          readOnly
           {...register("partsDetails")} 
         />
         {errors.partsDetails && <p className="text-sm text-destructive">{errors.partsDetails.message}</p>}

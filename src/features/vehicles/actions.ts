@@ -54,6 +54,17 @@ export async function getCustomersForDropdown() {
   })
 }
 
+export async function getVehicleCatalog() {
+  const companies = await prisma.vehicleCompany.findMany({
+    include: { models: { select: { name: true }, orderBy: { name: "asc" } } },
+    orderBy: { name: "asc" },
+  })
+  return companies.reduce<Record<string, string[]>>((catalog, company) => {
+    catalog[company.name] = company.models.map((model) => model.name)
+    return catalog
+  }, {})
+}
+
 export async function createVehicle(data: VehicleFormValues) {
   const parsed = vehicleSchema.parse(data)
   
