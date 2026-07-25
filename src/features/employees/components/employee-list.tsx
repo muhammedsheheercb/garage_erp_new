@@ -13,6 +13,9 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, Eye, EyeOff, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 type Employee = { id: string; username: string | null; permissions: string; isActive: boolean }
 type FormErrors = { username?: string; password?: string; permissions?: string }
@@ -69,13 +72,22 @@ export function EmployeeList() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Employee | undefined>()
-  const { data: employees = [], isLoading } = useQuery<Employee[]>({ queryKey: ["employees"], queryFn: getEmployees })
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
+
+  const { data: employees = [], isLoading } = useQuery<Employee[]>({ queryKey: ["employees", fromDateStr, toDateStr], queryFn: () => getEmployees(fromDateStr, toDateStr) })
   const toggleActive = useMutation({ mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => setEmployeeActive(id, isActive), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }) })
   const removeEmployee = useMutation({ mutationFn: deleteEmployee, onSuccess: () => { toast.success("Employee deleted"); queryClient.invalidateQueries({ queryKey: ["employees"] }) }, onError: (error: Error) => toast.error(error.message || "Unable to delete employee") })
   const close = () => { setOpen(false); setEditing(undefined); queryClient.invalidateQueries({ queryKey: ["employees"] }) }
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-between gap-4 items-center">
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={setDateRange} 
+        />
         <Button onClick={() => setOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add employee

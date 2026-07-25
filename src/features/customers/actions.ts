@@ -4,17 +4,23 @@ import prisma from "@/lib/prisma"
 import { CustomerFormValues, customerSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
-export async function getCustomers(page = 1, search = "") {
+export async function getCustomers(page = 1, search = "", fromDate?: string, toDate?: string) {
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where = {
+  const where: any = {
     OR: [
       { name: { contains: search } },
       { email: { contains: search } },
       { phone: { contains: search } },
     ]
   };
+
+  if (fromDate || toDate) {
+    where.createdAt = {};
+    if (fromDate) where.createdAt.gte = new Date(fromDate);
+    if (toDate) where.createdAt.lte = new Date(toDate);
+  }
 
   const [data, total] = await Promise.all([
     prisma.customer.findMany({

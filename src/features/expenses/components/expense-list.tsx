@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { format } from "date-fns";
+import { format, endOfDay } from "date-fns";
 import {
   Pencil,
   Trash2,
@@ -57,6 +57,8 @@ import {
 } from "@/components/ui/select";
 import { useTranslation } from "@/i18n";
 import { usePermissions } from "@/lib/use-permissions";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
 
 const getCategoryTranslationKey = (category: string): string => {
   const keyMap: Record<string, string> = {
@@ -81,6 +83,7 @@ export function ExpenseList() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
   const { can } = usePermissions();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const currentDate = new Date();
   const [reportYear, setReportYear] = useState(currentDate.getFullYear());
@@ -88,9 +91,12 @@ export function ExpenseList() {
 
   const queryClient = useQueryClient();
 
+  const fromDateStr = dateRange?.from?.toISOString();
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined;
+
   const { data, isLoading } = useQuery({
-    queryKey: ["expenses", page, search],
-    queryFn: () => getExpenses(page, search),
+    queryKey: ["expenses", page, search, fromDateStr, toDateStr],
+    queryFn: () => getExpenses(page, search, fromDateStr, toDateStr),
   });
 
   const { data: reportData, isLoading: reportLoading } = useQuery({
@@ -173,6 +179,10 @@ export function ExpenseList() {
                 className="pl-8"
               />
             </div>
+            <DatePickerWithRange 
+              date={dateRange} 
+              setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+            />
           </div>
 
           <div className="border rounded-md overflow-x-auto bg-card">

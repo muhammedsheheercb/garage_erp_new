@@ -13,6 +13,9 @@ import { InvoiceForm } from "./invoice-form"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useTranslation } from "@/i18n"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 export function InvoiceList() {
   const queryClient = useQueryClient()
@@ -22,11 +25,15 @@ export function InvoiceList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingInvoice, setEditingInvoice] = useState<any>(null)
   const [viewingJobCard, setViewingJobCard] = useState<any>(null)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const { t } = useTranslation()
 
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
+
   const { data, isLoading } = useQuery({
-    queryKey: ['invoices', page, search],
-    queryFn: () => getInvoices(page, search)
+    queryKey: ['invoices', page, search, fromDateStr, toDateStr],
+    queryFn: () => getInvoices(page, search, fromDateStr, toDateStr)
   })
 
   const deleteMutation = useMutation({
@@ -52,6 +59,11 @@ export function InvoiceList() {
             }}
           />
         </div>
+        
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+        />
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger render={

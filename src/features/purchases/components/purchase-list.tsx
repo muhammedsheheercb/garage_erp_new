@@ -11,8 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { PurchaseForm } from "./purchase-form"
 import { toast } from "sonner"
-import { format } from "date-fns"
+import { format, endOfDay } from "date-fns"
 import { useTranslation } from "@/i18n"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
 
 export function PurchaseList() {
   const queryClient = useQueryClient()
@@ -21,10 +23,14 @@ export function PurchaseList() {
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [viewingPurchase, setViewingPurchase] = useState<any>(null)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
 
   const { data, isLoading } = useQuery({
-    queryKey: ['purchases', page, search],
-    queryFn: () => getPurchases(page, search)
+    queryKey: ['purchases', page, search, fromDateStr, toDateStr],
+    queryFn: () => getPurchases(page, search, fromDateStr, toDateStr)
   })
 
   const deleteMutation = useMutation({
@@ -55,6 +61,11 @@ export function PurchaseList() {
             }}
           />
         </div>
+
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+        />
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger render={

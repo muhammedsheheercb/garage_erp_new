@@ -13,6 +13,9 @@ import { InventoryForm } from "./inventory-form"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
 import { usePermissions } from "@/lib/use-permissions"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 export function InventoryList() {
   const queryClient = useQueryClient()
@@ -22,10 +25,14 @@ export function InventoryList() {
   const [editingItem, setEditingItem] = useState<any>(null)
   const { t } = useTranslation()
   const { can } = usePermissions()
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
 
   const { data, isLoading } = useQuery({
-    queryKey: ['inventory', page, search],
-    queryFn: () => getInventory(page, search)
+    queryKey: ['inventory', page, search, fromDateStr, toDateStr],
+    queryFn: () => getInventory(page, search, fromDateStr, toDateStr)
   })
 
   const deleteMutation = useMutation({
@@ -51,6 +58,11 @@ export function InventoryList() {
             }}
           />
         </div>
+
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+        />
 
         {can("inventory", "create") && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

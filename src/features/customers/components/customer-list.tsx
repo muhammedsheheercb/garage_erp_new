@@ -13,6 +13,9 @@ import { toast } from "sonner"
 import dynamic from "next/dynamic"
 import { useTranslation } from "@/i18n"
 import { usePermissions } from "@/lib/use-permissions"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 // Lazy Loading: The form is only loaded when a dialog is opened, reducing initial JS bundle size.
 const CustomerForm = dynamic(() => import("./customer-form").then(mod => mod.CustomerForm), {
@@ -117,11 +120,15 @@ export function CustomerList() {
 
   // Debounce Search: Prevents hitting the API on every single keystroke.
   const debouncedSearch = useDebounce(search, 400)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
 
   // TanStack Query caching: keepPreviousData prevents flickering UI while fetching the next page.
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', page, debouncedSearch],
-    queryFn: () => getCustomers(page, debouncedSearch),
+    queryKey: ['customers', page, debouncedSearch, fromDateStr, toDateStr],
+    queryFn: () => getCustomers(page, debouncedSearch, fromDateStr, toDateStr),
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes to avoid redundant fetches
   })
@@ -177,6 +184,11 @@ export function CustomerList() {
             }}
           />
         </div>
+        
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+        />
 
         {can("customers", "create") && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

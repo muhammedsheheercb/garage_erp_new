@@ -4,16 +4,22 @@ import prisma from "@/lib/prisma"
 import { ExpenseFormValues, expenseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
-export async function getExpenses(page = 1, search = "") {
+export async function getExpenses(page = 1, search = "", fromDate?: string, toDate?: string) {
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where = search ? {
+  const where: any = search ? {
     OR: [
       { category: { contains: search } },
       { description: { contains: search } }
     ]
   } : {};
+
+  if (fromDate || toDate) {
+    where.date = {};
+    if (fromDate) where.date.gte = new Date(fromDate);
+    if (toDate) where.date.lte = new Date(toDate);
+  }
 
   const [data, total] = await Promise.all([
     prisma.expense.findMany({

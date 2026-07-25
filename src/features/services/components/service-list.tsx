@@ -14,6 +14,9 @@ import { toast } from "sonner"
 import { Currency } from "@/components/currency"
 import { useTranslation } from "@/i18n"
 import { usePermissions } from "@/lib/use-permissions"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 export function ServiceList() {
   const queryClient = useQueryClient()
@@ -23,10 +26,14 @@ export function ServiceList() {
   const [editingService, setEditingService] = useState<any>(null)
   const { t } = useTranslation()
   const { can } = usePermissions()
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
 
   const { data, isLoading } = useQuery({
-    queryKey: ['services', page, search],
-    queryFn: () => getServices(page, search)
+    queryKey: ['services', page, search, fromDateStr, toDateStr],
+    queryFn: () => getServices(page, search, fromDateStr, toDateStr)
   })
 
   const deleteMutation = useMutation({
@@ -55,6 +62,11 @@ export function ServiceList() {
             }}
           />
         </div>
+
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+        />
 
         {can("services", "create") && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

@@ -23,16 +23,22 @@ async function getDirectPaymeterId(
   return (await tx.paymeter.create({ data: { name } })).id
 }
 
-export async function getPurchases(page = 1, search = "") {
+export async function getPurchases(page = 1, search = "", fromDate?: string, toDate?: string) {
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where = search ? {
+  const where: any = search ? {
     OR: [
       { purchaseNumber: { contains: search } },
       { supplier: { name: { contains: search } } }
     ]
   } : {};
+
+  if (fromDate || toDate) {
+    where.createdAt = {};
+    if (fromDate) where.createdAt.gte = new Date(fromDate);
+    if (toDate) where.createdAt.lte = new Date(toDate);
+  }
 
   const [data, total] = await Promise.all([
     prisma.purchase.findMany({

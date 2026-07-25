@@ -46,6 +46,9 @@ import { toast } from "sonner";
 import { Currency } from "@/components/currency";
 import { useTranslation } from "@/i18n";
 import { usePermissions } from "@/lib/use-permissions";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { endOfDay } from "date-fns";
 
 const getTranslatedStatus = (t: any, status: string): string => {
   const statusMap: Record<string, string> = {
@@ -67,10 +70,14 @@ export function JobCardList() {
   const [editingJob, setEditingJob] = useState<any>(null);
   const { t } = useTranslation();
   const { can } = usePermissions();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  const fromDateStr = dateRange?.from?.toISOString();
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["jobcards", page, search],
-    queryFn: () => getJobCards(page, search),
+    queryKey: ["jobcards", page, search, fromDateStr, toDateStr],
+    queryFn: () => getJobCards(page, search, fromDateStr, toDateStr),
   });
 
   const deleteMutation = useMutation({
@@ -100,6 +107,11 @@ export function JobCardList() {
             }}
           />
         </div>
+
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+        />
 
         {can("jobcards", "create") && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

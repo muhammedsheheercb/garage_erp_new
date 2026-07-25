@@ -14,6 +14,9 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
 import { usePermissions } from "@/lib/use-permissions"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 export function MechanicList() {
   const queryClient = useQueryClient()
@@ -24,10 +27,14 @@ export function MechanicList() {
   const [viewingJobs, setViewingJobs] = useState<any>(null)
   const { t } = useTranslation()
   const { can } = usePermissions()
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
 
   const { data, isLoading } = useQuery({
-    queryKey: ['mechanics', page, search],
-    queryFn: () => getMechanics(page, search)
+    queryKey: ['mechanics', page, search, fromDateStr, toDateStr],
+    queryFn: () => getMechanics(page, search, fromDateStr, toDateStr)
   })
 
   const deleteMutation = useMutation({
@@ -56,6 +63,11 @@ export function MechanicList() {
             }}
           />
         </div>
+
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+        />
 
         {can("mechanics", "create") && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

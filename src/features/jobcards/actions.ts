@@ -5,18 +5,24 @@ import { JobCardFormValues, jobCardSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { requirePagePermission } from "@/lib/authorization"
 
-export async function getJobCards(page = 1, search = "") {
+export async function getJobCards(page = 1, search = "", fromDate?: string, toDate?: string) {
   await requirePagePermission("jobcards")
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where = {
+  const where: any = {
     OR: [
       { complaint: { contains: search } },
       { customer: { name: { contains: search } } },
       { vehicle: { plateNumber: { contains: search } } },
     ]
   };
+
+  if (fromDate || toDate) {
+    where.createdAt = {};
+    if (fromDate) where.createdAt.gte = new Date(fromDate);
+    if (toDate) where.createdAt.lte = new Date(toDate);
+  }
 
   const [data, total] = await Promise.all([
     prisma.jobCard.findMany({

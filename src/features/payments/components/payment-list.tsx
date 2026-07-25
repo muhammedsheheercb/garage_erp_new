@@ -12,6 +12,9 @@ import { PaymentForm } from "./payment-form"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { useTranslation } from "@/i18n"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 export function PaymentList() {
   const router = useRouter()
@@ -22,6 +25,7 @@ export function PaymentList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"history" | "pending">("history")
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const paymentMethodLabels: Record<string, string> = {
     CASH: t.payments.cash,
     CARD: t.payments.card,
@@ -29,9 +33,12 @@ export function PaymentList() {
     TRANSFER: t.payments.bankTransfer,
   }
 
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
+
   const { data: historyData, isLoading: historyLoading } = useQuery({
-    queryKey: ['payments', page, search],
-    queryFn: () => getPayments(page, search)
+    queryKey: ['payments', page, search, fromDateStr, toDateStr],
+    queryFn: () => getPayments(page, search, fromDateStr, toDateStr)
   })
 
   const { data: pendingData, isLoading: pendingLoading } = useQuery({
@@ -85,18 +92,24 @@ export function PaymentList() {
 
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {activeTab === "history" && (
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder={t.payments.searchPayments} 
-                className="pl-8 w-full" 
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
+            <>
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder={t.payments.searchPayments} 
+                  className="pl-8 w-full" 
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value)
+                    setPage(1)
+                  }}
+                />
+              </div>
+              <DatePickerWithRange 
+                date={dateRange} 
+                setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
               />
-            </div>
+            </>
           )}
           {activeTab === "pending" && (
             <div className="relative w-full sm:max-w-xs">
@@ -114,7 +127,7 @@ export function PaymentList() {
             <DialogTrigger render={
               <Button className="w-full sm:w-auto whitespace-nowrap"><Plus className="mr-2 h-4 w-4" /> {t.payments.recordPayment}</Button>
             } />
-            <DialogContent className="max-w-xl">
+            <DialogContent className="sm:max-w-xl">
               <DialogHeader>
                 <DialogTitle>{t.payments.recordPayment}</DialogTitle>
               </DialogHeader>
@@ -259,7 +272,7 @@ export function PaymentList() {
                         <Button className="flex-1"><Plus className="h-4 w-4 mr-2" /> {t.payments.pay}</Button>
                       } />
                       {payingInvoiceId === inv.id && (
-                        <DialogContent className="max-w-xl">
+                        <DialogContent className="sm:max-w-xl">
                           <DialogHeader>
                             <DialogTitle>{t.payments.recordPaymentFor} {inv.customer.name}</DialogTitle>
                           </DialogHeader>

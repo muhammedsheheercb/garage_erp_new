@@ -14,6 +14,9 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
 import { usePermissions } from "@/lib/use-permissions"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 export function VehicleList() {
   const queryClient = useQueryClient()
@@ -25,6 +28,7 @@ export function VehicleList() {
   const [viewingHistory, setViewingHistory] = useState<any>(null)
   const { t } = useTranslation()
   const { can } = usePermissions()
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const fuelTypeLabels: Record<string, string> = {
     Petrol: t.vehicles.fuelPetrol,
     Diesel: t.vehicles.fuelDiesel,
@@ -39,9 +43,12 @@ export function VehicleList() {
     CANCELLED: t.jobcards.statusCancelled,
   }
 
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
+
   const { data, isLoading } = useQuery({
-    queryKey: ['vehicles', page, search],
-    queryFn: () => getVehicles(page, search)
+    queryKey: ['vehicles', page, search, fromDateStr, toDateStr],
+    queryFn: () => getVehicles(page, search, fromDateStr, toDateStr)
   })
 
   const deleteMutation = useMutation({
@@ -67,6 +74,11 @@ export function VehicleList() {
             }}
           />
         </div>
+
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+        />
 
         {can("vehicles", "create") && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

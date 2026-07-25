@@ -5,12 +5,12 @@ import { VehicleFormValues, vehicleSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { requirePagePermission } from "@/lib/authorization"
 
-export async function getVehicles(page = 1, search = "") {
+export async function getVehicles(page = 1, search = "", fromDate?: string, toDate?: string) {
   await requirePagePermission("vehicles", "view")
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where = {
+  const where: any = {
     OR: [
       { plateNumber: { contains: search } },
       { brand: { contains: search } },
@@ -18,6 +18,12 @@ export async function getVehicles(page = 1, search = "") {
       { customer: { name: { contains: search } } },
     ]
   };
+
+  if (fromDate || toDate) {
+    where.createdAt = {};
+    if (fromDate) where.createdAt.gte = new Date(fromDate);
+    if (toDate) where.createdAt.lte = new Date(toDate);
+  }
 
   const [data, total] = await Promise.all([
     prisma.vehicle.findMany({

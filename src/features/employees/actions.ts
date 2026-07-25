@@ -29,9 +29,24 @@ export type EmployeeInput = {
 
 type EmployeeRow = { id: string; username: string | null; permissions: string; isActive: boolean; createdAt: Date }
 
-export async function getEmployees() {
+export async function getEmployees(fromDate?: string, toDate?: string) {
   await requireAdmin()
-  return prisma.$queryRaw<EmployeeRow[]>(Prisma.sql`SELECT "id", "username", "permissions", "isActive", "createdAt" FROM "Employee" ORDER BY "createdAt" DESC`)
+  let sql = `SELECT "id", "username", "permissions", "isActive", "createdAt" FROM "Employee"`
+  let whereClauses: string[] = []
+  
+  if (fromDate) {
+    whereClauses.push(`"createdAt" >= '${new Date(fromDate).toISOString()}'`)
+  }
+  if (toDate) {
+    whereClauses.push(`"createdAt" <= '${new Date(toDate).toISOString()}'`)
+  }
+
+  if (whereClauses.length > 0) {
+    sql += ` WHERE ${whereClauses.join(" AND ")}`
+  }
+  sql += ` ORDER BY "createdAt" DESC`
+  
+  return prisma.$queryRawUnsafe<EmployeeRow[]>(sql)
 }
 
 export async function createEmployee(data: EmployeeInput) {
