@@ -13,6 +13,7 @@ import { VehicleForm } from "./vehicle-form"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
+import { usePermissions } from "@/lib/use-permissions"
 
 export function VehicleList() {
   const queryClient = useQueryClient()
@@ -23,6 +24,7 @@ export function VehicleList() {
   const [viewingVehicle, setViewingVehicle] = useState<any>(null)
   const [viewingHistory, setViewingHistory] = useState<any>(null)
   const { t } = useTranslation()
+  const { can } = usePermissions()
   const fuelTypeLabels: Record<string, string> = {
     Petrol: t.vehicles.fuelPetrol,
     Diesel: t.vehicles.fuelDiesel,
@@ -66,17 +68,19 @@ export function VehicleList() {
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={
-            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.vehicles.addVehicle}</Button>
-          } />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t.vehicles.addNewVehicle}</DialogTitle>
-            </DialogHeader>
-            <VehicleForm onSuccess={() => setIsAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        {can("vehicles", "create") && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger render={
+              <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.vehicles.addVehicle}</Button>
+            } />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.vehicles.addNewVehicle}</DialogTitle>
+              </DialogHeader>
+              <VehicleForm onSuccess={() => setIsAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="border rounded-md overflow-hidden bg-card">
@@ -174,46 +178,50 @@ export function VehicleList() {
                       )}
                     </Dialog>
 
-                    <Dialog open={editingVehicle?.id === vehicle.id} onOpenChange={(open) => !open && setEditingVehicle(null)}>
-                      <DialogTrigger render={
-                        <Button variant="ghost" size="icon" onClick={() => setEditingVehicle(vehicle)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      } />
-                      {editingVehicle?.id === vehicle.id && (
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>{t.vehicles.editVehicle}</DialogTitle>
-                          </DialogHeader>
-                          <VehicleForm 
-                            initialData={editingVehicle} 
-                            onSuccess={() => setEditingVehicle(null)} 
-                          />
-                        </DialogContent>
-                      )}
-                    </Dialog>
+                    {can("vehicles", "edit") && (
+                      <Dialog open={editingVehicle?.id === vehicle.id} onOpenChange={(open) => !open && setEditingVehicle(null)}>
+                        <DialogTrigger render={
+                          <Button variant="ghost" size="icon" onClick={() => setEditingVehicle(vehicle)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        } />
+                        {editingVehicle?.id === vehicle.id && (
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>{t.vehicles.editVehicle}</DialogTitle>
+                            </DialogHeader>
+                            <VehicleForm 
+                              initialData={editingVehicle} 
+                              onSuccess={() => setEditingVehicle(null)} 
+                            />
+                          </DialogContent>
+                        )}
+                      </Dialog>
+                    )}
 
-                    <AlertDialog>
-                      <AlertDialogTrigger render={
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      } />
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{t.vehicles.deleteVehicle}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t.vehicles.deleteConfirm}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMutation.mutate(vehicle.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            {t.common.delete}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {can("vehicles", "delete") && (
+                      <AlertDialog>
+                        <AlertDialogTrigger render={
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        } />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t.vehicles.deleteVehicle}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t.vehicles.deleteConfirm}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteMutation.mutate(vehicle.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              {t.common.delete}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
 
                   </TableCell>
                 </TableRow>

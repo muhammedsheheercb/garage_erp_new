@@ -13,6 +13,7 @@ import { MechanicForm } from "./mechanic-form"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
+import { usePermissions } from "@/lib/use-permissions"
 
 export function MechanicList() {
   const queryClient = useQueryClient()
@@ -22,6 +23,7 @@ export function MechanicList() {
   const [editingMechanic, setEditingMechanic] = useState<any>(null)
   const [viewingJobs, setViewingJobs] = useState<any>(null)
   const { t } = useTranslation()
+  const { can } = usePermissions()
 
   const { data, isLoading } = useQuery({
     queryKey: ['mechanics', page, search],
@@ -55,15 +57,17 @@ export function MechanicList() {
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={<Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.mechanics.addMechanic}</Button>} />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t.mechanics.addNewMechanic}</DialogTitle>
-            </DialogHeader>
-            <MechanicForm onSuccess={() => setIsAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        {can("mechanics", "create") && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger render={<Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.mechanics.addMechanic}</Button>} />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.mechanics.addNewMechanic}</DialogTitle>
+              </DialogHeader>
+              <MechanicForm onSuccess={() => setIsAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="border rounded-md overflow-hidden bg-card">
@@ -115,7 +119,7 @@ export function MechanicList() {
                           </Button>
                         } />
                         {viewingJobs?.id === mechanic.id && (
-                          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                          <DialogContent className="sm:max-w-[70vw] max-h-[85vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>{mechanic.name}'s Active Jobs</DialogTitle>
                             </DialogHeader>
@@ -152,46 +156,50 @@ export function MechanicList() {
                       </Dialog>
                     )}
 
-                    <Dialog open={editingMechanic?.id === mechanic.id} onOpenChange={(open) => !open && setEditingMechanic(null)}>
-                      <DialogTrigger render={
-                        <Button variant="ghost" size="icon" onClick={() => setEditingMechanic(mechanic)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      } />
-                      {editingMechanic?.id === mechanic.id && (
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>{t.mechanics.editMechanic}</DialogTitle>
-                          </DialogHeader>
-                          <MechanicForm 
-                            initialData={editingMechanic} 
-                            onSuccess={() => setEditingMechanic(null)} 
-                          />
-                        </DialogContent>
-                      )}
-                    </Dialog>
+                    {can("mechanics", "edit") && (
+                      <Dialog open={editingMechanic?.id === mechanic.id} onOpenChange={(open) => !open && setEditingMechanic(null)}>
+                        <DialogTrigger render={
+                          <Button variant="ghost" size="icon" onClick={() => setEditingMechanic(mechanic)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        } />
+                        {editingMechanic?.id === mechanic.id && (
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>{t.mechanics.editMechanic}</DialogTitle>
+                            </DialogHeader>
+                            <MechanicForm 
+                              initialData={editingMechanic} 
+                              onSuccess={() => setEditingMechanic(null)} 
+                            />
+                          </DialogContent>
+                        )}
+                      </Dialog>
+                    )}
 
-                    <AlertDialog>
-                      <AlertDialogTrigger render={
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      } />
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{t.mechanics.deleteMechanic}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t.mechanics.deleteConfirm}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMutation.mutate(mechanic.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            {t.common.delete}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {can("mechanics", "delete") && (
+                      <AlertDialog>
+                        <AlertDialogTrigger render={
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        } />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t.mechanics.deleteMechanic}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t.mechanics.deleteConfirm}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteMutation.mutate(mechanic.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              {t.common.delete}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
 
                   </TableCell>
                 </TableRow>

@@ -56,6 +56,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslation } from "@/i18n";
+import { usePermissions } from "@/lib/use-permissions";
 
 const getCategoryTranslationKey = (category: string): string => {
   const keyMap: Record<string, string> = {
@@ -79,6 +80,7 @@ export function ExpenseList() {
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
+  const { can } = usePermissions();
 
   const currentDate = new Date();
   const [reportYear, setReportYear] = useState(currentDate.getFullYear());
@@ -132,21 +134,23 @@ export function ExpenseList() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold tracking-tight">{t.nav.expenses}</h2>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger
-            render={
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> {t.dashboard.todaysExpense}
-              </Button>
-            }
-          />
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>{t.dashboard.todaysExpense}</DialogTitle>
-            </DialogHeader>
-            <ExpenseForm onSuccess={() => setIsAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        {can("expenses", "create") && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger
+              render={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> {t.dashboard.todaysExpense}
+                </Button>
+              }
+            />
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>{t.dashboard.todaysExpense}</DialogTitle>
+              </DialogHeader>
+              <ExpenseForm onSuccess={() => setIsAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Tabs defaultValue="list" className="w-full">
@@ -171,7 +175,7 @@ export function ExpenseList() {
             </div>
           </div>
 
-          <div className="border rounded-md overflow-x-auto">
+          <div className="border rounded-md overflow-x-auto bg-card">
             <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
@@ -222,59 +226,63 @@ export function ExpenseList() {
                         -{expense.amount.toFixed(3)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Dialog
-                          open={editingExpense?.id === expense.id}
-                          onOpenChange={(open) =>
-                            !open && setEditingExpense(null)
-                          }
-                        >
-                          <DialogTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setEditingExpense(expense)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                        {can("expenses", "edit") && (
+                          <Dialog
+                            open={editingExpense?.id === expense.id}
+                            onOpenChange={(open) =>
+                              !open && setEditingExpense(null)
                             }
-                          />
-                          <DialogContent className="sm:max-w-[500px]">
-                            <DialogHeader>
-                              <DialogTitle>{t.common.edit}</DialogTitle>
-                            </DialogHeader>
-                            {editingExpense?.id === expense.id && (
-                              <ExpenseForm
-                                initialData={expense}
-                                onSuccess={() => setEditingExpense(null)}
-                              />
-                            )}
-                          </DialogContent>
-                        </Dialog>
-                        <AlertDialog>
-                          <AlertDialogTrigger
-                            render={
-                              <Button variant="ghost" size="icon" className="text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            }
-                          />
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>{t.common.delete}</AlertDialogTitle>
-                              <AlertDialogDescription>{t.settings.taxTab.expenseDeleteConfirm}</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                onClick={() => deleteMutation.mutate(expense.id)}
-                              >
-                                {t.common.delete}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                          >
+                            <DialogTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setEditingExpense(expense)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                            <DialogContent className="sm:max-w-[500px]">
+                              <DialogHeader>
+                                <DialogTitle>{t.common.edit}</DialogTitle>
+                              </DialogHeader>
+                              {editingExpense?.id === expense.id && (
+                                <ExpenseForm
+                                  initialData={expense}
+                                  onSuccess={() => setEditingExpense(null)}
+                                />
+                              )}
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                        {can("expenses", "delete") && (
+                          <AlertDialog>
+                            <AlertDialogTrigger
+                              render={
+                                <Button variant="ghost" size="icon" className="text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t.common.delete}</AlertDialogTitle>
+                                <AlertDialogDescription>{t.settings.taxTab.expenseDeleteConfirm}</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  onClick={() => deleteMutation.mutate(expense.id)}
+                                >
+                                  {t.common.delete}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

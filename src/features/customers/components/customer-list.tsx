@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner"
 import dynamic from "next/dynamic"
 import { useTranslation } from "@/i18n"
+import { usePermissions } from "@/lib/use-permissions"
 
 // Lazy Loading: The form is only loaded when a dialog is opened, reducing initial JS bundle size.
 const CustomerForm = dynamic(() => import("./customer-form").then(mod => mod.CustomerForm), {
@@ -34,13 +35,17 @@ const CustomerRow = memo(({
   onEdit, 
   onDelete, 
   isEditing,
-  t
+  t,
+  canEdit,
+  canDelete
 }: { 
   customer: any, 
   onEdit: (customer: any) => void, 
   onDelete: (id: string) => void,
   isEditing: boolean,
-  t: any
+  t: any,
+  canEdit: boolean,
+  canDelete: boolean
 }) => (
   <TableRow>
     <TableCell className="font-medium">{customer.name}</TableCell>
@@ -52,46 +57,50 @@ const CustomerRow = memo(({
     </TableCell>
     <TableCell className="max-w-[200px] truncate">{customer.address || t.common.NA}</TableCell>
     <TableCell className="text-right space-x-2">
-      <Dialog open={isEditing} onOpenChange={(open) => !open && onEdit(null)}>
-        <DialogTrigger render={
-          <Button variant="ghost" size="icon" onClick={() => onEdit(customer)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-        } />
-        {isEditing && (
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t.customers.editCustomer}</DialogTitle>
-            </DialogHeader>
-            <CustomerForm 
-              initialData={customer} 
-              onSuccess={() => onEdit(null)} 
-            />
-          </DialogContent>
-        )}
-      </Dialog>
+      {canEdit && (
+        <Dialog open={isEditing} onOpenChange={(open) => !open && onEdit(null)}>
+          <DialogTrigger render={
+            <Button variant="ghost" size="icon" onClick={() => onEdit(customer)}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          } />
+          {isEditing && (
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.customers.editCustomer}</DialogTitle>
+              </DialogHeader>
+              <CustomerForm 
+                initialData={customer} 
+                onSuccess={() => onEdit(null)} 
+              />
+            </DialogContent>
+          )}
+        </Dialog>
+      )}
 
-      <AlertDialog>
-        <AlertDialogTrigger render={
-          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-            <Trash className="h-4 w-4" />
-          </Button>
-        } />
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t.customers.deleteCustomer}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t.customers.deleteConfirm}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => onDelete(customer.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t.common.delete}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canDelete && (
+        <AlertDialog>
+          <AlertDialogTrigger render={
+            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+              <Trash className="h-4 w-4" />
+            </Button>
+          } />
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t.customers.deleteCustomer}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t.customers.deleteConfirm}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onDelete(customer.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {t.common.delete}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </TableCell>
   </TableRow>
 ))
@@ -104,6 +113,7 @@ export function CustomerList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<any>(null)
   const { t } = useTranslation()
+  const { can } = usePermissions()
 
   // Debounce Search: Prevents hitting the API on every single keystroke.
   const debouncedSearch = useDebounce(search, 400)
@@ -146,9 +156,11 @@ export function CustomerList() {
         onDelete={handleDelete} 
         isEditing={editingCustomer?.id === customer.id}
         t={t}
+        canEdit={can("customers", "edit")}
+        canDelete={can("customers", "delete")}
       />
     ))
-  }, [data?.data, handleEdit, handleDelete, editingCustomer?.id, t])
+  }, [data?.data, handleEdit, handleDelete, editingCustomer?.id, t, can])
 
   return (
     <div className="space-y-4">
@@ -166,17 +178,19 @@ export function CustomerList() {
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={
-            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.customers.addCustomer}</Button>
-          } />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t.customers.addNewCustomer}</DialogTitle>
-            </DialogHeader>
-            <CustomerForm onSuccess={() => setIsAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        {can("customers", "create") && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger render={
+              <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.customers.addCustomer}</Button>
+            } />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.customers.addNewCustomer}</DialogTitle>
+              </DialogHeader>
+              <CustomerForm onSuccess={() => setIsAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="border rounded-md overflow-hidden bg-card">

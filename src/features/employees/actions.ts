@@ -14,11 +14,11 @@ const employeeBaseSchema = z.object({
 })
 
 const createEmployeeSchema = employeeBaseSchema.extend({
-  password: z.string().min(6, "Password must be at least 6 characters").max(128),
+  password: z.string().min(6, "Password must be at least 6 characters").max(128).regex(/^\S+$/, "Password cannot contain spaces"),
 })
 
 const updateEmployeeSchema = employeeBaseSchema.extend({
-  password: z.string().max(128).optional(),
+  password: z.string().max(128).regex(/^\S+$/, "Password cannot contain spaces").optional().or(z.literal("")),
 })
 
 export type EmployeeInput = {

@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
-import { createSession, clearSession } from "@/lib/session"
+import { createSession, clearSession, getSession } from "@/lib/session"
 import { pagesWithViewPermission, parseModulePermissions } from "@/lib/permissions"
 import { Prisma } from "@prisma/client"
 

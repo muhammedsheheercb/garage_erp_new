@@ -15,6 +15,7 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTranslation } from "@/i18n"
+import { usePermissions } from "@/lib/use-permissions"
 
 // Using a custom Tabs implementation since we don't have the shadcn tabs component installed yet.
 function SimpleTabs({ tabs, active, onChange }: { tabs: { id: string, label: string }[], active: string, onChange: (id: string) => void }) {
@@ -168,6 +169,7 @@ export function SupplierList() {
   const [editingSupplier, setEditingSupplier] = useState<any>(null)
   const [viewingSupplier, setViewingSupplier] = useState<string | null>(null)
   const { t } = useTranslation()
+  const { can } = usePermissions()
 
   const { data, isLoading } = useQuery({
     queryKey: ['suppliers', page, search],
@@ -198,17 +200,19 @@ export function SupplierList() {
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={
-            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.suppliers.addSupplier}</Button>
-          } />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t.suppliers.addNewSupplier}</DialogTitle>
-            </DialogHeader>
-            <SupplierForm onSuccess={() => setIsAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        {can("suppliers", "create") && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger render={
+              <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.suppliers.addSupplier}</Button>
+            } />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.suppliers.addNewSupplier}</DialogTitle>
+              </DialogHeader>
+              <SupplierForm onSuccess={() => setIsAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="border rounded-md overflow-hidden bg-card">
@@ -259,46 +263,50 @@ export function SupplierList() {
                       )}
                     </Dialog>
 
-                    <Dialog open={editingSupplier?.id === supplier.id} onOpenChange={(open) => !open && setEditingSupplier(null)}>
-                      <DialogTrigger render={
-                        <Button variant="ghost" size="icon" onClick={() => setEditingSupplier(supplier)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      } />
-                      {editingSupplier?.id === supplier.id && (
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>{t.suppliers.editSupplier}</DialogTitle>
-                          </DialogHeader>
-                          <SupplierForm 
-                            initialData={editingSupplier} 
-                            onSuccess={() => setEditingSupplier(null)} 
-                          />
-                        </DialogContent>
-                      )}
-                    </Dialog>
+                    {can("suppliers", "edit") && (
+                      <Dialog open={editingSupplier?.id === supplier.id} onOpenChange={(open) => !open && setEditingSupplier(null)}>
+                        <DialogTrigger render={
+                          <Button variant="ghost" size="icon" onClick={() => setEditingSupplier(supplier)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        } />
+                        {editingSupplier?.id === supplier.id && (
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>{t.suppliers.editSupplier}</DialogTitle>
+                            </DialogHeader>
+                            <SupplierForm 
+                              initialData={editingSupplier} 
+                              onSuccess={() => setEditingSupplier(null)} 
+                            />
+                          </DialogContent>
+                        )}
+                      </Dialog>
+                    )}
 
-                    <AlertDialog>
-                      <AlertDialogTrigger render={
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      } />
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{t.suppliers.deleteSupplier}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t.suppliers.deleteConfirm}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMutation.mutate(supplier.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            {t.common.delete}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {can("suppliers", "delete") && (
+                      <AlertDialog>
+                        <AlertDialogTrigger render={
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        } />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t.suppliers.deleteSupplier}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t.suppliers.deleteConfirm}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteMutation.mutate(supplier.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              {t.common.delete}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
 
                   </TableCell>
                 </TableRow>

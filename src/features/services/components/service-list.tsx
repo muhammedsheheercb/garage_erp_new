@@ -13,6 +13,7 @@ import { ServiceForm } from "./service-form"
 import { toast } from "sonner"
 import { Currency } from "@/components/currency"
 import { useTranslation } from "@/i18n"
+import { usePermissions } from "@/lib/use-permissions"
 
 export function ServiceList() {
   const queryClient = useQueryClient()
@@ -21,6 +22,7 @@ export function ServiceList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingService, setEditingService] = useState<any>(null)
   const { t } = useTranslation()
+  const { can } = usePermissions()
 
   const { data, isLoading } = useQuery({
     queryKey: ['services', page, search],
@@ -54,15 +56,17 @@ export function ServiceList() {
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={<Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.services.addService}</Button>} />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t.services.addNewService}</DialogTitle>
-            </DialogHeader>
-            <ServiceForm onSuccess={() => setIsAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        {can("services", "create") && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger render={<Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.services.addService}</Button>} />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t.services.addNewService}</DialogTitle>
+              </DialogHeader>
+              <ServiceForm onSuccess={() => setIsAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="border rounded-md overflow-hidden bg-card">
@@ -107,46 +111,50 @@ export function ServiceList() {
                   </TableCell>
                   <TableCell className="text-right space-x-1 whitespace-nowrap">
                     
-                    <Dialog open={editingService?.id === service.id} onOpenChange={(open) => !open && setEditingService(null)}>
-                      <DialogTrigger render={
-                        <Button variant="ghost" size="icon" onClick={() => setEditingService(service)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      } />
-                      {editingService?.id === service.id && (
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>{t.services.editService}</DialogTitle>
-                          </DialogHeader>
-                          <ServiceForm 
-                            initialData={editingService} 
-                            onSuccess={() => setEditingService(null)} 
-                          />
-                        </DialogContent>
-                      )}
-                    </Dialog>
+                    {can("services", "edit") && (
+                      <Dialog open={editingService?.id === service.id} onOpenChange={(open) => !open && setEditingService(null)}>
+                        <DialogTrigger render={
+                          <Button variant="ghost" size="icon" onClick={() => setEditingService(service)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        } />
+                        {editingService?.id === service.id && (
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>{t.services.editService}</DialogTitle>
+                            </DialogHeader>
+                            <ServiceForm 
+                              initialData={editingService} 
+                              onSuccess={() => setEditingService(null)} 
+                            />
+                          </DialogContent>
+                        )}
+                      </Dialog>
+                    )}
 
-                    <AlertDialog>
-                      <AlertDialogTrigger render={
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      } />
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{t.services.deleteService}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t.services.deleteConfirm}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMutation.mutate(service.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            {t.common.delete}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {can("services", "delete") && (
+                      <AlertDialog>
+                        <AlertDialogTrigger render={
+                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        } />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t.services.deleteService}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t.services.deleteConfirm}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteMutation.mutate(service.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              {t.common.delete}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
 
                   </TableCell>
                 </TableRow>
