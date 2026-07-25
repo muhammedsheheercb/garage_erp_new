@@ -4,7 +4,7 @@ import { useForm, Controller, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { PurchaseFormValues, purchaseSchema } from "../schema"
-import { createPurchase, getPurchaseDropdownData, getNextPurchaseNumber } from "../actions"
+import { createPurchase, updatePurchase, getPurchaseDropdownData, getNextPurchaseNumber } from "../actions"
 import { getActiveTaxSetting } from "../../settings/actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,12 +18,13 @@ import { useTranslation } from "@/i18n"
 
 interface PurchaseFormProps {
   onSuccess?: () => void
+  initialData?: any
 }
 
-export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
+export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
-  const [purchaseNumber, setPurchaseNumber] = useState<string>(t.inventoryMod.generatingPartNo)
+  const [purchaseNumber, setPurchaseNumber] = useState<string>(initialData?.purchaseNumber || t.inventoryMod.generatingPartNo)
 
   const { data: dropdownData, isLoading: dropdownsLoading } = useQuery({
     queryKey: ['purchase-dropdowns'],
@@ -40,7 +41,21 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<PurchaseFormValues>({
     resolver: zodResolver(purchaseSchema),
-    defaultValues: {
+    defaultValues: initialData ? {
+      purchaseDate: new Date(initialData.purchaseDate).toISOString().split('T')[0],
+      supplierId: initialData.supplierId,
+      paymentSource: "PAYMETER",
+      paymentMethodId: initialData.paymentMethodId,
+      directPaymentMethod: undefined,
+      discount: initialData.discount,
+      paidAmount: initialData.paidAmount,
+      items: initialData.items.map((item: any) => ({
+        inventoryId: item.inventoryId,
+        quantity: item.quantity,
+        purchasePrice: item.purchasePrice,
+        sellingPrice: item.sellingPrice
+      }))
+    } : {
       purchaseDate: new Date().toISOString().split('T')[0],
       supplierId: "",
       paymentSource: "PAYMETER",
@@ -58,13 +73,16 @@ export function PurchaseForm({ onSuccess }: PurchaseFormProps) {
   })
 
   useEffect(() => {
-    getNextPurchaseNumber().then(num => setPurchaseNumber(num))
-  }, [])
+    if (!initialData) {
+      getNextPurchaseNumber().then(num => setPurchaseNumber(num))
+    }
+  }, [initialData])
 
   const mutation = useMutation({
-    mutationFn: (data: PurchaseFormValues) => createPurchase(data),
+    mutationFn: (data: PurchaseFormValues) => 
+      initialData ? updatePurchase(initialData.id, data) : createPurchase(data),
     onSuccess: () => {
-      toast.success(t.purchases.purchaseRegisteredSuccess)
+      toast.success(initialData ? t.common.save : t.purchases.purchaseRegisteredSuccess)
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })

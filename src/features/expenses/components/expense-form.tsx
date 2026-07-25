@@ -47,17 +47,17 @@ export function ExpenseForm({
     control,
     formState: { errors },
   } = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseSchema),
+    resolver: zodResolver(expenseSchema) as any,
     defaultValues: initialData
       ? {
           ...initialData,
-          date: new Date(initialData.date),
+          date: format(new Date(initialData.date), "yyyy-MM-dd") as unknown as Date,
         }
       : {
           category: undefined,
           amount: 0,
           description: "",
-          date: new Date(),
+          date: format(new Date(), "yyyy-MM-dd") as unknown as Date,
         },
   });
 
@@ -143,12 +143,7 @@ export function ExpenseForm({
           <Input
             id="date"
             type="date"
-            {...register("date", { valueAsDate: true })}
-            defaultValue={
-              initialData
-                ? format(new Date(initialData.date), "yyyy-MM-dd")
-                : format(new Date(), "yyyy-MM-dd")
-            }
+            {...register("date")}
           />
           {errors.date && (
             <p className="text-sm text-destructive">{errors.date.message}</p>

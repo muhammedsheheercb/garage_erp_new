@@ -13,7 +13,7 @@ export const expenseSchema = z.object({
   category: z.enum(expenseCategories),
   amount: z.number().finite("Amount is required").min(0.001, "Amount must be greater than 0"),
   description: z.string().trim().optional(),
-  date: z.date(),
+  date: z.coerce.date(),
 })
 
 export type ExpenseFormValues = z.infer<typeof expenseSchema>

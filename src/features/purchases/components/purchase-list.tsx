@@ -6,7 +6,7 @@ import { getPurchases, deletePurchase } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Trash, Eye, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Plus, Trash, Eye, Edit, ChevronLeft, ChevronRight } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { PurchaseForm } from "./purchase-form"
@@ -23,6 +23,7 @@ export function PurchaseList() {
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [viewingPurchase, setViewingPurchase] = useState<any>(null)
+  const [editingPurchase, setEditingPurchase] = useState<any>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
 
   const fromDateStr = dateRange?.from?.toISOString()
@@ -114,6 +115,9 @@ export function PurchaseList() {
                   <TableCell className="text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => setViewingPurchase(p)} title={t.purchases.viewDetails}>
                       <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setEditingPurchase(p)} title={t.common.edit}>
+                      <Edit className="h-4 w-4 text-muted-foreground" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger render={
@@ -257,6 +261,21 @@ export function PurchaseList() {
                 </div>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Modal */}
+      {editingPurchase && (
+        <Dialog open={!!editingPurchase} onOpenChange={(open) => !open && setEditingPurchase(null)}>
+          <DialogContent className="max-w-[95vw] sm:max-w-7xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{t.common.edit}: {editingPurchase.purchaseNumber}</DialogTitle>
+            </DialogHeader>
+            <PurchaseForm 
+              initialData={editingPurchase} 
+              onSuccess={() => setEditingPurchase(null)} 
+            />
           </DialogContent>
         </Dialog>
       )}
