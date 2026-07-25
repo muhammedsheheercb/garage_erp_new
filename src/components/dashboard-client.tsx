@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Wrench, Users, Car, CheckCircle2, Clock, PlusCircle, FileText, Activity, Briefcase, CreditCard, Package, Truck } from "lucide-react"
+import { Wrench, Users, Car, CheckCircle2, Clock, PlusCircle, FileText, Activity, Briefcase, CreditCard, Package, Truck, UserCog } from "lucide-react"
 import { SignOutButton } from "@/components/sign-out-button"
 import { Currency, OmanIcon } from "@/components/currency"
 import Link from "next/link"
 import { useTranslation } from "@/i18n"
 
 interface DashboardClientProps {
-  session: { email?: string } | null
+  session: { email?: string; role?: "ADMIN" | "EMPLOYEE"; permissions?: string[] } | null
   realStats: {
     dailyRevenue: number
     dailyExpense: number
@@ -33,6 +33,17 @@ interface DashboardClientProps {
 
 export function DashboardClient({ session, realStats, recentActivities }: DashboardClientProps) {
   const { t } = useTranslation()
+  const canAccess = (page: string) => session?.role !== "EMPLOYEE" || session.permissions?.includes(page)
+  const actions = [
+    { page: "jobcards", href: "/jobcards", label: t.nav.createJobCard, icon: Wrench, primary: true },
+    { page: "invoices", href: "/invoices", label: t.nav.invoices, icon: FileText }, { page: "payments", href: "/payments", label: t.nav.payments, icon: CreditCard },
+    { page: "inventory", href: "/inventory", label: t.nav.inventory, icon: Package }, { page: "purchases", href: "/purchases", label: t.nav.purchases, icon: Package },
+    { page: "suppliers", href: "/suppliers", label: t.nav.suppliers, icon: Truck }, { page: "paymeters", href: "/paymeters", label: t.nav.paymeters, icon: CreditCard },
+    { page: "customers", href: "/customers", label: t.nav.addCustomer, icon: Users }, { page: "vehicles", href: "/vehicles", label: t.nav.addVehicle, icon: Car },
+    { page: "vehicle-companies", href: "/vehicle-companies", label: t.nav.vehicleCompanies, icon: Car }, { page: "mechanics", href: "/mechanics", label: t.nav.mechanics, icon: Briefcase },
+    { page: "services", href: "/services", label: t.nav.serviceCatalog, icon: Activity }, { page: "expenses", href: "/expenses", label: t.nav.expenses, icon: CreditCard },
+    { page: "reports", href: "/reports", label: t.nav.reports, icon: Activity },
+  ]
 
   const stats = [
     { title: t.dashboard.todaysIncome, value: <Currency amount={realStats.dailyRevenue} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.paymentsReceivedToday },
@@ -76,81 +87,13 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
             </p>
           </div>
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <Link href="/jobcards" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" className="gap-1.5 w-full">
-                <Wrench className="h-4 w-4" /> {t.nav.createJobCard}
-              </Button>
-            </Link>
-            <Link href="/invoices" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <FileText className="h-4 w-4" /> {t.nav.invoices}
-              </Button>
-            </Link>
-            <Link href="/payments" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <CreditCard className="h-4 w-4" /> {t.nav.payments}
-              </Button>
-            </Link>
-            <Link href="/inventory" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Package className="h-4 w-4" /> {t.nav.inventory}
-              </Button>
-            </Link>
-            <Link href="/purchases" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Package className="h-4 w-4" /> {t.nav.purchases}
-              </Button>
-            </Link>
-            <Link href="/suppliers" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Truck className="h-4 w-4" /> {t.nav.suppliers}
-              </Button>
-            </Link>
-            <Link href="/paymeters" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <CreditCard className="h-4 w-4" /> {t.nav.paymeters}
-              </Button>
-            </Link>
-            <Link href="/customers" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="secondary" className="gap-1.5 w-full">
-                <Users className="h-4 w-4" /> {t.nav.addCustomer}
-              </Button>
-            </Link>
-            <Link href="/vehicles" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="secondary" className="gap-1.5 w-full">
-                <Car className="h-4 w-4" /> {t.nav.addVehicle}
-              </Button>
-            </Link>
-            <Link href="/vehicle-companies" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Car className="h-4 w-4" /> {t.nav.vehicleCompanies}
-              </Button>
-            </Link>
-            <Link href="/mechanics" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Briefcase className="h-4 w-4" /> {t.nav.mechanics}
-              </Button>
-            </Link>
-            <Link href="/services" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Activity className="h-4 w-4" /> {t.nav.serviceCatalog}
-              </Button>
-            </Link>
-            <Link href="/expenses" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <CreditCard className="h-4 w-4" /> {t.nav.expenses}
-              </Button>
-            </Link>
-            <Link href="/reports" passHref className="flex-1 md:flex-auto">
-              <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed bg-primary/5 border-primary/20 hover:bg-primary/10">
-                <Activity className="h-4 w-4 text-primary" /> {t.nav.reports}
-              </Button>
-            </Link>
-            <Link href="/settings" passHref className="flex-1 md:flex-auto">
+            {actions.filter((action) => canAccess(action.page)).map((action) => { const Icon = action.icon; return <Link key={action.page} href={action.href} className="flex-1 md:flex-auto"><Button size="sm" variant={action.primary ? "default" : "outline"} className="gap-1.5 w-full border-dashed"><Icon className="h-4 w-4" /> {action.label}</Button></Link> })}
+            {session?.role !== "EMPLOYEE" && <Link href="/settings" passHref className="flex-1 md:flex-auto">
               <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
                 <Wrench className="h-4 w-4" /> {t.nav.settings}
               </Button>
-            </Link>
+            </Link>}
+            {session?.role === "ADMIN" && <Link href="/employees" className="flex-1 md:flex-auto"><Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed"><UserCog className="h-4 w-4" /> Employees</Button></Link>}
           </div>
         </div>
 

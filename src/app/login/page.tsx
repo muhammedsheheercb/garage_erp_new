@@ -12,7 +12,7 @@ import { LanguageToggle } from "@/components/language-toggle";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,7 +23,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await loginAction(email, password);
+      const result = await loginAction(username, password);
 
       if (!result?.success) {
         toast.error(result?.error || t.login.invalidCredentials);
@@ -87,22 +87,23 @@ export default function LoginPage() {
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Custom Input: Email */}
+            {/* Admins sign in with email; employees sign in with their username. */}
             <div className="bg-[#2a2a2a] border border-[#3a3a3a] px-4 py-3 focus-within:border-[#e32400] transition-colors group">
               <label
                 className="block text-[13px] text-gray-400 font-medium mb-1"
-                htmlFor="email"
+                htmlFor="username"
               >
-                {t.login.email}
+                Email or username
               </label>
               <input
-                id="email"
-                type="email"
-                placeholder={t.login.emailPlaceholder}
+                id="username"
+                type="text"
+                autoComplete="username"
+                placeholder="Enter email or username"
                 required
                 className="w-full bg-transparent text-white text-base placeholder:text-transparent focus:placeholder:text-gray-500 focus:outline-none"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 disabled={isLoading}
               />
             </div>
@@ -119,6 +120,7 @@ export default function LoginPage() {
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   placeholder="********"
                   required
                   className="w-full bg-transparent text-white text-base placeholder:text-transparent focus:placeholder:text-gray-500 focus:outline-none tracking-widest font-mono pr-8"

@@ -1,6 +1,7 @@
 import { decrypt } from "@/lib/session"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { pathToPermission } from "@/lib/permissions"
 
 export async function proxy(request: NextRequest) {
   const sessionCookie = request.cookies.get("garage_session")
@@ -11,8 +12,7 @@ export async function proxy(request: NextRequest) {
     if (decrypted) {
       try {
         const data = JSON.parse(decrypted)
-        // Check if session has expired (7 days)
-        if (Date.now() - data.createdAt <= 1000 * 60 * 60 * 24 * 7) {
+        if (data.role && Array.isArray(data.permissions) && Date.now() - data.createdAt <= 1000 * 60 * 60 * 24) {
           session = data
         }
       } catch (error) {
@@ -38,6 +38,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(
       new URL(`/login?from=${encodeURIComponent(from)}`, request.url)
     );
+  }
+
+  if (session.role === "EMPLOYEE" && request.nextUrl.pathname.startsWith("/settings")) {
+    return NextResponse.redirect(new URL("/", request.url))
+  }
+
+  const requiredPermission = pathToPermission(request.nextUrl.pathname)
+  // The dashboard route (/) has no module key. Employees can always reach it;
+  // actual module pages still require their View permission.
+  if (session.role === "EMPLOYEE" && requiredPermission && !session.permissions.includes(requiredPermission)) {
+    return NextResponse.redirect(new URL("/", request.url))
   }
 }
 

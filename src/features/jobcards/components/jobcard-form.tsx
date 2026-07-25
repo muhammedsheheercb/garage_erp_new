@@ -80,6 +80,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
       complaint: initialData?.complaint || "",
       workDone: initialData?.workDone || "",
       notes: initialData?.notes || "",
+      expectedFinishDate: initialData?.expectedFinishDate ? new Date(initialData.expectedFinishDate).toISOString().slice(0, 10) : "",
 
       services:
         initialData?.services?.map((s: any) => ({
@@ -361,7 +362,11 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                             })
                             .then(() => {
                               if (newVeh && newVeh.id) {
-                                setValue("vehicleId", newVeh.id);
+                                setValue("vehicleId", newVeh.id, {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                });
+                                setVehicleSearch(newVeh.plateNumber);
                               }
                             });
                         }}
@@ -511,6 +516,12 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                 )}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="expectedFinishDate">Expected finish date</Label>
+            <Input id="expectedFinishDate" type="date" {...register("expectedFinishDate")} />
+            <p className="text-xs text-muted-foreground">When the vehicle is expected to be ready.</p>
           </div>
 
           <div className="space-y-2">

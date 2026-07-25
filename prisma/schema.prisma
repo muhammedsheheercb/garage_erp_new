@@ -17,6 +17,20 @@ model Admin {
   updatedAt DateTime @updatedAt
 }
 
+model Employee {
+  id          String   @id @default(uuid())
+  name        String
+  username    String?  @unique
+  email       String   @default("employee@garage.com")
+  password    String
+  permissions String   @default("[]")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([email])
+}
+
 model Customer {
   id        String    @id @default(uuid())
   name      String
@@ -91,6 +105,7 @@ model JobCard {
   complaint      String
   workDone       String?
   estimatedCost  Float?
+  expectedFinishDate DateTime?
   notes          String?
   customerId     String
   customer       Customer         @relation(fields: [customerId], references: [id])

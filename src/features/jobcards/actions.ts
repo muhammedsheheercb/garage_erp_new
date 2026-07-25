@@ -3,8 +3,10 @@
 import prisma from "@/lib/prisma"
 import { JobCardFormValues, jobCardSchema } from "./schema"
 import { revalidatePath } from "next/cache"
+import { requirePagePermission } from "@/lib/authorization"
 
 export async function getJobCards(page = 1, search = "") {
+  await requirePagePermission("jobcards")
   const limit = 10;
   const skip = (page - 1) * limit;
 
@@ -45,6 +47,7 @@ export async function getJobCards(page = 1, search = "") {
 }
 
 export async function getJobCardById(id: string) {
+  await requirePagePermission("jobcards")
   return prisma.jobCard.findUnique({
     where: { id },
     include: {
@@ -63,6 +66,7 @@ export async function getJobCardById(id: string) {
 
 // Fetch lists for dropdowns
 export async function getDropdownData() {
+  await requirePagePermission("jobcards")
   const [customers, vehicles, mechanics] = await Promise.all([
     prisma.customer.findMany({ select: { id: true, name: true, phone: true }, orderBy: { name: 'asc' } }),
     prisma.vehicle.findMany({
@@ -84,6 +88,7 @@ export async function getDropdownData() {
 }
 
 export async function getVehicleHistory(vehicleId: string, excludeJobCardId?: string) {
+  await requirePagePermission("jobcards")
   return prisma.jobCard.findMany({
     where: {
       vehicleId,
@@ -98,6 +103,7 @@ export async function getVehicleHistory(vehicleId: string, excludeJobCardId?: st
 }
 
 export async function getServicesList(search = "") {
+  await requirePagePermission("jobcards")
   return prisma.service.findMany({
     where: {
       name: { contains: search }
@@ -107,6 +113,7 @@ export async function getServicesList(search = "") {
 }
 
 export async function getInventoryList(search = "") {
+  await requirePagePermission("jobcards")
   return prisma.inventoryBatch.findMany({
     where: {
       quantity: { gt: 0 },
@@ -125,6 +132,7 @@ export async function getInventoryList(search = "") {
 }
 
 export async function createJobCard(data: JobCardFormValues) {
+  await requirePagePermission("jobcards")
   const parsed = jobCardSchema.parse(data)
   
   const jobCard = await prisma.jobCard.create({
@@ -136,6 +144,7 @@ export async function createJobCard(data: JobCardFormValues) {
       complaint: parsed.complaint,
       workDone: parsed.workDone || null,
       notes: parsed.notes || null,
+      expectedFinishDate: parsed.expectedFinishDate ? new Date(parsed.expectedFinishDate) : null,
       serviceTotal: parsed.serviceTotal,
       partsTotal: parsed.partsTotal,
       discount: parsed.discount,
@@ -164,6 +173,7 @@ export async function createJobCard(data: JobCardFormValues) {
 }
 
 export async function updateJobCard(id: string, data: JobCardFormValues) {
+  await requirePagePermission("jobcards")
   const parsed = jobCardSchema.parse(data)
   
   // Update inventory stock ONLY if status changes to COMPLETED
@@ -196,6 +206,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
         complaint: parsed.complaint,
         workDone: parsed.workDone || null,
         notes: parsed.notes || null,
+        expectedFinishDate: parsed.expectedFinishDate ? new Date(parsed.expectedFinishDate) : null,
         serviceTotal: parsed.serviceTotal,
         partsTotal: parsed.partsTotal,
         discount: parsed.discount,
@@ -225,6 +236,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
 }
 
 export async function deleteJobCard(id: string) {
+  await requirePagePermission("jobcards")
   await prisma.$transaction([
     prisma.jobCardService.deleteMany({ where: { jobCardId: id } }),
     prisma.jobCardPart.deleteMany({ where: { jobCardId: id } }),

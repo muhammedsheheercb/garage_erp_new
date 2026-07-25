@@ -123,6 +123,7 @@ export function JobCardList() {
               <TableHead>{t.jobcards.vehicleCustomer}</TableHead>
               <TableHead>{t.jobcards.complaint}</TableHead>
               <TableHead>{t.jobcards.statusMechanic}</TableHead>
+              <TableHead>Expected finish</TableHead>
               <TableHead>{t.jobcards.estCost}</TableHead>
               <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
@@ -130,13 +131,13 @@ export function JobCardList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">
+                <TableCell colSpan={6} className="text-center h-24">
                   {t.common.loading}
                 </TableCell>
               </TableRow>
             ) : data?.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">
+                <TableCell colSpan={6} className="text-center h-24">
                   {t.jobcards.noJobCards}
                 </TableCell>
               </TableRow>
@@ -161,6 +162,7 @@ export function JobCardList() {
                       {job.complaint}
                     </div>
                   </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm">{job.expectedFinishDate ? new Date(job.expectedFinishDate).toLocaleDateString() : "—"}</TableCell>
                   <TableCell>
                     <div className="flex flex-col items-start gap-1">
                       <Badge

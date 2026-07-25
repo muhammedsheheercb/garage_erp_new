@@ -54,13 +54,17 @@ export function decrypt(encryptedText: string): string | null {
 export interface SessionData {
   userId: string
   email: string
+  role: "ADMIN" | "EMPLOYEE"
+  permissions: string[]
   createdAt: number
 }
 
-export async function createSession(userId: string, email: string) {
+export async function createSession(userId: string, email: string, role: SessionData["role"] = "ADMIN", permissions: string[] = []) {
   const sessionData: SessionData = {
     userId,
     email,
+    role,
+    permissions,
     createdAt: Date.now()
   }
   
@@ -74,7 +78,7 @@ export async function createSession(userId: string, email: string) {
     secure: process.env.NODE_ENV === "production" && process.env.ELECTRON_DESKTOP !== "1",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24, // 1 day
   })
 }
 
@@ -94,8 +98,9 @@ export async function getSession(): Promise<SessionData | null> {
     
     const data: SessionData = JSON.parse(decrypted)
     
-    // Check if session has expired (7 days)
-    if (Date.now() - data.createdAt > 1000 * 60 * 60 * 24 * 7) {
+    if (!data.role || !Array.isArray(data.permissions)) return null
+    // Sessions expire after one day, even if the browser keeps the cookie.
+    if (Date.now() - data.createdAt > 1000 * 60 * 60 * 24) {
       return null
     }
     

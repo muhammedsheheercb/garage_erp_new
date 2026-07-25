@@ -3,8 +3,10 @@
 import prisma from "@/lib/prisma"
 import { VehicleFormValues, vehicleSchema } from "./schema"
 import { revalidatePath } from "next/cache"
+import { requirePagePermission } from "@/lib/authorization"
 
 export async function getVehicles(page = 1, search = "") {
+  await requirePagePermission("vehicles", "view")
   const limit = 10;
   const skip = (page - 1) * limit;
 
@@ -48,6 +50,7 @@ export async function getVehicles(page = 1, search = "") {
 
 // Keep it simple: fetch all customers for the select dropdown
 export async function getCustomersForDropdown() {
+  await requirePagePermission("vehicles", "view")
   return prisma.customer.findMany({
     select: { id: true, name: true, phone: true },
     orderBy: { name: 'asc' }
@@ -55,6 +58,7 @@ export async function getCustomersForDropdown() {
 }
 
 export async function getVehicleCatalog() {
+  await requirePagePermission("vehicles", "view")
   const companies = await prisma.vehicleCompany.findMany({
     include: { models: { select: { name: true }, orderBy: { name: "asc" } } },
     orderBy: { name: "asc" },
@@ -66,6 +70,7 @@ export async function getVehicleCatalog() {
 }
 
 export async function createVehicle(data: VehicleFormValues) {
+  await requirePagePermission("vehicles", "create")
   const parsed = vehicleSchema.parse(data)
   
   const vehicle = await prisma.vehicle.create({
@@ -84,6 +89,7 @@ export async function createVehicle(data: VehicleFormValues) {
 }
 
 export async function updateVehicle(id: string, data: VehicleFormValues) {
+  await requirePagePermission("vehicles", "edit")
   const parsed = vehicleSchema.parse(data)
   
   const vehicle = await prisma.vehicle.update({
@@ -103,6 +109,7 @@ export async function updateVehicle(id: string, data: VehicleFormValues) {
 }
 
 export async function deleteVehicle(id: string) {
+  await requirePagePermission("vehicles", "delete")
   const jobCardCount = await prisma.jobCard.count({ where: { vehicleId: id } })
   if (jobCardCount > 0) {
     throw new Error("This vehicle cannot be deleted because it has job card history.")

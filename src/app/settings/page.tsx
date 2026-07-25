@@ -16,6 +16,10 @@ export default async function SettingsPage() {
     redirect('/login')
   }
 
+  if (session.role !== "ADMIN") {
+    redirect('/')
+  }
+
   return (
     <SettingsPageClient>
       <SettingsForm />

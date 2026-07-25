@@ -64,6 +64,10 @@ export default async function PrintJobCardPage({ params }: { params: Promise<{ i
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Current Status</h3>
             <p className="font-semibold text-gray-900">{job.status.replace('_', ' ')}</p>
           </div>
+          <div>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Expected Finish</h3>
+            <p className="font-semibold text-gray-900">{job.expectedFinishDate ? new Date(job.expectedFinishDate).toLocaleDateString() : 'Not set'}</p>
+          </div>
         </div>
 
         {/* Work Done & Cost */}
