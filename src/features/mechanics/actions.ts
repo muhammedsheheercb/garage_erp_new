@@ -23,7 +23,15 @@ export async function getMechanics(page = 1, search = "") {
       take: limit,
       include: {
         jobCards: {
-          select: { id: true, status: true, vehicle: { select: { plateNumber: true, brand: true } } },
+          select: { 
+            id: true, 
+            status: true, 
+            expectedFinishDate: true,
+            complaint: true,
+            workDone: true,
+            vehicle: { select: { plateNumber: true, brand: true } },
+            customer: { select: { name: true } }
+          },
           where: { status: { not: 'COMPLETED' } } // only fetch active assigned jobs
         }
       },

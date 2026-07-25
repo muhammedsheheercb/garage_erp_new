@@ -6,7 +6,7 @@ import { getMechanics, deleteMechanic } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Briefcase } from "lucide-react"
+import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Briefcase, Eye, Calendar, Car, User, Wrench } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { MechanicForm } from "./mechanic-form"
@@ -20,6 +20,7 @@ export function MechanicList() {
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingMechanic, setEditingMechanic] = useState<any>(null)
+  const [viewingJobs, setViewingJobs] = useState<any>(null)
   const { t } = useTranslation()
 
   const { data, isLoading } = useQuery({
@@ -106,6 +107,51 @@ export function MechanicList() {
                   </TableCell>
                   <TableCell className="text-right space-x-1 whitespace-nowrap">
                     
+                    {mechanic.jobCards.length > 0 && (
+                      <Dialog open={viewingJobs?.id === mechanic.id} onOpenChange={(open) => !open && setViewingJobs(null)}>
+                        <DialogTrigger render={
+                          <Button variant="ghost" size="icon" onClick={() => setViewingJobs(mechanic)} title="View Active Jobs">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        } />
+                        {viewingJobs?.id === mechanic.id && (
+                          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>{mechanic.name}'s Active Jobs</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 mt-4">
+                              {mechanic.jobCards.map((job: any) => (
+                                <div key={job.id} className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Car className="h-4 w-4 text-muted-foreground" />
+                                      <span className="font-bold tracking-widest">{job.vehicle.plateNumber}</span>
+                                      <Badge variant="outline" className="ml-2">{job.status}</Badge>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                      <Calendar className="h-4 w-4" />
+                                      {job.expectedFinishDate ? new Date(job.expectedFinishDate).toLocaleDateString() : "No date set"}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <User className="h-4 w-4 text-muted-foreground" />
+                                    <span>{job.customer.name}</span>
+                                  </div>
+                                  <div className="flex items-start gap-2 text-sm mt-2">
+                                    <Wrench className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div className="flex-1">
+                                      <p className="font-medium">Complaint / Work:</p>
+                                      <p className="text-muted-foreground whitespace-pre-wrap">{job.complaint || "No description provided."}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </DialogContent>
+                        )}
+                      </Dialog>
+                    )}
+
                     <Dialog open={editingMechanic?.id === mechanic.id} onOpenChange={(open) => !open && setEditingMechanic(null)}>
                       <DialogTrigger render={
                         <Button variant="ghost" size="icon" onClick={() => setEditingMechanic(mechanic)}>

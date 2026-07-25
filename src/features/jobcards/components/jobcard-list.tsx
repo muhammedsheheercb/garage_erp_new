@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Currency } from "@/components/currency";
 import { useTranslation } from "@/i18n";
+import { usePermissions } from "@/lib/use-permissions";
 
 const getTranslatedStatus = (t: any, status: string): string => {
   const statusMap: Record<string, string> = {
@@ -65,6 +66,7 @@ export function JobCardList() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<any>(null);
   const { t } = useTranslation();
+  const { can } = usePermissions();
 
   const { data, isLoading } = useQuery({
     queryKey: ["jobcards", page, search],
@@ -99,21 +101,23 @@ export function JobCardList() {
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger
-            render={
-              <Button className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" /> {t.jobcards.createJobCard}
-              </Button>
-            }
-          />
-          <DialogContent className="max-w-6xl sm:max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{t.jobcards.newJobCard}</DialogTitle>
-            </DialogHeader>
-            <JobCardForm onSuccess={() => setIsAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        {can("jobcards", "create") && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger
+              render={
+                <Button className="w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" /> {t.jobcards.createJobCard}
+                </Button>
+              }
+            />
+            <DialogContent className="max-w-6xl sm:max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{t.jobcards.newJobCard}</DialogTitle>
+              </DialogHeader>
+              <JobCardForm onSuccess={() => setIsAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="border rounded-md overflow-hidden bg-card overflow-x-auto">
@@ -185,7 +189,7 @@ export function JobCardList() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Currency amount={job.estimatedCost || 0} />
+                    <Currency amount={job.grandTotal || 0} />
                   </TableCell>
                   <TableCell className="text-right space-x-1 whitespace-nowrap">
                     <Button
@@ -197,70 +201,74 @@ export function JobCardList() {
                       <Printer className="h-4 w-4" />
                     </Button>
 
-                    <Dialog
-                      open={editingJob?.id === job.id}
-                      onOpenChange={(open) => !open && setEditingJob(null)}
-                    >
-                      <DialogTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingJob(job)}
-                            title={t.jobcards.editJobCard}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        }
-                      />
-                      {editingJob?.id === job.id && (
-                        <DialogContent className="max-w-6xl sm:max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>{t.jobcards.editJobCard}</DialogTitle>
-                          </DialogHeader>
-                          <JobCardForm
-                            initialData={editingJob}
-                            onSuccess={() => setEditingJob(null)}
-                          />
-                        </DialogContent>
-                      )}
-                    </Dialog>
+                    {can("jobcards", "edit") && (
+                      <Dialog
+                        open={editingJob?.id === job.id}
+                        onOpenChange={(open) => !open && setEditingJob(null)}
+                      >
+                        <DialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingJob(job)}
+                              title={t.jobcards.editJobCard}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+                        {editingJob?.id === job.id && (
+                          <DialogContent className="max-w-6xl sm:max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>{t.jobcards.editJobCard}</DialogTitle>
+                            </DialogHeader>
+                            <JobCardForm
+                              initialData={editingJob}
+                              onSuccess={() => setEditingJob(null)}
+                            />
+                          </DialogContent>
+                        )}
+                      </Dialog>
+                    )}
 
-                    <AlertDialog>
-                      <AlertDialogTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            title={t.jobcards.deleteJobCard}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        }
-                      />
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            {t.jobcards.deleteConfirmTitle}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t.jobcards.deleteConfirm}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>
-                            {t.common.cancel}
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteMutation.mutate(job.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            {t.common.delete}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {can("jobcards", "delete") && (
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              title={t.jobcards.deleteJobCard}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {t.jobcards.deleteConfirmTitle}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t.jobcards.deleteConfirm}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>
+                              {t.common.cancel}
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(job.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {t.common.delete}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

@@ -12,16 +12,17 @@ import { useTranslation } from "@/i18n"
 
 interface PartSelectionModalProps {
   onSelect: (part: any) => void
+  jobCardId?: string
 }
 
-export function PartSelectionModal({ onSelect }: PartSelectionModalProps) {
+export function PartSelectionModal({ onSelect, jobCardId }: PartSelectionModalProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const { t } = useTranslation()
 
   const { data: parts, isLoading } = useQuery({
-    queryKey: ['parts-list', search],
-    queryFn: () => getInventoryList(search)
+    queryKey: ['parts-list', search, jobCardId],
+    queryFn: () => getInventoryList(search, jobCardId)
   })
 
   return (
@@ -67,14 +68,23 @@ export function PartSelectionModal({ onSelect }: PartSelectionModalProps) {
                   <TableRow key={part.id}>
                     <TableCell className="font-medium">{part.inventory.itemName}</TableCell>
                     <TableCell>{part.inventory.partNumber}</TableCell>
-                    <TableCell>{part.quantity}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span>{part.availableQuantity}</span>
+                        {part.reservedQuantity > 0 && (
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            ({part.quantity} total, {part.reservedQuantity} used)
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">{part.sellingPrice.toFixed(3)} OMR</TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" type="button" disabled={part.quantity <= 0} onClick={() => {
+                      <Button size="sm" type="button" disabled={part.availableQuantity <= 0} onClick={() => {
                         onSelect(part)
                         setOpen(false)
                       }}>
-                        {part.quantity <= 0 ? t.jobcards.outOfStock : t.jobcards.select}
+                        {part.availableQuantity <= 0 ? t.jobcards.outOfStock : t.jobcards.select}
                       </Button>
                     </TableCell>
                   </TableRow>

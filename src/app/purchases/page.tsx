@@ -11,7 +11,7 @@ export default async function PurchasesPage() {
   }
 
   return (
-    <ModulePageWrapper titleKey="purchasesMod.title" descriptionKey="purchasesMod.description">
+    <ModulePageWrapper titleKey="purchases.title" descriptionKey="purchases.description">
       <PurchaseList />
     </ModulePageWrapper>
   )

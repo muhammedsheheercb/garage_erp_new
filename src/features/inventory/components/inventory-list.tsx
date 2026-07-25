@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { InventoryForm } from "./inventory-form"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
+import { usePermissions } from "@/lib/use-permissions"
 
 export function InventoryList() {
   const queryClient = useQueryClient()
@@ -20,6 +21,7 @@ export function InventoryList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const { t } = useTranslation()
+  const { can } = usePermissions()
 
   const { data, isLoading } = useQuery({
     queryKey: ['inventory', page, search],
@@ -50,17 +52,19 @@ export function InventoryList() {
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={
-            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.inventoryMod.addItem}</Button>
-          } />
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{t.inventoryMod.addNewItem}</DialogTitle>
-            </DialogHeader>
-            <InventoryForm onSuccess={() => setIsAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        {can("inventory", "create") && (
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger render={
+              <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.inventoryMod.addItem}</Button>
+            } />
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{t.inventoryMod.addNewItem}</DialogTitle>
+              </DialogHeader>
+              <InventoryForm onSuccess={() => setIsAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="border rounded-md overflow-hidden bg-card">
@@ -111,46 +115,50 @@ export function InventoryList() {
 
                     <TableCell className="text-right space-x-2">
                       
-                      <Dialog open={editingItem?.id === item.id} onOpenChange={(open) => !open && setEditingItem(null)}>
-                        <DialogTrigger render={
-                          <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        } />
-                        {editingItem?.id === item.id && (
-                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>{t.inventoryMod.editItem}</DialogTitle>
-                            </DialogHeader>
-                            <InventoryForm 
-                              initialData={editingItem} 
-                              onSuccess={() => setEditingItem(null)} 
-                            />
-                          </DialogContent>
-                        )}
-                      </Dialog>
+                      {can("inventory", "edit") && (
+                        <Dialog open={editingItem?.id === item.id} onOpenChange={(open) => !open && setEditingItem(null)}>
+                          <DialogTrigger render={
+                            <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          } />
+                          {editingItem?.id === item.id && (
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>{t.inventoryMod.editItem}</DialogTitle>
+                              </DialogHeader>
+                              <InventoryForm 
+                                initialData={editingItem} 
+                                onSuccess={() => setEditingItem(null)} 
+                              />
+                            </DialogContent>
+                          )}
+                        </Dialog>
+                      )}
 
-                      <AlertDialog>
-                        <AlertDialogTrigger render={
-                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        } />
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>{t.inventoryMod.deleteItemTitle}</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {t.inventoryMod.deleteItemConfirm}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMutation.mutate(item.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                              {t.common.delete}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      {can("inventory", "delete") && (
+                        <AlertDialog>
+                          <AlertDialogTrigger render={
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          } />
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t.inventoryMod.deleteItemTitle}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {t.inventoryMod.deleteItemConfirm}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteMutation.mutate(item.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                {t.common.delete}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
 
                     </TableCell>
                   </TableRow>

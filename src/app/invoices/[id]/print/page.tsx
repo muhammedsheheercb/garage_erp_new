@@ -60,6 +60,10 @@ export default async function PrintInvoicePage({ params }: { params: { id: strin
             <table className="w-full text-right">
               <tbody>
                 <tr className="border-b">
+                  <td className="py-2 text-gray-600">Service Charge:</td>
+                  <td className="py-2 font-medium">{invoice.serviceCharge.toFixed(3)} OMR</td>
+                </tr>
+                <tr className="border-b">
                   <td className="py-2 text-gray-600">Labour Charge:</td>
                   <td className="py-2 font-medium">{invoice.labourCharge.toFixed(3)} OMR</td>
                 </tr>

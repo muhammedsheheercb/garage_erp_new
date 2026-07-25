@@ -112,9 +112,9 @@ export async function getServicesList(search = "") {
   })
 }
 
-export async function getInventoryList(search = "") {
+export async function getInventoryList(search = "", excludeJobCardId?: string) {
   await requirePagePermission("jobcards")
-  return prisma.inventoryBatch.findMany({
+  const batches = await prisma.inventoryBatch.findMany({
     where: {
       quantity: { gt: 0 },
       inventory: {
@@ -125,9 +125,27 @@ export async function getInventoryList(search = "") {
       }
     },
     include: {
-      inventory: true
+      inventory: true,
+      jobCardParts: {
+        where: {
+          jobCard: {
+            status: { notIn: ["COMPLETED", "CANCELLED"] },
+            ...(excludeJobCardId ? { id: { not: excludeJobCardId } } : {})
+          }
+        }
+      }
     },
     take: 20
+  })
+
+  return batches.map(batch => {
+    const reservedQuantity = batch.jobCardParts.reduce((sum, part) => sum + part.quantity, 0);
+    return {
+      ...batch,
+      reservedQuantity,
+      availableQuantity: Math.max(0, batch.quantity - reservedQuantity),
+      jobCardParts: undefined // remove relation array from response
+    }
   })
 }
 

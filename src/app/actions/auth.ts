@@ -36,3 +36,15 @@ export async function loginAction(identifier: string, password: string) {
 export async function logoutAction() {
   await clearSession()
 }
+
+export async function getRoleAndPermissions() {
+  const session = await getSession()
+  if (!session) return { role: null, permissions: {} }
+  if (session.role === "ADMIN") return { role: "ADMIN", permissions: {} }
+  
+  const [employee] = await prisma.$queryRaw<{ permissions: string }[]>(Prisma.sql`SELECT "permissions" FROM "Employee" WHERE "id" = ${session.userId} LIMIT 1`)
+  return { 
+    role: "EMPLOYEE", 
+    permissions: parseModulePermissions(employee?.permissions || "{}") 
+  }
+}

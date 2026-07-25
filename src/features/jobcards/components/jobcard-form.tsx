@@ -126,18 +126,21 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   });
 
   // Watch for totals calculation
-  const watchedServices = watch("services");
-  const watchedParts = watch("parts");
-  const watchedDiscount = watch("discount");
-  const watchedTax = watch("tax");
+  const watchedServices = watch("services") || [];
+  const watchedParts = watch("parts") || [];
+  const watchedDiscount = watch("discount") || 0;
+  const watchedTax = watch("tax") || 0;
+
+  const servicesJson = JSON.stringify(watchedServices);
+  const partsJson = JSON.stringify(watchedParts);
 
   useEffect(() => {
-    const sTotal = watchedServices.reduce(
-      (acc, curr) => acc + (curr.quantity || 0) * (curr.price || 0),
+    const sTotal = (watchedServices || []).reduce(
+      (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
       0,
     );
-    const pTotal = watchedParts.reduce(
-      (acc, curr) => acc + (curr.quantity || 0) * (curr.price || 0),
+    const pTotal = (watchedParts || []).reduce(
+      (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
       0,
     );
 
@@ -145,11 +148,11 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
     setValue("partsTotal", pTotal);
 
     const subTotal = sTotal + pTotal;
-    const taxAmt = (subTotal * (watchedTax || 0)) / 100;
-    const gTotal = subTotal + taxAmt - (watchedDiscount || 0);
+    const taxAmt = (subTotal * watchedTax) / 100;
+    const gTotal = subTotal + taxAmt - watchedDiscount;
 
     setValue("grandTotal", gTotal > 0 ? gTotal : 0);
-  }, [watchedServices, watchedParts, watchedDiscount, watchedTax, setValue]);
+  }, [servicesJson, partsJson, watchedDiscount, watchedTax, setValue]);
 
   const {
     data: dropdowns = { customers: [], vehicles: [], mechanics: [] },
@@ -606,6 +609,8 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                             type="number"
                             step="0.001"
                             min="0"
+                            readOnly
+                            className="bg-muted cursor-not-allowed"
                             {...register(`services.${index}.price`, {
                               valueAsNumber: true,
                             })}
@@ -638,6 +643,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-lg">{t.jobcards.parts}</h3>
               <PartSelectionModal
+                jobCardId={initialData?.id}
                 onSelect={(batch) => {
                   if (!watchedParts.find((p) => p.batchId === batch.id)) {
                     appendPart({
@@ -645,7 +651,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                       name: `${batch.inventory.itemName} (${batch.inventory.partNumber})`,
                       quantity: 1,
                       price: batch.sellingPrice,
-                      maxStock: batch.quantity,
+                      maxStock: batch.availableQuantity,
                     });
                   } else {
                     toast.error(t.jobcards.partAlreadyAdded);
@@ -712,6 +718,8 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                             type="number"
                             step="0.001"
                             min="0"
+                            readOnly
+                            className="bg-muted cursor-not-allowed"
                             {...register(`parts.${index}.price`, {
                               valueAsNumber: true,
                             })}
