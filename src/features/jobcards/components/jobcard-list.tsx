@@ -48,7 +48,7 @@ import { useTranslation } from "@/i18n";
 import { usePermissions } from "@/lib/use-permissions";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
-import { endOfDay } from "date-fns";
+import { endOfDay, format } from "date-fns";
 
 const getTranslatedStatus = (t: any, status: string): string => {
   const statusMap: Record<string, string> = {
@@ -178,7 +178,6 @@ export function JobCardList() {
                       {job.complaint}
                     </div>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm">{job.expectedFinishDate ? new Date(job.expectedFinishDate).toLocaleDateString() : "—"}</TableCell>
                   <TableCell>
                     <div className="flex flex-col items-start gap-1">
                       <Badge
@@ -199,6 +198,9 @@ export function JobCardList() {
                         {job.mechanic?.name || t.jobcards.unassigned}
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm">
+                    {job.expectedFinishDate ? format(new Date(job.expectedFinishDate), "dd MMM yyyy") : "—"}
                   </TableCell>
                   <TableCell>
                     <Currency amount={job.grandTotal || 0} />

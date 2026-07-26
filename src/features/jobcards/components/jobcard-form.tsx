@@ -522,9 +522,16 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expectedFinishDate">Expected finish date</Label>
+            <Label htmlFor="expectedFinishDate">
+              Expected finish date <span className="text-destructive">*</span>
+            </Label>
             <Input id="expectedFinishDate" type="date" {...register("expectedFinishDate")} />
             <p className="text-xs text-muted-foreground">When the vehicle is expected to be ready.</p>
+            {errors.expectedFinishDate && (
+              <p className="text-sm text-destructive">
+                {errors.expectedFinishDate.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

@@ -29,7 +29,7 @@ export const jobCardSchema = z.object({
   complaint: z.string().trim().min(3, "Complaint description is required"),
   workDone: z.string().trim().optional(),
   notes: z.string().trim().optional(),
-  expectedFinishDate: z.string().optional(),
+  expectedFinishDate: z.string().trim().min(1, "Expected finish date is required"),
   
   services: z.array(jobCardServiceSchema),
   parts: z.array(jobCardPartSchema),
