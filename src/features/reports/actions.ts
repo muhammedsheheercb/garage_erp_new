@@ -29,8 +29,8 @@ export async function getDashboardStats() {
     })
   ])
   const dailyPurchase = todayPurchases._sum.grandTotal || 0
-  const dailyExpense = (todayExpenses._sum.amount || 0) + dailyPurchase
-  const dailyProfit = dailyRevenue - dailyExpense
+  const dailyExpense = todayExpenses._sum.amount || 0
+  const dailyProfit = dailyRevenue - dailyExpense - dailyPurchase
 
   // Monthly Income
   const monthlyPayments = await prisma.payment.aggregate({
@@ -50,7 +50,8 @@ export async function getDashboardStats() {
       _sum: { grandTotal: true }
     })
   ])
-  const monthlyExpenses = (monthlyExpensesQuery._sum.amount || 0) + (monthlyPurchases._sum.grandTotal || 0)
+  const monthlyExpenses = monthlyExpensesQuery._sum.amount || 0
+  const monthlyPurchaseTotal = monthlyPurchases._sum.grandTotal || 0
 
   // Job Cards Stats
   const pendingJobs = await prisma.jobCard.count({
@@ -64,7 +65,7 @@ export async function getDashboardStats() {
   const totalCustomers = await prisma.customer.count()
   const totalVehicles = await prisma.vehicle.count()
 
-  const profit = monthlyRevenue - monthlyExpenses
+  const profit = monthlyRevenue - monthlyExpenses - monthlyPurchaseTotal
 
   return {
     dailyRevenue,
