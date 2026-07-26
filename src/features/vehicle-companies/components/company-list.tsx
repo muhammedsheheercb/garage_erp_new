@@ -12,6 +12,9 @@ import { CompanyForm } from "./company-form"
 import { ModelForm } from "./model-form"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 export function CompanyList() {
   const { t } = useTranslation()
@@ -20,12 +23,21 @@ export function CompanyList() {
   const [editingCompany, setEditingCompany] = useState<any>(null)
   const [addingModelFor, setAddingModelFor] = useState<any>(null)
   const [editingModel, setEditingModel] = useState<{ companyId: string; model: any } | null>(null)
-  const { data: companies = [], isLoading } = useQuery({ queryKey: ["vehicle-companies"], queryFn: getVehicleCompanies })
+  
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
+
+  const { data: companies = [], isLoading } = useQuery({ queryKey: ["vehicle-companies", fromDateStr, toDateStr], queryFn: () => getVehicleCompanies(fromDateStr, toDateStr) })
   const companyDelete = useMutation({ mutationFn: deleteVehicleCompany, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["vehicle-companies"] }); queryClient.invalidateQueries({ queryKey: ["vehicle-catalog"] }); toast.success(t.vehicles.companyDeleted) }, onError: (e: Error) => toast.error(e.message || t.common.somethingWrong) })
   const modelDelete = useMutation({ mutationFn: deleteVehicleModel, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["vehicle-companies"] }); queryClient.invalidateQueries({ queryKey: ["vehicle-catalog"] }); toast.success(t.vehicles.modelDeleted) }, onError: (e: Error) => toast.error(e.message || t.common.somethingWrong) })
 
   return <div className="space-y-4">
-    <div className="flex justify-end">
+    <div className="flex justify-between items-center gap-4">
+      <DatePickerWithRange 
+        date={dateRange} 
+        setDate={setDateRange} 
+      />
       <Dialog open={addingCompany} onOpenChange={setAddingCompany}><DialogTrigger render={<Button><Plus className="mr-2 h-4 w-4" />{t.vehicles.addCompany}</Button>} /><DialogContent><DialogHeader><DialogTitle>{t.vehicles.addCompany}</DialogTitle></DialogHeader><CompanyForm onSuccess={() => setAddingCompany(false)} /></DialogContent></Dialog>
     </div>
     {isLoading ? <p className="py-12 text-center text-muted-foreground">{t.common.loading}</p> : companies.length === 0 ? <Card><CardContent className="py-12 text-center text-muted-foreground">{t.common.noResults}</CardContent></Card> : <div className="grid gap-4 md:grid-cols-2">

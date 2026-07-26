@@ -13,6 +13,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PaymeterForm } from "./paymeter-form"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
 
 export function PaymeterList() {
   const queryClient = useQueryClient()
@@ -22,9 +25,14 @@ export function PaymeterList() {
   const [settlingPaymeter, setSettlingPaymeter] = useState<any>(null)
   const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({})
 
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
+
   const { data: paymeters = [], isLoading } = useQuery({
-    queryKey: ['paymeters'],
-    queryFn: () => getPaymeters()
+    queryKey: ['paymeters', fromDateStr, toDateStr],
+    queryFn: () => getPaymeters(fromDateStr, toDateStr)
   })
 
   const deleteMutation = useMutation({
@@ -53,12 +61,18 @@ export function PaymeterList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h2 className="text-xl font-bold tracking-tight">{t.settings.databaseTab.ledgersAccounts}</h2>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={
-            <Button><Plus className="mr-2 h-4 w-4" /> {t.settings.databaseTab.addPaymeter}</Button>
-          } />
+        
+        <div className="flex gap-2">
+          <DatePickerWithRange 
+            date={dateRange} 
+            setDate={setDateRange} 
+          />
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger render={
+              <Button><Plus className="mr-2 h-4 w-4" /> {t.settings.databaseTab.addPaymeter}</Button>
+            } />
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>{t.settings.databaseTab.addNewPaymeter}</DialogTitle>
@@ -66,6 +80,7 @@ export function PaymeterList() {
             <PaymeterForm onSuccess={() => setIsAddOpen(false)} />
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="border rounded-md overflow-hidden bg-card">
@@ -86,7 +101,11 @@ export function PaymeterList() {
               paymeters.map((pm: any) => (
                 <TableRow key={pm.id}>
                   <TableCell className="font-medium">{pm.name}</TableCell>
-                  <TableCell>{pm.spentAmount?.toFixed(3)} OMR</TableCell>
+                  <TableCell>
+                    {(fromDateStr || toDateStr) 
+                      ? pm.filteredSpentAmount?.toFixed(3) 
+                      : pm.spentAmount?.toFixed(3)} OMR
+                  </TableCell>
                   <TableCell className="text-right space-x-2">
                     
                     <Dialog open={settlingPaymeter?.id === pm.id} onOpenChange={(open) => !open && setSettlingPaymeter(null)}>

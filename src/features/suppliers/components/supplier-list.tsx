@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { getSuppliers, deleteSupplier, getSupplierDetails } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,27 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTranslation } from "@/i18n"
 import { usePermissions } from "@/lib/use-permissions"
+import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { endOfDay } from "date-fns"
+import { useEffect } from "react"
+
+// Custom hook for debouncing search input
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
 
 // Using a custom Tabs implementation since we don't have the shadcn tabs component installed yet.
 function SimpleTabs({ tabs, active, onChange }: { tabs: { id: string, label: string }[], active: string, onChange: (id: string) => void }) {
@@ -168,12 +189,19 @@ export function SupplierList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingSupplier, setEditingSupplier] = useState<any>(null)
   const [viewingSupplier, setViewingSupplier] = useState<string | null>(null)
+  const debouncedSearch = useDebounce(search, 400)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const { t } = useTranslation()
   const { can } = usePermissions()
 
+  const fromDateStr = dateRange?.from?.toISOString()
+  const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
+
   const { data, isLoading } = useQuery({
-    queryKey: ['suppliers', page, search],
-    queryFn: () => getSuppliers(page, search)
+    queryKey: ['suppliers', page, debouncedSearch, fromDateStr, toDateStr],
+    queryFn: () => getSuppliers(page, debouncedSearch, fromDateStr, toDateStr),
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5,
   })
 
   const deleteMutation = useMutation({
@@ -199,6 +227,11 @@ export function SupplierList() {
             }}
           />
         </div>
+        
+        <DatePickerWithRange 
+          date={dateRange} 
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+        />
 
         {can("suppliers", "create") && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

@@ -28,7 +28,8 @@ export async function getDashboardStats() {
       _sum: { grandTotal: true }
     })
   ])
-  const dailyExpense = (todayExpenses._sum.amount || 0) + (todayPurchases._sum.grandTotal || 0)
+  const dailyPurchase = todayPurchases._sum.grandTotal || 0
+  const dailyExpense = (todayExpenses._sum.amount || 0) + dailyPurchase
   const dailyProfit = dailyRevenue - dailyExpense
 
   // Monthly Income
@@ -67,6 +68,7 @@ export async function getDashboardStats() {
 
   return {
     dailyRevenue,
+    dailyPurchase,
     dailyExpense,
     dailyProfit,
     monthlyRevenue,
@@ -288,4 +290,62 @@ export async function getRecentActivities() {
       ...a,
       time: format(a.time, 'MMM dd, HH:mm')
     }))
+}
+
+export async function getReportsDashboardTotals(fromDate?: string, toDate?: string) {
+  const now = new Date()
+  let dateFilter: any = {}
+  
+  if (fromDate || toDate) {
+    const start = fromDate ? new Date(fromDate) : new Date(toDate!)
+    const end = toDate ? new Date(toDate) : new Date(fromDate!)
+    dateFilter.gte = start
+    dateFilter.lte = endOfDay(end)
+  } else {
+    dateFilter = { gte: startOfMonth(now), lte: endOfMonth(now) }
+  }
+
+  // 1. Total Income & breakdown
+  const payments = await prisma.payment.findMany({
+    where: { createdAt: dateFilter },
+    select: { amount: true, method: true }
+  })
+  let totalIncome = 0;
+  const incomeByMethod: Record<string, number> = {};
+  for (const p of payments) {
+    totalIncome += p.amount;
+    incomeByMethod[p.method] = (incomeByMethod[p.method] || 0) + p.amount;
+  }
+
+  // 2. Total Expense (regular expenses)
+  const expenses = await prisma.expense.aggregate({
+    where: { date: dateFilter },
+    _sum: { amount: true }
+  })
+  const totalExpense = expenses._sum.amount || 0;
+
+  // 3. Total Purchase & breakdown
+  const purchases = await prisma.purchase.findMany({
+    where: { createdAt: dateFilter },
+    include: { paymentMethod: true }
+  })
+  let totalPurchase = 0;
+  const purchaseByMethod: Record<string, number> = {};
+  for (const p of purchases) {
+    totalPurchase += p.grandTotal;
+    const method = p.paymentMethod?.name || 'Unknown';
+    purchaseByMethod[method] = (purchaseByMethod[method] || 0) + p.grandTotal;
+  }
+
+  // 4. Total Revenue (Profit)
+  const totalRevenue = totalIncome - (totalExpense + totalPurchase);
+
+  return {
+    totalIncome,
+    incomeByMethod,
+    totalExpense,
+    totalPurchase,
+    purchaseByMethod,
+    totalRevenue
+  }
 }

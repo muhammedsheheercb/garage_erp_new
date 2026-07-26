@@ -31,9 +31,31 @@ export function DatePickerWithRange({
   const { locale, t } = useTranslation()
   const dateLocale = locale === 'ar' ? ar : enUS
 
+  const [isOpen, setIsOpen] = React.useState(false)
+  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>(date)
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setInternalDate(date)
+    }
+  }, [isOpen, date])
+
+  const handleApply = () => {
+    setDate(internalDate)
+    setIsOpen(false)
+  }
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setInternalDate(undefined)
+    setDate(undefined)
+    setIsOpen(false)
+  }
+
   return (
     <div className={cn("grid gap-2 relative", className)}>
-      <Popover>
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger
           id="date"
           className={cn(
@@ -59,13 +81,21 @@ export function DatePickerWithRange({
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="range"
-            defaultMonth={date?.from}
-            selected={date}
-            onSelect={setDate}
+            defaultMonth={internalDate?.from || new Date()}
+            selected={internalDate}
+            onSelect={setInternalDate}
             numberOfMonths={2}
             locale={dateLocale}
             dir={locale === 'ar' ? 'rtl' : 'ltr'}
           />
+          <div className="flex items-center justify-end gap-2 p-3 border-t">
+            <Button variant="ghost" size="sm" onClick={handleClear}>
+              Clear
+            </Button>
+            <Button size="sm" onClick={handleApply}>
+              Apply
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
       {date?.from && (
@@ -73,11 +103,7 @@ export function DatePickerWithRange({
           type="button"
           className="absolute end-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground z-10 rounded-full hover:bg-muted"
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            setDate(undefined)
-          }}
+          onClick={handleClear}
           aria-label="Clear date"
         >
           <X className="h-4 w-4" />

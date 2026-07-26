@@ -16,6 +16,7 @@ interface DashboardClientProps {
   session: { email?: string; role?: "ADMIN" | "EMPLOYEE"; permissions?: string[] } | null
   realStats: {
     dailyRevenue: number
+    dailyPurchase: number
     dailyExpense: number
     dailyProfit: number
     pendingJobs: number
@@ -47,11 +48,11 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
 
   const stats = [
     { title: t.dashboard.todaysIncome, value: <Currency amount={realStats.dailyRevenue} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.paymentsReceivedToday },
+    { title: "Today's Purchase", value: <Currency amount={realStats.dailyPurchase} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total purchases today" },
     { title: t.dashboard.todaysExpense, value: <Currency amount={realStats.dailyExpense} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.expensesPurchasesToday },
     { title: t.dashboard.todaysRevenue, value: <Currency amount={realStats.dailyProfit} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.incomeMinusExpense },
     { title: t.dashboard.pendingJobs, value: realStats.pendingJobs.toString(), icon: Clock, description: t.dashboard.needsAttention },
     { title: t.dashboard.completedJobsMonth, value: realStats.completedJobs.toString(), icon: CheckCircle2, description: t.dashboard.thisMonth },
-    { title: t.dashboard.monthlyProfit, value: <Currency amount={realStats.profit} size={1.2} />, icon: Activity, description: t.dashboard.incomeMinusAllExpenses },
   ]
 
   return (

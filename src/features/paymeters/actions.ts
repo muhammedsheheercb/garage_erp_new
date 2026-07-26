@@ -4,17 +4,32 @@ import prisma from "@/lib/prisma"
 import { PaymeterFormValues, paymeterSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
-export async function getPaymeters() {
-  return prisma.paymeter.findMany({
+export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
+  const purchaseWhere: any = {};
+  if (fromDateStr || toDateStr) {
+    purchaseWhere.purchaseDate = {};
+    if (fromDateStr) purchaseWhere.purchaseDate.gte = new Date(fromDateStr);
+    if (toDateStr) purchaseWhere.purchaseDate.lte = new Date(toDateStr);
+  }
+
+  const paymeters = await prisma.paymeter.findMany({
     include: {
       purchases: {
+        where: purchaseWhere,
         include: {
           supplier: true,
-        }
+        },
+        orderBy: { purchaseDate: 'desc' }
       }
     },
     orderBy: { name: 'asc' }
-  })
+  });
+  
+  // Calculate dynamic spent amount for the selected date range
+  return paymeters.map((pm: any) => ({
+    ...pm,
+    filteredSpentAmount: pm.purchases.reduce((acc: number, p: any) => acc + (p.grandTotal || 0), 0)
+  }));
 }
 
 export async function getPaymetersDropdown() {

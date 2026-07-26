@@ -9,8 +9,16 @@ const refreshVehicleData = () => {
   revalidatePath("/vehicles")
 }
 
-export async function getVehicleCompanies() {
+export async function getVehicleCompanies(fromDateStr?: string, toDateStr?: string) {
+  const where: any = {};
+  if (fromDateStr || toDateStr) {
+    where.createdAt = {};
+    if (fromDateStr) where.createdAt.gte = new Date(fromDateStr);
+    if (toDateStr) where.createdAt.lte = new Date(toDateStr);
+  }
+
   return prisma.vehicleCompany.findMany({
+    where,
     include: { models: { orderBy: { name: "asc" } } },
     orderBy: { name: "asc" },
   })
