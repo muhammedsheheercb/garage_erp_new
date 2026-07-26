@@ -8,5 +8,5 @@ export default async function EmployeesPage() {
   if (!session || session.role !== "ADMIN") {
     redirect('/login')
   }
-  return <ModulePageWrapper titleKey="Employees" descriptionKey="Create employee login accounts and choose each module's access level."><EmployeeList /></ModulePageWrapper>
+  return <ModulePageWrapper titleKey="Users" descriptionKey="Create user login accounts and choose each module's access level."><EmployeeList /></ModulePageWrapper>
 }

@@ -38,8 +38,8 @@ function EmployeeForm({ employee, onDone }: { employee?: Employee; onDone: () =>
       if (employee) await updateEmployee(employee.id, { username, password, permissions })
       else await createEmployee({ username, password, permissions })
     },
-    onSuccess: () => { toast.success(employee ? "Employee updated" : "Employee created"); onDone() },
-    onError: (error: Error) => toast.error(error.message || "Unable to save employee"),
+    onSuccess: () => { toast.success(employee ? "User updated" : "User created"); onDone() },
+    onError: (error: Error) => toast.error(error.message || "Unable to save user"),
   })
   const togglePermission = (page: PagePermission, action: PermissionAction) => setPermissions((current) => {
     const actions = current[page] ?? []
@@ -63,8 +63,8 @@ function EmployeeForm({ employee, onDone }: { employee?: Employee; onDone: () =>
   return <form className="space-y-5" noValidate onSubmit={(event) => { event.preventDefault(); if (validate()) mutation.mutate() }}>
     <div className="space-y-2"><Label htmlFor="employee-username">Login username</Label><Input id="employee-username" value={username} onChange={(event) => { setUsername(event.target.value.toLowerCase().replace(/\s/g, '')); setErrors((current) => ({ ...current, username: undefined })) }} placeholder="e.g. john.m" minLength={2} aria-invalid={Boolean(errors.username)} required />{errors.username ? <p className="text-sm text-destructive">{errors.username}</p> : <p className="text-xs text-muted-foreground">At least 2 characters. Spaces are not allowed.</p>}</div>
     <div className="space-y-2"><Label htmlFor="employee-password">{employee ? "New password (optional)" : "Password"}</Label><div className="relative"><Input id="employee-password" type={showPassword ? "text" : "password"} minLength={6} value={password} onChange={(event) => { setPassword(event.target.value); setErrors((current) => ({ ...current, password: undefined })) }} aria-invalid={Boolean(errors.password)} required={!employee} className="pr-10" /><Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button></div>{errors.password ? <p className="text-sm text-destructive">{errors.password}</p> : employee && <p className="text-xs text-muted-foreground">Leave blank to keep the current password.</p>}</div>
-    <fieldset className="space-y-3"><legend className="text-base font-semibold">Module permissions</legend><p className="text-sm text-muted-foreground">Choose what this employee can do in each module.</p><div className="space-y-2">{PAGE_PERMISSIONS.map((module) => { const selected = permissions[module.key] ?? []; const allSelected = selected.length === PERMISSION_ACTIONS.length; return <div key={module.key} className="rounded-lg border bg-muted/30 px-3 py-3 sm:flex sm:items-center sm:justify-between"><span className="font-medium">{module.label}</span><div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 sm:mt-0"><label className="flex items-center gap-1.5 text-sm font-medium"><input type="checkbox" checked={allSelected} onChange={() => { toggleAllPermissions(module.key); setErrors((current) => ({ ...current, permissions: undefined })) }} />All</label>{PERMISSION_ACTIONS.map((action) => <label key={action} className="flex items-center gap-1.5 text-sm capitalize"><input type="checkbox" checked={selected.includes(action)} onChange={() => { togglePermission(module.key, action); setErrors((current) => ({ ...current, permissions: undefined })) }} />{action}</label>)}</div></div> })}</div>{errors.permissions && <p className="text-sm text-destructive">{errors.permissions}</p>}</fieldset>
-    <Button type="submit" disabled={mutation.isPending} className="w-full">{mutation.isPending ? "Saving…" : employee ? "Save employee" : "Create employee"}</Button>
+    <fieldset className="space-y-3"><legend className="text-base font-semibold">Module permissions</legend><p className="text-sm text-muted-foreground">Choose what this user can do in each module.</p><div className="space-y-2">{PAGE_PERMISSIONS.map((module) => { const selected = permissions[module.key] ?? []; const allSelected = selected.length === PERMISSION_ACTIONS.length; return <div key={module.key} className="rounded-lg border bg-muted/30 px-3 py-3 sm:flex sm:items-center sm:justify-between"><span className="font-medium">{module.label}</span><div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 sm:mt-0"><label className="flex items-center gap-1.5 text-sm font-medium"><input type="checkbox" checked={allSelected} onChange={() => { toggleAllPermissions(module.key); setErrors((current) => ({ ...current, permissions: undefined })) }} />All</label>{PERMISSION_ACTIONS.map((action) => <label key={action} className="flex items-center gap-1.5 text-sm capitalize"><input type="checkbox" checked={selected.includes(action)} onChange={() => { togglePermission(module.key, action); setErrors((current) => ({ ...current, permissions: undefined })) }} />{action}</label>)}</div></div> })}</div>{errors.permissions && <p className="text-sm text-destructive">{errors.permissions}</p>}</fieldset>
+    <Button type="submit" disabled={mutation.isPending} className="w-full">{mutation.isPending ? "Saving…" : employee ? "Save user" : "Create user"}</Button>
   </form>
 }
 
@@ -79,7 +79,7 @@ export function EmployeeList() {
 
   const { data: employees = [], isLoading } = useQuery<Employee[]>({ queryKey: ["employees", fromDateStr, toDateStr], queryFn: () => getEmployees(fromDateStr, toDateStr) })
   const toggleActive = useMutation({ mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => setEmployeeActive(id, isActive), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }) })
-  const removeEmployee = useMutation({ mutationFn: deleteEmployee, onSuccess: () => { toast.success("Employee deleted"); queryClient.invalidateQueries({ queryKey: ["employees"] }) }, onError: (error: Error) => toast.error(error.message || "Unable to delete employee") })
+  const removeEmployee = useMutation({ mutationFn: deleteEmployee, onSuccess: () => { toast.success("User deleted"); queryClient.invalidateQueries({ queryKey: ["employees"] }) }, onError: (error: Error) => toast.error(error.message || "Unable to delete user") })
   const close = () => { setOpen(false); setEditing(undefined); queryClient.invalidateQueries({ queryKey: ["employees"] }) }
   return (
     <div className="space-y-4">
@@ -90,7 +90,7 @@ export function EmployeeList() {
         />
         <Button onClick={() => setOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add employee
+          Add user
         </Button>
       </div>
       <div className="overflow-x-auto rounded-md border bg-card">
@@ -112,7 +112,7 @@ export function EmployeeList() {
             ) : employees.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                  No employees yet.
+                  No users yet.
                 </TableCell>
               </TableRow>
             ) : (
@@ -134,7 +134,7 @@ export function EmployeeList() {
                         setEditing(employee)
                         setOpen(true)
                       }}
-                      title="Edit employee"
+                      title="Edit user"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -148,10 +148,10 @@ export function EmployeeList() {
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>
-                            {employee.isActive ? "Disable employee?" : "Enable employee?"}
+                            {employee.isActive ? "Disable user?" : "Enable user?"}
                           </AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to {employee.isActive ? "disable" : "enable"} this employee? 
+                            Are you sure you want to {employee.isActive ? "disable" : "enable"} this user? 
                             {employee.isActive ? " They will no longer be able to log in." : " They will regain access to the system."}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -174,7 +174,7 @@ export function EmployeeList() {
                             size="icon"
                             className="text-destructive hover:text-destructive"
                             disabled={removeEmployee.isPending}
-                            title="Delete employee"
+                            title="Delete user"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -182,9 +182,9 @@ export function EmployeeList() {
                       />
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete employee?</AlertDialogTitle>
+                          <AlertDialogTitle>Delete user?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Delete {employee.username ?? "this employee"}? This action cannot be
+                            Delete {employee.username ?? "this user"}? This action cannot be
                             undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -194,7 +194,7 @@ export function EmployeeList() {
                             variant="destructive"
                             onClick={() => removeEmployee.mutate(employee.id)}
                           >
-                            Delete employee
+                            Delete user
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -215,7 +215,7 @@ export function EmployeeList() {
       >
         <DialogContent className="w-[calc(100vw-2rem)] lg:w-[70vw] lg:max-w-[70vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit employee" : "Add employee"}</DialogTitle>
+            <DialogTitle>{editing ? "Edit user" : "Add user"}</DialogTitle>
           </DialogHeader>
           {open && <EmployeeForm employee={editing} onDone={close} />}
         </DialogContent>

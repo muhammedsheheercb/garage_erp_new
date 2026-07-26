@@ -5,7 +5,14 @@ import { JobCardFormValues, jobCardSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { requirePagePermission } from "@/lib/authorization"
 
-export async function getJobCards(page = 1, search = "", fromDate?: string, toDate?: string) {
+export async function getJobCards(
+  page = 1, 
+  search = "", 
+  fromDate?: string, 
+  toDate?: string,
+  expectedFromDate?: string,
+  expectedToDate?: string
+) {
   await requirePagePermission("jobcards")
   const limit = 10;
   const skip = (page - 1) * limit;
@@ -22,6 +29,12 @@ export async function getJobCards(page = 1, search = "", fromDate?: string, toDa
     where.createdAt = {};
     if (fromDate) where.createdAt.gte = new Date(fromDate);
     if (toDate) where.createdAt.lte = new Date(toDate);
+  }
+
+  if (expectedFromDate || expectedToDate) {
+    where.expectedFinishDate = {};
+    if (expectedFromDate) where.expectedFinishDate.gte = new Date(expectedFromDate);
+    if (expectedToDate) where.expectedFinishDate.lte = new Date(expectedToDate);
   }
 
   const [data, total] = await Promise.all([

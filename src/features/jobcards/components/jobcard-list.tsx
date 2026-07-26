@@ -71,13 +71,17 @@ export function JobCardList() {
   const { t } = useTranslation();
   const { can } = usePermissions();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [expectedDateRange, setExpectedDateRange] = useState<DateRange | undefined>();
 
   const fromDateStr = dateRange?.from?.toISOString();
   const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined;
+  
+  const expectedFromDateStr = expectedDateRange?.from?.toISOString();
+  const expectedToDateStr = expectedDateRange?.to ? endOfDay(expectedDateRange.to).toISOString() : undefined;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["jobcards", page, search, fromDateStr, toDateStr],
-    queryFn: () => getJobCards(page, search, fromDateStr, toDateStr),
+    queryKey: ["jobcards", page, search, fromDateStr, toDateStr, expectedFromDateStr, expectedToDateStr],
+    queryFn: () => getJobCards(page, search, fromDateStr, toDateStr, expectedFromDateStr, expectedToDateStr),
   });
 
   const deleteMutation = useMutation({
@@ -108,10 +112,22 @@ export function JobCardList() {
           />
         </div>
 
-        <DatePickerWithRange 
-          date={dateRange} 
-          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
-        />
+        <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground font-medium px-1">Created Date</span>
+            <DatePickerWithRange 
+              date={dateRange} 
+              setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground font-medium px-1">Expected Finish</span>
+            <DatePickerWithRange 
+              date={expectedDateRange} 
+              setDate={(newDate) => { setExpectedDateRange(newDate); setPage(1); }} 
+            />
+          </div>
+        </div>
 
         {can("jobcards", "create") && (
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

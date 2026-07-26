@@ -93,7 +93,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
                 <Wrench className="h-4 w-4" /> {t.nav.settings}
               </Button>
             </Link>}
-            {session?.role === "ADMIN" && <Link href="/employees" className="flex-1 md:flex-auto"><Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed"><UserCog className="h-4 w-4" /> Employees</Button></Link>}
+            {session?.role === "ADMIN" && <Link href="/employees" className="flex-1 md:flex-auto"><Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed"><UserCog className="h-4 w-4" /> Users</Button></Link>}
           </div>
         </div>
 
