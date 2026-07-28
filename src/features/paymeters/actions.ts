@@ -26,6 +26,11 @@ export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
         where: purchaseWhere,
         include: {
           supplier: true,
+          jobCard: {
+            include: {
+              vehicle: true
+            }
+          }
         },
         orderBy: { purchaseDate: 'desc' }
       },

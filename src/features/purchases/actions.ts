@@ -46,6 +46,12 @@ export async function getPurchases(page = 1, search = "", fromDate?: string, toD
       take: limit,
       include: {
         supplier: true,
+        jobCard: {
+          include: {
+            customer: true,
+            vehicle: true
+          }
+        },
         paymentMethod: true,
         items: {
           include: {
@@ -70,12 +76,20 @@ export async function getPurchases(page = 1, search = "", fromDate?: string, toD
 }
 
 export async function getPurchaseDropdownData() {
-  const [suppliers, paymeters, inventoryRaw] = await Promise.all([
+  const [suppliers, paymeters, inventoryRaw, jobCards] = await Promise.all([
     prisma.supplier.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
     prisma.paymeter.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
     prisma.inventory.findMany({ 
       include: { batches: { orderBy: { createdAt: 'desc' }, take: 1 } },
       orderBy: { itemName: 'asc' } 
+    }),
+    prisma.jobCard.findMany({
+      where: { status: { notIn: ["COMPLETED", "CANCELLED"] } },
+      include: {
+        vehicle: true,
+        customer: true
+      },
+      orderBy: { createdAt: 'desc' }
     })
   ])
   
@@ -87,7 +101,7 @@ export async function getPurchaseDropdownData() {
     sellingPrice: i.batches[0]?.sellingPrice || 0
   }))
 
-  return { suppliers, paymeters, inventory }
+  return { suppliers, paymeters, inventory, jobCards }
 }
 
 export async function getNextPurchaseNumber() {
@@ -150,6 +164,8 @@ export async function createPurchase(data: PurchaseFormValues) {
       data: {
         purchaseNumber,
         purchaseDate: new Date(parsed.purchaseDate),
+        purchaseType: parsed.purchaseType,
+        jobCardId: parsed.jobCardId || null,
         supplierId: parsed.supplierId,
         paymentMethodId: selectedPaymentMethodId,
         subTotal,
@@ -183,9 +199,10 @@ export async function createPurchase(data: PurchaseFormValues) {
       })
     }
 
-    // 3. Create Inventory Batches
+    // 4. Create Inventory Batches and optional JobCardParts
+    let addedPartsTotal = 0
     for (const item of parsed.items) {
-      await tx.inventoryBatch.create({
+      const batch = await tx.inventoryBatch.create({
         data: {
           inventoryId: item.inventoryId,
           batchNumber: purchaseNumber,
@@ -195,6 +212,39 @@ export async function createPurchase(data: PurchaseFormValues) {
           purchaseId: purchase.id
         }
       })
+      
+      if (parsed.purchaseType === 'VEHICLE' && parsed.jobCardId) {
+        await tx.jobCardPart.create({
+          data: {
+            jobCardId: parsed.jobCardId,
+            batchId: batch.id,
+            quantity: item.quantity,
+            price: item.sellingPrice
+          }
+        })
+        addedPartsTotal += (item.quantity * item.sellingPrice)
+      }
+    }
+    
+    if (parsed.purchaseType === 'VEHICLE' && parsed.jobCardId && addedPartsTotal > 0) {
+      // Update JobCard totals
+      const jobCard = await tx.jobCard.findUnique({ where: { id: parsed.jobCardId } })
+      if (jobCard) {
+        const taxRate = jobCard.tax > 0 ? (jobCard.tax / (jobCard.serviceTotal + jobCard.partsTotal)) : 0
+        const newPartsTotal = jobCard.partsTotal + addedPartsTotal
+        const subTotal = jobCard.serviceTotal + newPartsTotal
+        const newTax = subTotal * taxRate
+        const newGrandTotal = subTotal + newTax - jobCard.discount
+        
+        await tx.jobCard.update({
+          where: { id: parsed.jobCardId },
+          data: {
+            partsTotal: newPartsTotal,
+            tax: newTax,
+            grandTotal: newGrandTotal
+          }
+        })
+      }
     }
 
     return purchase
@@ -343,16 +393,48 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
       data: { spentAmount: { decrement: existingPurchase.grandTotal } }
     })
 
-    // 2. Delete old items, batches, payments
+    // 2. Handle old JobCard parts and totals
+    if (existingPurchase.purchaseType === 'VEHICLE' && existingPurchase.jobCardId) {
+      const oldBatches = await tx.inventoryBatch.findMany({ where: { purchaseId: id } })
+      const oldBatchIds = oldBatches.map(b => b.id)
+      
+      if (oldBatchIds.length > 0) {
+        // Find how much was contributed
+        const oldParts = await tx.jobCardPart.findMany({ where: { batchId: { in: oldBatchIds } } })
+        const oldPartsTotal = oldParts.reduce((sum, p) => sum + (p.quantity * p.price), 0)
+        
+        await tx.jobCardPart.deleteMany({ where: { batchId: { in: oldBatchIds } } })
+        
+        if (oldPartsTotal > 0) {
+          const oldJobCard = await tx.jobCard.findUnique({ where: { id: existingPurchase.jobCardId } })
+          if (oldJobCard) {
+            const taxRate = oldJobCard.tax > 0 ? (oldJobCard.tax / (oldJobCard.serviceTotal + oldJobCard.partsTotal)) : 0
+            const newPartsTotal = Math.max(0, oldJobCard.partsTotal - oldPartsTotal)
+            const subTotal = oldJobCard.serviceTotal + newPartsTotal
+            const newTax = subTotal * taxRate
+            const newGrandTotal = subTotal + newTax - oldJobCard.discount
+            
+            await tx.jobCard.update({
+              where: { id: existingPurchase.jobCardId },
+              data: { partsTotal: newPartsTotal, tax: newTax, grandTotal: newGrandTotal }
+            })
+          }
+        }
+      }
+    }
+
+    // 3. Delete old items, batches, payments
     await tx.purchaseItem.deleteMany({ where: { purchaseId: id } })
     await tx.inventoryBatch.deleteMany({ where: { purchaseId: id } })
     await tx.purchasePayment.deleteMany({ where: { purchaseId: id } })
 
-    // 3. Update the purchase
+    // 4. Update the purchase
     const purchase = await tx.purchase.update({
       where: { id },
       data: {
         purchaseDate: new Date(parsed.purchaseDate),
+        purchaseType: parsed.purchaseType,
+        jobCardId: parsed.jobCardId || null,
         supplierId: parsed.supplierId,
         paymentMethodId: selectedPaymentMethodId,
         subTotal,
@@ -386,9 +468,10 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
       })
     }
 
-    // 6. Create Inventory Batches
+    // 7. Create Inventory Batches and JobCardParts
+    let addedPartsTotal = 0
     for (const item of parsed.items) {
-      await tx.inventoryBatch.create({
+      const batch = await tx.inventoryBatch.create({
         data: {
           inventoryId: item.inventoryId,
           batchNumber: purchase.purchaseNumber,
@@ -398,6 +481,34 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
           purchaseId: purchase.id
         }
       })
+      
+      if (parsed.purchaseType === 'VEHICLE' && parsed.jobCardId) {
+        await tx.jobCardPart.create({
+          data: {
+            jobCardId: parsed.jobCardId,
+            batchId: batch.id,
+            quantity: item.quantity,
+            price: item.sellingPrice
+          }
+        })
+        addedPartsTotal += (item.quantity * item.sellingPrice)
+      }
+    }
+    
+    if (parsed.purchaseType === 'VEHICLE' && parsed.jobCardId && addedPartsTotal > 0) {
+      const jobCard = await tx.jobCard.findUnique({ where: { id: parsed.jobCardId } })
+      if (jobCard) {
+        const taxRate = jobCard.tax > 0 ? (jobCard.tax / (jobCard.serviceTotal + jobCard.partsTotal)) : 0
+        const newPartsTotal = jobCard.partsTotal + addedPartsTotal
+        const subTotal = jobCard.serviceTotal + newPartsTotal
+        const newTax = subTotal * taxRate
+        const newGrandTotal = subTotal + newTax - jobCard.discount
+        
+        await tx.jobCard.update({
+          where: { id: parsed.jobCardId },
+          data: { partsTotal: newPartsTotal, tax: newTax, grandTotal: newGrandTotal }
+        })
+      }
     }
 
     return purchase

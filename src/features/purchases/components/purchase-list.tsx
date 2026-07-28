@@ -86,7 +86,9 @@ export function PurchaseList() {
           <TableHeader>
             <TableRow>
               <TableHead>{t.purchases.purchaseNo}</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>{t.suppliers.supplierTitle}</TableHead>
+              <TableHead>Job Card Details</TableHead>
               <TableHead>{t.payments.date}</TableHead>
               <TableHead>{t.invoicesMod.grandTotal}</TableHead>
               <TableHead>{t.purchases.paidAmount}</TableHead>
@@ -97,14 +99,27 @@ export function PurchaseList() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={8} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : !data || data.data.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center h-24">{t.purchases.noPurchases}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center h-24">{t.purchases.noPurchases}</TableCell></TableRow>
             ) : (
               data.data.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-semibold">{p.purchaseNumber}</TableCell>
+                  <TableCell>
+                    <span className={`text-xs px-2 py-1 rounded ${p.purchaseType === 'VEHICLE' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {p.purchaseType}
+                    </span>
+                  </TableCell>
                   <TableCell>{p.supplier?.name}</TableCell>
+                  <TableCell>
+                    {p.purchaseType === 'VEHICLE' && p.jobCard ? (
+                      <div className="flex flex-col text-xs">
+                        <span className="font-medium">{p.jobCard.vehicle.plateNumber}</span>
+                        <span className="text-muted-foreground">{p.jobCard.customer.name}</span>
+                      </div>
+                    ) : '-'}
+                  </TableCell>
                   <TableCell>{format(new Date(p.purchaseDate), 'dd-MM-yyyy')}</TableCell>
                   <TableCell>{p.grandTotal.toFixed(3)} OMR</TableCell>
                   <TableCell className="text-green-600 font-medium">{p.paidAmount.toFixed(3)} OMR</TableCell>
@@ -190,6 +205,13 @@ export function PurchaseList() {
                   <span className="text-xs text-muted-foreground block">{t.purchases.purchaseDate}</span>
                   <span className="font-semibold">{format(new Date(viewingPurchase.purchaseDate), 'dd-MM-yyyy')}</span>
                 </div>
+                {viewingPurchase.purchaseType === 'VEHICLE' && viewingPurchase.jobCard && (
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Job Card Details</span>
+                    <span className="font-semibold block">{viewingPurchase.jobCard.vehicle.plateNumber}</span>
+                    <span className="text-xs text-muted-foreground">{viewingPurchase.jobCard.customer.name}</span>
+                  </div>
+                )}
                 <div>
                   <span className="text-xs text-muted-foreground block">{t.purchases.ledgerAccount}</span>
                   <span className="font-semibold">{viewingPurchase.paymentMethod?.name || '-'}</span>

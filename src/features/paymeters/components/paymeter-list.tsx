@@ -63,7 +63,7 @@ export function PaymeterList() {
   const payExpenseMutation = useMutation({
     mutationFn: ({ expenseId, amount }: { expenseId: string, amount: number }) => payExpense(expenseId, amount),
     onSuccess: (_data, variables) => {
-      toast.success(t.payments.paymentAdded || "Payment added")
+      toast.success("Payment added")
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
       setSettlementAmounts((amounts) => ({ ...amounts, [variables.expenseId]: "0" }))
@@ -139,7 +139,7 @@ export function PaymeterList() {
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead>{t.purchases.purchaseNo}</TableHead>
-                                    <TableHead>{t.suppliers.supplierTitle}</TableHead>
+                                    <TableHead>Type & Details</TableHead>
                                     <TableHead className="text-right">{t.payments.total}</TableHead>
                                     <TableHead className="text-right">{t.payments.paid}</TableHead>
                                     <TableHead className="text-right">{t.purchases.pending}</TableHead>
@@ -150,7 +150,16 @@ export function PaymeterList() {
                                   {pm.purchases.filter((p: any) => p.pendingAmount > 0).map((purchase: any) => (
                                     <TableRow key={purchase.id}>
                                       <TableCell>{purchase.purchaseNumber}</TableCell>
-                                      <TableCell>{purchase.supplier?.name || t.common.unknown}</TableCell>
+                                      <TableCell>
+                                        <div className="flex flex-col text-xs">
+                                          <span className="font-medium text-muted-foreground">{purchase.purchaseType === 'VEHICLE' ? 'Vehicle Purchase' : 'Stock Purchase'}</span>
+                                          {purchase.purchaseType === 'VEHICLE' && purchase.jobCard ? (
+                                            <span className="font-semibold">{purchase.jobCard.vehicle.plateNumber}</span>
+                                          ) : (
+                                            <span className="font-semibold">{purchase.supplier?.name || t.common.unknown}</span>
+                                          )}
+                                        </div>
+                                      </TableCell>
                                       <TableCell className="text-right">{purchase.grandTotal.toFixed(3)}</TableCell>
                                       <TableCell className="text-right">{purchase.paidAmount.toFixed(3)}</TableCell>
                                       <TableCell className="text-right text-red-500 font-medium">{purchase.pendingAmount.toFixed(3)}</TableCell>

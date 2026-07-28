@@ -46,6 +46,8 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
     resolver: zodResolver(purchaseSchema),
     defaultValues: initialData ? {
       purchaseDate: new Date(initialData.purchaseDate).toISOString().split('T')[0],
+      purchaseType: initialData.purchaseType || "STOCK",
+      jobCardId: initialData.jobCardId || null,
       supplierId: initialData.supplierId,
       paymentSource: "PAYMETER",
       paymentMethodId: initialData.paymentMethodId,
@@ -60,6 +62,8 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
       }))
     } : {
       purchaseDate: new Date().toISOString().split('T')[0],
+      purchaseType: "STOCK",
+      jobCardId: null,
       supplierId: "",
       paymentSource: "PAYMETER",
       paymentMethodId: "",
@@ -69,6 +73,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
       items: [{ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0 }]
     }
   })
+
+  const purchaseType = watch("purchaseType")
+  const [vehicleSearch, setVehicleSearch] = useState("")
+  const [isJobCardSelectOpen, setIsJobCardSelectOpen] = useState(false)
+  const selectedJobCard = dropdownData?.jobCards?.find((jc: any) => jc.id === watch("jobCardId"))
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -136,10 +145,105 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="purchaseType">Purchase Type <span className="text-destructive">*</span></Label>
+          <Controller
+            control={control}
+            name="purchaseType"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={(val) => {
+                field.onChange(val)
+                if (val === "STOCK") {
+                  setValue("jobCardId", null)
+                }
+              }}>
+                <SelectTrigger id="purchaseType"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STOCK">Stock Purchase</SelectItem>
+                  <SelectItem value="VEHICLE">Vehicle Purchase</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="purchaseDate">{t.purchases.purchaseDate} <span className="text-destructive">*</span></Label>
           <Input id="purchaseDate" type="date" {...register("purchaseDate")} />
           {errors.purchaseDate && <p className="text-sm text-destructive">{errors.purchaseDate.message}</p>}
         </div>
+      </div>
+      
+      {purchaseType === "VEHICLE" && (
+        <div className="bg-muted/30 p-4 rounded-lg border space-y-4">
+          <h3 className="font-semibold">Vehicle & Job Card Selection</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Search Vehicle Plate Number</Label>
+              <Input 
+                placeholder="e.g. 1234 A" 
+                value={vehicleSearch} 
+                onChange={(e) => setVehicleSearch(e.target.value)} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="jobCardId">Select Job Card <span className="text-destructive">*</span></Label>
+              <Controller
+                control={control}
+                name="jobCardId"
+                render={({ field }) => {
+                  const filteredJobCards = dropdownData?.jobCards?.filter((jc: any) => 
+                    jc.vehicle.plateNumber.toLowerCase().includes(vehicleSearch.toLowerCase())
+                  ) || []
+                  
+                  return (
+                    <Select value={field.value || ""} onValueChange={field.onChange} open={isJobCardSelectOpen} onOpenChange={setIsJobCardSelectOpen}>
+                      <SelectTrigger id="jobCardId">
+                        <SelectValue placeholder="Select Job Card">
+                          {(val: string) => {
+                            const jc = dropdownData?.jobCards?.find((j: any) => j.id === val)
+                            return jc ? `${jc.vehicle.plateNumber} - ${jc.customer.name}` : null
+                          }}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredJobCards.length > 0 ? (
+                          filteredJobCards.map((jc: any) => (
+                            <SelectItem key={jc.id} value={jc.id}>
+                              {jc.vehicle.plateNumber} - {jc.customer.name} (Complaints: {jc.complaint.substring(0, 20)})
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-2 text-sm text-muted-foreground text-center">No active job cards found</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )
+                }}
+              />
+              {errors.jobCardId && <p className="text-sm text-destructive">{errors.jobCardId.message}</p>}
+            </div>
+          </div>
+          
+          {selectedJobCard && (
+            <div className="grid grid-cols-3 gap-2 text-sm bg-background p-3 rounded border">
+              <div>
+                <span className="text-muted-foreground block text-xs">Customer</span>
+                <span className="font-medium">{selectedJobCard.customer.name}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-xs">Vehicle</span>
+                <span className="font-medium">{selectedJobCard.vehicle.brand} {selectedJobCard.vehicle.model} ({selectedJobCard.vehicle.plateNumber})</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-xs">Complaint</span>
+                <span className="font-medium truncate block" title={selectedJobCard.complaint}>{selectedJobCard.complaint}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">

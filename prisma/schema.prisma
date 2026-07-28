@@ -115,6 +115,7 @@ model JobCard {
   mechanic       Mechanic         @relation(fields: [mechanicId], references: [id])
   services       JobCardService[]
   parts          JobCardPart[]
+  purchases      Purchase[]
   
   serviceTotal   Float            @default(0)
   partsTotal     Float            @default(0)
@@ -283,6 +284,9 @@ model Purchase {
   id               String            @id @default(uuid())
   purchaseNumber   String            @unique
   purchaseDate     DateTime          @default(now())
+  purchaseType     String            @default("STOCK") // "STOCK" or "VEHICLE"
+  jobCardId        String?
+  jobCard          JobCard?          @relation(fields: [jobCardId], references: [id])
   supplierId       String
   supplier         Supplier          @relation(fields: [supplierId], references: [id])
   paymentMethodId  String
