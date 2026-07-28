@@ -206,6 +206,9 @@ export async function createJobCard(data: JobCardFormValues) {
   })
   
   revalidatePath('/jobcards')
+  revalidatePath('/vehicles')
+  revalidatePath('/inventory')
+  revalidatePath('/purchases')
   return jobCard
 }
 
@@ -269,6 +272,9 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
   ])
   
   revalidatePath('/jobcards')
+  revalidatePath('/vehicles')
+  revalidatePath('/inventory')
+  revalidatePath('/purchases')
   return { success: true }
 }
 
@@ -281,5 +287,8 @@ export async function deleteJobCard(id: string) {
   ])
   
   revalidatePath('/jobcards')
+  revalidatePath('/vehicles')
+  revalidatePath('/inventory')
+  revalidatePath('/purchases')
   return { success: true }
 }

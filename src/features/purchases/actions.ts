@@ -253,6 +253,8 @@ export async function createPurchase(data: PurchaseFormValues) {
   revalidatePath('/purchases')
   revalidatePath('/inventory')
   revalidatePath('/paymeters')
+  revalidatePath('/jobcards')
+  revalidatePath('/vehicles')
   return result
 }
 
@@ -294,9 +296,9 @@ export async function deletePurchase(id: string) {
 
   revalidatePath('/purchases')
   revalidatePath('/inventory')
-  revalidatePath('/purchases')
-  revalidatePath('/inventory')
   revalidatePath('/paymeters')
+  revalidatePath('/jobcards')
+  revalidatePath('/vehicles')
   return result
 }
 
@@ -517,5 +519,7 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
   revalidatePath('/purchases')
   revalidatePath('/inventory')
   revalidatePath('/paymeters')
+  revalidatePath('/jobcards')
+  revalidatePath('/vehicles')
   return result
 }

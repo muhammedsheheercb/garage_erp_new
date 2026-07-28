@@ -176,6 +176,9 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
       queryClient.invalidateQueries({ queryKey: ["jobcards"] });
       queryClient.invalidateQueries({ queryKey: ["mechanics"] });
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["purchases"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-dropdowns"] });
       onSuccess?.();
     },
     onError: () => {

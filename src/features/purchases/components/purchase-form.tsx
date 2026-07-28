@@ -98,6 +98,9 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
+      queryClient.invalidateQueries({ queryKey: ['jobcards'] })
+      queryClient.invalidateQueries({ queryKey: ['jobcards-dropdowns'] })
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] })
       onSuccess?.()
     },
     onError: (error: any) => {

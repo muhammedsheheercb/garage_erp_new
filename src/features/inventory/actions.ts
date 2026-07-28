@@ -86,6 +86,8 @@ export async function createInventoryItem(data: InventoryFormValues) {
   })
   
   revalidatePath('/inventory')
+  revalidatePath('/purchases')
+  revalidatePath('/jobcards')
   return item
 }
 
@@ -101,6 +103,8 @@ export async function updateInventoryItem(id: string, data: InventoryFormValues)
   })
   
   revalidatePath('/inventory')
+  revalidatePath('/purchases')
+  revalidatePath('/jobcards')
   return item
 }
 
@@ -118,5 +122,7 @@ export async function deleteInventoryItem(id: string) {
   })
   
   revalidatePath('/inventory')
+  revalidatePath('/purchases')
+  revalidatePath('/jobcards')
   return { success: true }
 }

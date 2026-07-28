@@ -43,6 +43,10 @@ export function InventoryForm({ initialData, onSuccess }: InventoryFormProps) {
     onSuccess: () => {
       toast.success(initialData ? t.inventoryMod.itemUpdated : t.inventoryMod.itemCreated)
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      queryClient.invalidateQueries({ queryKey: ['purchases'] })
+      queryClient.invalidateQueries({ queryKey: ['purchase-dropdowns'] })
+      queryClient.invalidateQueries({ queryKey: ['jobcards'] })
+      queryClient.invalidateQueries({ queryKey: ['jobcards-dropdowns'] })
       onSuccess?.()
     },
     onError: (error: any) => {
