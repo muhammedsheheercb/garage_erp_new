@@ -2,9 +2,10 @@
 
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExpenseFormValues, expenseSchema, expenseCategories } from "../schema";
 import { createExpense, updateExpense } from "../actions";
+import { getPaymetersDropdown } from "@/features/paymeters/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export function ExpenseForm({
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
   } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema) as any,
@@ -52,13 +54,24 @@ export function ExpenseForm({
       ? {
           ...initialData,
           date: format(new Date(initialData.date), "yyyy-MM-dd") as unknown as Date,
+          paymentType: initialData.paymentMethod === "PAYMETER" ? "PAYMETER" : "DIRECT",
         }
       : {
           category: undefined,
           amount: 0,
           description: "",
           date: format(new Date(), "yyyy-MM-dd") as unknown as Date,
+          paymentType: "DIRECT",
+          paymentMethod: "CASH",
+          paymeterId: null,
         },
+  });
+
+  const paymentType = watch("paymentType");
+
+  const { data: paymeters = [] } = useQuery({
+    queryKey: ["paymetersDropdown"],
+    queryFn: () => getPaymetersDropdown()
   });
 
   const mutation = useMutation({
@@ -149,6 +162,73 @@ export function ExpenseForm({
             <p className="text-sm text-destructive">{errors.date.message}</p>
           )}
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="paymentType">Payment Type</Label>
+          <Controller
+            control={control}
+            name="paymentType"
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value || "DIRECT"}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Payment Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DIRECT">Direct Payment</SelectItem>
+                  <SelectItem value="PAYMETER">Paymeter</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
+        {paymentType === "DIRECT" ? (
+          <div className="space-y-2">
+            <Label htmlFor="paymentMethod">Payment Method</Label>
+            <Controller
+              control={control}
+              name="paymentMethod"
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value || "CASH"}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="CARD">Card</SelectItem>
+                    <SelectItem value="TRANSFER">Bank Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="paymeterId">Select Paymeter</Label>
+            <Controller
+              control={control}
+              name="paymeterId"
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a paymeter">
+                      {field.value 
+                        ? paymeters.find((pm: any) => pm.id === field.value)?.name || "Select a paymeter"
+                        : "Select a paymeter"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymeters.map((pm: any) => (
+                      <SelectItem key={pm.id} value={pm.id}>
+                        {pm.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">

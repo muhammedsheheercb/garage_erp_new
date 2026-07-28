@@ -139,3 +139,76 @@ export async function deleteCustomer(id: string) {
   revalidatePath('/customers')
   return { success: true }
 }
+
+export async function getCustomerFullDetails(id: string, fromDate?: string, toDate?: string) {
+  const jobCardWhere: any = {};
+  if (fromDate || toDate) {
+    jobCardWhere.createdAt = {};
+    if (fromDate) jobCardWhere.createdAt.gte = new Date(fromDate);
+    if (toDate) jobCardWhere.createdAt.lte = new Date(toDate);
+  }
+
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    include: {
+      vehicles: {
+        include: {
+          jobCards: {
+            where: jobCardWhere,
+            orderBy: { createdAt: 'desc' },
+            include: {
+              services: {
+                include: { service: true }
+              },
+              parts: {
+                include: { batch: { include: { inventory: true } } }
+              },
+              invoice: {
+                include: { payments: true }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!customer) return null;
+
+  let totalPaid = 0;
+  let totalPending = 0;
+
+  const vehiclesWithStats = customer.vehicles.map(vehicle => {
+    let vPaid = 0;
+    let vPending = 0;
+
+    const jobCardsWithStats = vehicle.jobCards.map(jc => {
+      const invoice = jc.invoice;
+      if (invoice) {
+        const paid = invoice.payments.reduce((sum: number, p: any) => sum + p.amount, 0);
+        const pending = invoice.grandTotal - paid;
+        vPaid += paid;
+        vPending += pending;
+        return { ...jc, paidAmount: paid, pendingAmount: pending };
+      }
+      return { ...jc, paidAmount: 0, pendingAmount: 0 };
+    });
+
+    totalPaid += vPaid;
+    totalPending += vPending;
+
+    return {
+      ...vehicle,
+      jobCards: jobCardsWithStats,
+      totalPaid: vPaid,
+      totalPending: vPending,
+    };
+  });
+
+  return {
+    ...customer,
+    vehicles: vehiclesWithStats,
+    overallTotalPaid: totalPaid,
+    overallTotalPending: totalPending,
+  };
+}

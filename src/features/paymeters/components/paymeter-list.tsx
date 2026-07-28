@@ -186,35 +186,70 @@ export function PaymeterList() {
                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye h-4 w-4"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
                         </Button>
                       } />
-                      <DialogContent className="sm:max-w-3xl">
+                      <DialogContent className="sm:max-w-4xl">
                         <DialogHeader>
-                          <DialogTitle>{pm.name} - {t.purchases.purchaseOrderDetails}</DialogTitle>
+                          <DialogTitle>{pm.name} - {t.purchases.viewDetails || "Details"}</DialogTitle>
                         </DialogHeader>
-                        <div className="max-h-[60vh] overflow-y-auto">
-                          {pm.purchases && pm.purchases.length > 0 ? (
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>{t.payments.date}</TableHead>
-                                  <TableHead>{t.purchases.purchaseNo}</TableHead>
-                                  <TableHead>{t.suppliers.supplierTitle}</TableHead>
-                                  <TableHead className="text-right">{t.invoicesMod.grandTotal}</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {pm.purchases.map((purchase: any) => (
-                                  <TableRow key={purchase.id}>
-                                    <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
-                                    <TableCell>{purchase.purchaseNumber}</TableCell>
-                                    <TableCell>{purchase.supplier?.name || t.common.unknown}</TableCell>
-                                    <TableCell className="text-right">{purchase.grandTotal.toFixed(3)}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          ) : (
-                            <p className="text-center text-muted-foreground py-8">{t.purchases.noPurchasesFound}</p>
-                          )}
+                        <div className="max-h-[60vh] overflow-y-auto space-y-8">
+                          <div>
+                            <h3 className="font-semibold mb-3">{t.purchases.purchaseOrderDetails || "Purchases"}</h3>
+                            {pm.purchases && pm.purchases.length > 0 ? (
+                              <div className="border rounded-md">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>{t.payments.date}</TableHead>
+                                      <TableHead>{t.purchases.purchaseNo}</TableHead>
+                                      <TableHead>{t.suppliers.supplierTitle}</TableHead>
+                                      <TableHead className="text-right">{t.invoicesMod.grandTotal}</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {pm.purchases.map((purchase: any) => (
+                                      <TableRow key={purchase.id}>
+                                        <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
+                                        <TableCell>{purchase.purchaseNumber}</TableCell>
+                                        <TableCell>{purchase.supplier?.name || t.common.unknown}</TableCell>
+                                        <TableCell className="text-right font-medium">{purchase.grandTotal.toFixed(3)}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            ) : (
+                              <p className="text-center text-muted-foreground py-4 border rounded-md">{t.purchases.noPurchasesFound}</p>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-semibold mb-3">{t.expensesMod?.title || "Expenses"}</h3>
+                            {pm.expenses && pm.expenses.length > 0 ? (
+                              <div className="border rounded-md">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>{t.payments.date}</TableHead>
+                                      <TableHead>{t.expensesMod?.expenseCategory || "Category"}</TableHead>
+                                      <TableHead>{t.expensesMod?.expenseDescription || "Description"}</TableHead>
+                                      <TableHead className="text-right">{t.expensesMod?.amount || "Amount"}</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {pm.expenses.map((expense: any) => (
+                                      <TableRow key={expense.id}>
+                                        <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                                        <TableCell>{expense.category}</TableCell>
+                                        <TableCell>{expense.description || '-'}</TableCell>
+                                        <TableCell className="text-right font-medium">{expense.amount.toFixed(3)}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            ) : (
+                              <p className="text-center text-muted-foreground py-4 border rounded-md">No expenses found.</p>
+                            )}
+                          </div>
                         </div>
                       </DialogContent>
                     </Dialog>

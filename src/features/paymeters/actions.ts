@@ -6,10 +6,18 @@ import { revalidatePath } from "next/cache"
 
 export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
   const purchaseWhere: any = {};
+  const expenseWhere: any = {};
   if (fromDateStr || toDateStr) {
     purchaseWhere.purchaseDate = {};
-    if (fromDateStr) purchaseWhere.purchaseDate.gte = new Date(fromDateStr);
-    if (toDateStr) purchaseWhere.purchaseDate.lte = new Date(toDateStr);
+    expenseWhere.date = {};
+    if (fromDateStr) {
+      purchaseWhere.purchaseDate.gte = new Date(fromDateStr);
+      expenseWhere.date.gte = new Date(fromDateStr);
+    }
+    if (toDateStr) {
+      purchaseWhere.purchaseDate.lte = new Date(toDateStr);
+      expenseWhere.date.lte = new Date(toDateStr);
+    }
   }
 
   const paymeters = await prisma.paymeter.findMany({
@@ -20,16 +28,24 @@ export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
           supplier: true,
         },
         orderBy: { purchaseDate: 'desc' }
+      },
+      expenses: {
+        where: expenseWhere,
+        orderBy: { date: 'desc' }
       }
     },
     orderBy: { name: 'asc' }
   });
   
   // Calculate dynamic spent amount for the selected date range
-  return paymeters.map((pm: any) => ({
-    ...pm,
-    filteredSpentAmount: pm.purchases.reduce((acc: number, p: any) => acc + (p.grandTotal || 0), 0)
-  }));
+  return paymeters.map((pm: any) => {
+    const purchaseTotal = pm.purchases.reduce((acc: number, p: any) => acc + (p.grandTotal || 0), 0);
+    const expenseTotal = pm.expenses.reduce((acc: number, e: any) => acc + (e.amount || 0), 0);
+    return {
+      ...pm,
+      filteredSpentAmount: purchaseTotal + expenseTotal
+    }
+  });
 }
 
 export async function getPaymetersDropdown() {

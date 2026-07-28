@@ -71,9 +71,25 @@ export async function getMonthlyExpenseReport(year: number, month: number) {
 
 export async function createExpense(data: ExpenseFormValues) {
   const parsed = expenseSchema.parse(data)
+  const { paymentType, ...dbData } = parsed
+  if (paymentType === "PAYMETER") {
+    dbData.paymentMethod = "PAYMETER"
+  } else {
+    dbData.paymeterId = null
+  }
   
-  const expense = await prisma.expense.create({
-    data: parsed
+  const expense = await prisma.$transaction(async (tx) => {
+    const newExpense = await tx.expense.create({
+      data: dbData
+    })
+    
+    if (dbData.paymeterId) {
+      await tx.paymeter.update({
+        where: { id: dbData.paymeterId },
+        data: { spentAmount: { increment: dbData.amount } }
+      })
+    }
+    return newExpense
   })
   
   revalidatePath('/expenses')
@@ -82,10 +98,37 @@ export async function createExpense(data: ExpenseFormValues) {
 
 export async function updateExpense(id: string, data: ExpenseFormValues) {
   const parsed = expenseSchema.parse(data)
+  const { paymentType, ...dbData } = parsed
+  if (paymentType === "PAYMETER") {
+    dbData.paymentMethod = "PAYMETER"
+  } else {
+    dbData.paymeterId = null
+  }
   
-  const expense = await prisma.expense.update({
-    where: { id },
-    data: parsed
+  const expense = await prisma.$transaction(async (tx) => {
+    const oldExpense = await tx.expense.findUnique({ where: { id } })
+    if (!oldExpense) throw new Error("Expense not found")
+
+    if (oldExpense.paymeterId) {
+      await tx.paymeter.update({
+        where: { id: oldExpense.paymeterId },
+        data: { spentAmount: { decrement: oldExpense.amount } }
+      })
+    }
+
+    const newExpense = await tx.expense.update({
+      where: { id },
+      data: dbData
+    })
+
+    if (dbData.paymeterId) {
+      await tx.paymeter.update({
+        where: { id: dbData.paymeterId },
+        data: { spentAmount: { increment: dbData.amount } }
+      })
+    }
+    
+    return newExpense
   })
   
   revalidatePath('/expenses')
@@ -93,8 +136,18 @@ export async function updateExpense(id: string, data: ExpenseFormValues) {
 }
 
 export async function deleteExpense(id: string) {
-  await prisma.expense.delete({
-    where: { id }
+  await prisma.$transaction(async (tx) => {
+    const oldExpense = await tx.expense.findUnique({ where: { id } })
+    if (!oldExpense) return
+
+    if (oldExpense.paymeterId) {
+      await tx.paymeter.update({
+        where: { id: oldExpense.paymeterId },
+        data: { spentAmount: { decrement: oldExpense.amount } }
+      })
+    }
+
+    await tx.expense.delete({ where: { id } })
   })
   
   revalidatePath('/expenses')

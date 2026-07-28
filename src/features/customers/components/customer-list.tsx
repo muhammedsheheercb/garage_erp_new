@@ -6,7 +6,8 @@ import { getCustomers, deleteCustomer } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Eye } from "lucide-react"
+import Link from "next/link"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
@@ -60,6 +61,12 @@ const CustomerRow = memo(({
     </TableCell>
 
     <TableCell className="text-right space-x-2">
+      <Link href={`/customers/${customer.id}`}>
+        <Button variant="ghost" size="icon" title="View Details">
+          <Eye className="h-4 w-4" />
+        </Button>
+      </Link>
+
       {canEdit && (
         <Dialog open={isEditing} onOpenChange={(open) => !open && onEdit(null)}>
           <DialogTrigger render={
