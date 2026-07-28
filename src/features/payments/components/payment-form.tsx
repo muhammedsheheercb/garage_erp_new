@@ -19,7 +19,6 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
   const paymentMethodLabels: Record<string, string> = {
     CASH: t.payments.cash,
     CARD: t.payments.card,
-    UPI: t.payments.upi,
     TRANSFER: t.payments.bankTransfer,
   }
   
@@ -135,7 +134,6 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
                 <SelectContent>
                   <SelectItem value="CASH">{t.payments.cash}</SelectItem>
                   <SelectItem value="CARD">{t.payments.card}</SelectItem>
-                  <SelectItem value="UPI">{t.payments.upi}</SelectItem>
                   <SelectItem value="TRANSFER">{t.payments.bankTransfer}</SelectItem>
                 </SelectContent>
               </Select>

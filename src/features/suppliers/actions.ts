@@ -8,8 +8,7 @@ import { revalidatePath } from "next/cache"
 const directPaymentNames = {
   CASH: "Direct Cash",
   BANK_TRANSFER: "Direct Bank Transfer",
-  CARD: "Direct Card",
-  UPI: "Direct UPI",
+  CARD: "Card",
 } as const
 
 async function getDirectPaymeterId(
@@ -100,6 +99,22 @@ export async function getSupplierDetails(id: string) {
 export async function createSupplier(data: SupplierFormValues) {
   const parsed = supplierSchema.parse(data)
   
+  const existingName = await prisma.supplier.findFirst({
+    where: { name: { equals: parsed.name, mode: 'insensitive' } }
+  })
+  if (existingName) {
+    throw new Error("This supplier name is already used.")
+  }
+
+  if (parsed.contact) {
+    const existingContact = await prisma.supplier.findFirst({
+      where: { contact: parsed.contact }
+    })
+    if (existingContact) {
+      throw new Error("This contact number is already used by another supplier.")
+    }
+  }
+
   const supplier = await prisma.supplier.create({
     data: {
       name: parsed.name,
@@ -116,6 +131,28 @@ export async function createSupplier(data: SupplierFormValues) {
 export async function updateSupplier(id: string, data: SupplierFormValues) {
   const parsed = supplierSchema.parse(data)
   
+  const existingName = await prisma.supplier.findFirst({
+    where: { 
+      name: { equals: parsed.name, mode: 'insensitive' },
+      id: { not: id }
+    }
+  })
+  if (existingName) {
+    throw new Error("This supplier name is already used.")
+  }
+
+  if (parsed.contact) {
+    const existingContact = await prisma.supplier.findFirst({
+      where: { 
+        contact: parsed.contact,
+        id: { not: id }
+      }
+    })
+    if (existingContact) {
+      throw new Error("This contact number is already used by another supplier.")
+    }
+  }
+
   const supplier = await prisma.supplier.update({
     where: { id },
     data: {

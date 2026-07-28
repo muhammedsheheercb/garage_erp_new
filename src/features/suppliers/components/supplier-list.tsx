@@ -64,7 +64,6 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
     "Direct Cash": t.payments.cash,
     "Direct Bank Transfer": t.payments.bankTransfer,
     "Direct Card": t.payments.card,
-    "Direct UPI": t.payments.upi,
   }[name] || name)
 
   const { data: details, isLoading } = useQuery({
@@ -254,16 +253,16 @@ export function SupplierList() {
             <TableRow>
               <TableHead>{t.common.name}</TableHead>
               <TableHead>{t.suppliers.contactInfo}</TableHead>
-              <TableHead>{t.common.address}</TableHead>
+
               <TableHead className="text-center">{t.suppliers.purchases}</TableHead>
               <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : data?.data.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center h-24">{t.suppliers.noSuppliers}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.suppliers.noSuppliers}</TableCell></TableRow>
             ) : (
               data?.data.map((supplier) => (
                 <TableRow key={supplier.id}>
@@ -274,7 +273,7 @@ export function SupplierList() {
                       <span className="text-xs text-muted-foreground">{supplier.email || '-'}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate">{supplier.address || '-'}</TableCell>
+
                   <TableCell className="text-center">
                     <Badge variant="secondary">{supplier._count.purchases}</Badge>
                   </TableCell>

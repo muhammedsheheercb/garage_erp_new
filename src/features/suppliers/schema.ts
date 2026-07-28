@@ -13,7 +13,7 @@ export const supplierPaymentSchema = z.object({
   purchaseId: z.string().trim().min(1, "Purchase bill is required"),
   paymentSource: z.enum(["PAYMETER", "DIRECT"]),
   paymeterId: z.string().trim().optional(),
-  directPaymentMethod: z.enum(["CASH", "BANK_TRANSFER", "CARD", "UPI"]).optional(),
+  directPaymentMethod: z.enum(["CASH", "BANK_TRANSFER", "CARD"]).optional(),
   amount: z.number().finite("Amount is required").min(0.01, "Amount must be greater than 0"),
 }).superRefine((data, ctx) => {
   if (data.paymentSource === "PAYMETER" && !data.paymeterId) {

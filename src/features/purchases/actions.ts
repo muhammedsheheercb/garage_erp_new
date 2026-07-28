@@ -8,8 +8,7 @@ import { revalidatePath } from "next/cache"
 const directPaymentNames = {
   CASH: "Direct Cash",
   BANK_TRANSFER: "Direct Bank Transfer",
-  CARD: "Direct Card",
-  UPI: "Direct UPI",
+  CARD: "Card",
 } as const
 
 async function getDirectPaymeterId(
@@ -217,9 +216,17 @@ export async function deletePurchase(id: string) {
     throw new Error("Purchase not found")
   }
 
+  if (purchase.pendingAmount > 0) {
+    throw new Error("Cannot delete this purchase because it has a pending balance.")
+  }
+
   const result = await prisma.$transaction(async (tx) => {
-    // 1. (No explicit inventory rollback needed since InventoryBatch is cascade deleted with Purchase, 
-    // but we would need to check if job card used these batches before deleting. For now, cascade takes care of the batch removal.)
+    // 1. Detach InventoryBatches so the items remain in inventory even if the purchase is deleted.
+    // This also naturally bypasses the JobCardPart RESTRICT constraint since the batches aren't deleted.
+    await tx.inventoryBatch.updateMany({
+      where: { purchaseId: id },
+      data: { purchaseId: null }
+    })
 
     // 2. Revert Paymeter spentAmount by full grandTotal (purchase commitment is cancelled)
     await tx.paymeter.update({
@@ -227,7 +234,7 @@ export async function deletePurchase(id: string) {
       data: { spentAmount: { decrement: purchase.grandTotal } }
     })
 
-    // 3. Delete the purchase (cascades items and payments)
+    // 3. Delete the purchase (cascades items and payments, but batches are now safe)
     await tx.purchase.delete({
       where: { id }
     })

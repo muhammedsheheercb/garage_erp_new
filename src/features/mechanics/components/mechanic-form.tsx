@@ -41,8 +41,8 @@ export function MechanicForm({ initialData, onSuccess }: MechanicFormProps) {
       queryClient.invalidateQueries({ queryKey: ['mechanics'] })
       onSuccess?.()
     },
-    onError: () => {
-      toast.error(t.common.somethingWrong)
+    onError: (error: any) => {
+      toast.error(error.message || t.common.somethingWrong)
     }
   })
 
@@ -64,11 +64,7 @@ export function MechanicForm({ initialData, onSuccess }: MechanicFormProps) {
         {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">{t.common.email}</Label>
-        <Input id="email" type="email" placeholder={t.mechanics.emailPlaceholder} {...register("email")} />
-        {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-      </div>
+
 
       <div className="pt-4 flex justify-end">
         <Button type="submit" disabled={mutation.isPending}>

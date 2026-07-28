@@ -53,6 +53,22 @@ export async function getCustomer(id: string) {
 export async function createCustomer(data: CustomerFormValues) {
   const parsed = customerSchema.parse(data)
   
+  const existingName = await prisma.customer.findFirst({
+    where: { name: { equals: parsed.name, mode: 'insensitive' } }
+  })
+  if (existingName) {
+    throw new Error("This customer name is already used.")
+  }
+
+  if (parsed.phone) {
+    const existingPhone = await prisma.customer.findFirst({
+      where: { phone: parsed.phone }
+    })
+    if (existingPhone) {
+      throw new Error("This mobile number is already used by another customer.")
+    }
+  }
+
   const customer = await prisma.customer.create({
     data: {
       name: parsed.name,
@@ -69,6 +85,28 @@ export async function createCustomer(data: CustomerFormValues) {
 export async function updateCustomer(id: string, data: CustomerFormValues) {
   const parsed = customerSchema.parse(data)
   
+  const existingName = await prisma.customer.findFirst({
+    where: { 
+      name: { equals: parsed.name, mode: 'insensitive' },
+      id: { not: id }
+    }
+  })
+  if (existingName) {
+    throw new Error("This customer name is already used.")
+  }
+
+  if (parsed.phone) {
+    const existingPhone = await prisma.customer.findFirst({
+      where: { 
+        phone: parsed.phone,
+        id: { not: id }
+      }
+    })
+    if (existingPhone) {
+      throw new Error("This mobile number is already used by another customer.")
+    }
+  }
+
   const customer = await prisma.customer.update({
     where: { id },
     data: {

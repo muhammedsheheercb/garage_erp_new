@@ -13,7 +13,9 @@ import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEffect, useState } from "react"
-import { Plus, Trash2, Loader2 } from "lucide-react"
+import { Plus, Trash2, Loader2, UserPlus } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { SupplierForm } from "../../suppliers/components/supplier-form"
 import { useTranslation } from "@/i18n"
 
 interface PurchaseFormProps {
@@ -25,6 +27,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const [purchaseNumber, setPurchaseNumber] = useState<string>(initialData?.purchaseNumber || t.inventoryMod.generatingPartNo)
+  const [isSupplierAddOpen, setIsSupplierAddOpen] = useState(false)
 
   const { data: dropdownData, isLoading: dropdownsLoading } = useQuery({
     queryKey: ['purchase-dropdowns'],
@@ -139,7 +142,29 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="supplierId">{t.suppliers.supplierTitle} <span className="text-destructive">*</span></Label>
+          <div className="flex justify-between items-center">
+            <Label htmlFor="supplierId">{t.suppliers.supplierTitle} <span className="text-destructive">*</span></Label>
+            <Dialog open={isSupplierAddOpen} onOpenChange={setIsSupplierAddOpen}>
+              <DialogTrigger render={
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                  <UserPlus className="h-3 w-3 mr-1" />
+                  {t.common.add || 'Add'}
+                </Button>
+              } />
+              <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>{t.suppliers.addNewSupplier}</DialogTitle>
+                </DialogHeader>
+                <SupplierForm onSuccess={async (newSupplier) => {
+                  setIsSupplierAddOpen(false)
+                  await queryClient.invalidateQueries({ queryKey: ['purchase-dropdowns'] })
+                  if (newSupplier && newSupplier.id) {
+                    setValue("supplierId", newSupplier.id)
+                  }
+                }} />
+              </DialogContent>
+            </Dialog>
+          </div>
           <Controller
             control={control}
             name="supplierId"
@@ -218,7 +243,6 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                   <SelectItem value="CASH">{t.payments.cash}</SelectItem>
                   <SelectItem value="BANK_TRANSFER">{t.payments.bankTransfer}</SelectItem>
                   <SelectItem value="CARD">{t.payments.card}</SelectItem>
-                  <SelectItem value="UPI">{t.payments.upi}</SelectItem>
                 </SelectContent>
               </Select>
             )}

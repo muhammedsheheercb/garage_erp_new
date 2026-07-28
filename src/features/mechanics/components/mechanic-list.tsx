@@ -43,8 +43,8 @@ export function MechanicList() {
       toast.success(t.mechanics.mechanicDeleted)
       queryClient.invalidateQueries({ queryKey: ['mechanics'] })
     },
-    onError: () => {
-      toast.error(t.mechanics.cannotDelete)
+    onError: (error: any) => {
+      toast.error(error.message || t.mechanics.cannotDelete)
     }
   })
 
@@ -106,7 +106,7 @@ export function MechanicList() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-sm">{mechanic.phone || t.common.NA}</span>
-                      <span className="text-xs text-muted-foreground">{mechanic.email}</span>
+
                     </div>
                   </TableCell>
                   <TableCell>

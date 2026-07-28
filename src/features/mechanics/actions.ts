@@ -60,6 +60,22 @@ export async function getMechanics(page = 1, search = "", fromDate?: string, toD
 export async function createMechanic(data: MechanicFormValues) {
   const parsed = mechanicSchema.parse(data)
   
+  const existingName = await prisma.mechanic.findFirst({
+    where: { name: { equals: parsed.name, mode: 'insensitive' } }
+  })
+  if (existingName) {
+    throw new Error("This mechanic name is already used.")
+  }
+
+  if (parsed.phone) {
+    const existingPhone = await prisma.mechanic.findFirst({
+      where: { phone: parsed.phone }
+    })
+    if (existingPhone) {
+      throw new Error("This mobile number is already used by another mechanic.")
+    }
+  }
+
   const mechanic = await prisma.mechanic.create({
     data: {
       name: parsed.name,
@@ -75,6 +91,28 @@ export async function createMechanic(data: MechanicFormValues) {
 export async function updateMechanic(id: string, data: MechanicFormValues) {
   const parsed = mechanicSchema.parse(data)
   
+  const existingName = await prisma.mechanic.findFirst({
+    where: { 
+      name: { equals: parsed.name, mode: 'insensitive' },
+      id: { not: id }
+    }
+  })
+  if (existingName) {
+    throw new Error("This mechanic name is already used.")
+  }
+
+  if (parsed.phone) {
+    const existingPhone = await prisma.mechanic.findFirst({
+      where: { 
+        phone: parsed.phone,
+        id: { not: id }
+      }
+    })
+    if (existingPhone) {
+      throw new Error("This mobile number is already used by another mechanic.")
+    }
+  }
+
   const mechanic = await prisma.mechanic.update({
     where: { id },
     data: {

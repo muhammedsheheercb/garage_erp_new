@@ -29,7 +29,6 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
     "Direct Cash": t.payments.cash,
     "Direct Bank Transfer": t.payments.bankTransfer,
     "Direct Card": t.payments.card,
-    "Direct UPI": t.payments.upi,
   }[name] || name)
   
   const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<SupplierPaymentFormValues>({
@@ -177,7 +176,6 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
                   <SelectItem value="CASH">{t.payments.cash}</SelectItem>
                   <SelectItem value="BANK_TRANSFER">{t.payments.bankTransfer}</SelectItem>
                   <SelectItem value="CARD">{t.payments.card}</SelectItem>
-                  <SelectItem value="UPI">{t.payments.upi}</SelectItem>
                 </SelectContent>
               </Select>
             )}

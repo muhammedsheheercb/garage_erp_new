@@ -6,7 +6,7 @@ import { getPayments, getPendingInvoices } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, FileText, ChevronLeft, ChevronRight, CreditCard, Banknote, Landmark, Wallet } from "lucide-react"
+import { Search, Plus, FileText, ChevronLeft, ChevronRight, CreditCard, Banknote, Building, Wallet } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { PaymentForm } from "./payment-form"
 import { useRouter } from "next/navigation"
@@ -29,7 +29,6 @@ export function PaymentList() {
   const paymentMethodLabels: Record<string, string> = {
     CASH: t.payments.cash,
     CARD: t.payments.card,
-    UPI: t.payments.upi,
     TRANSFER: t.payments.bankTransfer,
   }
 
@@ -50,8 +49,7 @@ export function PaymentList() {
     switch(method) {
       case 'CASH': return <Banknote className="h-4 w-4 mr-2" />
       case 'CARD': return <CreditCard className="h-4 w-4 mr-2" />
-      case 'UPI': return <Wallet className="h-4 w-4 mr-2" />
-      case 'TRANSFER': return <Landmark className="h-4 w-4 mr-2" />
+      case 'TRANSFER': return <Building className="h-4 w-4 mr-2" />
       default: return null
     }
   }

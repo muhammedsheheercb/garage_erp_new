@@ -70,14 +70,39 @@ export async function updatePaymeter(id: string, data: PaymeterFormValues) {
 }
 
 export async function deletePaymeter(id: string) {
-  // Check if purchases or payments are associated
-  const count = await prisma.purchase.count({
-    where: { paymentMethodId: id }
+  const purchases = await prisma.purchase.findMany({
+    where: { paymentMethodId: id },
+    include: {
+      batches: {
+        include: {
+          jobCardParts: true
+        }
+      }
+    }
   })
   
-  if (count > 0) {
-    throw new Error("Cannot delete paymeter with associated purchases.")
+  const hasPending = purchases.some(p => p.pendingAmount > 0)
+  if (hasPending) {
+    throw new Error("Cannot delete this Paymeter because there are purchases with pending amounts.")
   }
+
+  if (purchases.length > 0) {
+    const purchaseIds = purchases.map(p => p.id)
+    
+    // Detach batches so inventory isn't lost
+    await prisma.inventoryBatch.updateMany({
+      where: { purchaseId: { in: purchaseIds } },
+      data: { purchaseId: null }
+    })
+
+    await prisma.purchase.deleteMany({
+      where: { paymentMethodId: id }
+    })
+  }
+
+  await prisma.purchasePayment.deleteMany({
+    where: { paymeterId: id }
+  })
   
   await prisma.paymeter.delete({
     where: { id }

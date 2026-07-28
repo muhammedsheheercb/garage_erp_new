@@ -58,7 +58,7 @@ const CustomerRow = memo(({
         <span className="text-xs text-muted-foreground">{customer.email}</span>
       </div>
     </TableCell>
-    <TableCell className="max-w-[200px] truncate">{customer.address || t.common.NA}</TableCell>
+
     <TableCell className="text-right space-x-2">
       {canEdit && (
         <Dialog open={isEditing} onOpenChange={(open) => !open && onEdit(null)}>
@@ -153,7 +153,7 @@ export function CustomerList() {
   // useMemo: Memoizes the list rendering so it doesn't recalculate unless data or editing state changes.
   const renderedCustomers = useMemo(() => {
     if (!data?.data || data.data.length === 0) {
-      return <TableRow><TableCell colSpan={4} className="text-center h-24">{t.customers.noCustomers}</TableCell></TableRow>
+      return <TableRow><TableCell colSpan={3} className="text-center h-24">{t.customers.noCustomers}</TableCell></TableRow>
     }
     return data.data.map((customer: any) => (
       <CustomerRow 
@@ -211,13 +211,13 @@ export function CustomerList() {
             <TableRow>
               <TableHead>{t.common.name}</TableHead>
               <TableHead>{t.customers.contact}</TableHead>
-              <TableHead>{t.common.address}</TableHead>
+
               <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={3} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : renderedCustomers}
           </TableBody>
         </Table>

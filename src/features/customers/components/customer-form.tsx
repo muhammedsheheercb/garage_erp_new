@@ -10,14 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createCustomer, updateCustomer } from "../actions";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Controller } from "react-hook-form";
+
 import type { z } from "zod";
 
 interface CustomerFormProps {
@@ -61,8 +54,8 @@ export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       onSuccess?.(data);
     },
-    onError: () => {
-      toast.error(t.common.somethingWrong);
+    onError: (error: any) => {
+      toast.error(error.message || t.common.somethingWrong);
     },
   });
 
@@ -70,7 +63,7 @@ export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
     mutation.mutate(data);
   };
 
-  const customerTypes = ["Individual", "Business", "Organization"];
+
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -88,18 +81,7 @@ export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">{t.common.email}</Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder={t.customers.emailPlaceholder}
-          {...register("email")}
-        />
-        {errors.email && (
-          <p className="text-sm text-destructive">{errors.email.message}</p>
-        )}
-      </div>
+
 
       <div className="space-y-2">
         <Label htmlFor="phone">
@@ -112,56 +94,6 @@ export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
         />
         {errors.phone && (
           <p className="text-sm text-destructive">{errors.phone.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="address">{t.common.address}</Label>
-        <Input
-          id="address"
-          placeholder={t.customers.addressPlaceholder}
-          {...register("address")}
-        />
-        {errors.address && (
-          <p className="text-sm text-destructive">{errors.address.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="type">{t.customers.customerType}</Label>
-        <Controller
-          control={control}
-          name="type"
-          render={({ field }) => (
-            <Select
-              onValueChange={field.onChange}
-              value={field.value || "Individual"}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {customerTypes.map((type) => {
-                  const typeKeyMap: Record<string, string> = {
-                    Individual: "typeIndividual",
-                    Business: "typeBusiness",
-                    Organization: "typeOrganization",
-                  };
-                  const translatedType =
-                    t.customers[typeKeyMap[type] as keyof typeof t.customers] ||
-                    type;
-                  return (
-                    <SelectItem key={type} value={type}>
-                      {translatedType}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {errors.type && (
-          <p className="text-sm text-destructive">{errors.type.message}</p>
         )}
       </div>
 

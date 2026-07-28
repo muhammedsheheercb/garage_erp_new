@@ -13,7 +13,7 @@ export const purchaseSchema = z.object({
   supplierId: z.string().trim().min(1, "Supplier is required"),
   paymentSource: z.enum(["PAYMETER", "DIRECT"]),
   paymentMethodId: z.string().trim().optional(),
-  directPaymentMethod: z.enum(["CASH", "BANK_TRANSFER", "CARD", "UPI"]).optional(),
+  directPaymentMethod: z.enum(["CASH", "BANK_TRANSFER", "CARD"]).optional(),
   discount: z.number().finite("Discount is required").min(0, "Discount cannot be negative"),
   paidAmount: z.number().finite("Paid amount is required").min(0, "Paid amount cannot be negative"),
   items: z.array(purchaseItemSchema).min(1, "At least one item is required"),
