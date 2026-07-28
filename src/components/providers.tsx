@@ -17,8 +17,14 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   };
 }
 
-// Create a client
-const queryClient = new QueryClient()
+// Create a client with a default staleTime of 5 minutes to make navigation fast
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+    },
+  },
+})
 
 export function Providers({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>) {
   return (

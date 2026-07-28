@@ -10,9 +10,11 @@ export default async function DashboardPage() {
     redirect("/login");
   }
   
-  // Fetch real data from the database
-  const realStats = await getDashboardStats();
-  const recentActivities = await getRecentActivities();
+  // Fetch real data from the database concurrently
+  const [realStats, recentActivities] = await Promise.all([
+    getDashboardStats(),
+    getRecentActivities()
+  ]);
 
   return (
     <DashboardClient 

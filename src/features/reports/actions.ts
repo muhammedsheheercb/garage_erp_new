@@ -10,60 +10,75 @@ export async function getDashboardStats() {
   const todayStart = startOfDay(now)
   const todayEnd = endOfDay(now)
 
-  // Today's Income (invoice payments received today)
-  const todayPayments = await prisma.payment.aggregate({
-    where: { createdAt: { gte: todayStart, lte: todayEnd } },
-    _sum: { amount: true }
-  })
-  const dailyRevenue = todayPayments._sum.amount || 0
-
-  // Today's Expenses (regular expenses + purchase grandTotals created today)
-  const [todayExpenses, todayPurchases] = await Promise.all([
+  const [
+    todayPaymentsQuery,
+    todayExpensesQuery,
+    todayPurchasesQuery,
+    monthlyPaymentsQuery,
+    monthlyExpensesQuery,
+    monthlyPurchasesQuery,
+    pendingJobsCount,
+    completedJobsCount,
+    totalCustomersCount,
+    totalVehiclesCount
+  ] = await Promise.all([
+    // Today's Income
+    prisma.payment.aggregate({
+      where: { createdAt: { gte: todayStart, lte: todayEnd } },
+      _sum: { amount: true }
+    }),
+    // Today's Expenses
     prisma.expense.aggregate({
       where: { date: { gte: todayStart, lte: todayEnd } },
       _sum: { amount: true }
     }),
+    // Today's Purchases
     prisma.purchase.aggregate({
       where: { createdAt: { gte: todayStart, lte: todayEnd } },
       _sum: { grandTotal: true }
-    })
-  ])
-  const dailyPurchase = todayPurchases._sum.grandTotal || 0
-  const dailyExpense = todayExpenses._sum.amount || 0
-  const dailyProfit = dailyRevenue - dailyExpense - dailyPurchase
-
-  // Monthly Income
-  const monthlyPayments = await prisma.payment.aggregate({
-    where: { createdAt: { gte: currentMonthStart, lte: currentMonthEnd } },
-    _sum: { amount: true }
-  })
-  const monthlyRevenue = monthlyPayments._sum.amount || 0
-
-  // Monthly Expenses (regular + purchases)
-  const [monthlyExpensesQuery, monthlyPurchases] = await Promise.all([
+    }),
+    // Monthly Income
+    prisma.payment.aggregate({
+      where: { createdAt: { gte: currentMonthStart, lte: currentMonthEnd } },
+      _sum: { amount: true }
+    }),
+    // Monthly Expenses
     prisma.expense.aggregate({
       where: { date: { gte: currentMonthStart, lte: currentMonthEnd } },
       _sum: { amount: true }
     }),
+    // Monthly Purchases
     prisma.purchase.aggregate({
       where: { createdAt: { gte: currentMonthStart, lte: currentMonthEnd } },
       _sum: { grandTotal: true }
-    })
+    }),
+    // Pending Jobs
+    prisma.jobCard.count({
+      where: { status: { in: ['PENDING', 'IN_PROGRESS'] } }
+    }),
+    // Completed Jobs
+    prisma.jobCard.count({
+      where: { status: 'COMPLETED', createdAt: { gte: currentMonthStart, lte: currentMonthEnd } }
+    }),
+    // Total Customers
+    prisma.customer.count(),
+    // Total Vehicles
+    prisma.vehicle.count()
   ])
+
+  const dailyRevenue = todayPaymentsQuery._sum.amount || 0
+  const dailyPurchase = todayPurchasesQuery._sum.grandTotal || 0
+  const dailyExpense = todayExpensesQuery._sum.amount || 0
+  const dailyProfit = dailyRevenue - dailyExpense - dailyPurchase
+
+  const monthlyRevenue = monthlyPaymentsQuery._sum.amount || 0
   const monthlyExpenses = monthlyExpensesQuery._sum.amount || 0
-  const monthlyPurchaseTotal = monthlyPurchases._sum.grandTotal || 0
+  const monthlyPurchaseTotal = monthlyPurchasesQuery._sum.grandTotal || 0
 
-  // Job Cards Stats
-  const pendingJobs = await prisma.jobCard.count({
-    where: { status: { in: ['PENDING', 'IN_PROGRESS'] } }
-  })
-
-  const completedJobs = await prisma.jobCard.count({
-    where: { status: 'COMPLETED', createdAt: { gte: currentMonthStart, lte: currentMonthEnd } }
-  })
-
-  const totalCustomers = await prisma.customer.count()
-  const totalVehicles = await prisma.vehicle.count()
+  const pendingJobs = pendingJobsCount
+  const completedJobs = completedJobsCount
+  const totalCustomers = totalCustomersCount
+  const totalVehicles = totalVehiclesCount
 
   const profit = monthlyRevenue - monthlyExpenses - monthlyPurchaseTotal
 
@@ -254,17 +269,18 @@ export async function getDetailedReportData(type: 'revenue' | 'expenses' | 'jobs
 }
 
 export async function getRecentActivities() {
-  const latestInvoices = await prisma.invoice.findMany({
-    take: 3,
-    orderBy: { createdAt: 'desc' },
-    include: { customer: true }
-  })
-  
-  const latestJobs = await prisma.jobCard.findMany({
-    take: 3,
-    orderBy: { createdAt: 'desc' },
-    include: { customer: true }
-  })
+  const [latestInvoices, latestJobs] = await Promise.all([
+    prisma.invoice.findMany({
+      take: 3,
+      orderBy: { createdAt: 'desc' },
+      include: { customer: true }
+    }),
+    prisma.jobCard.findMany({
+      take: 3,
+      orderBy: { createdAt: 'desc' },
+      include: { customer: true }
+    })
+  ])
   
   const activities = [
     ...latestInvoices.map(i => ({
