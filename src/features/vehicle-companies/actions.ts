@@ -26,6 +26,12 @@ export async function getVehicleCompanies(fromDateStr?: string, toDateStr?: stri
 
 export async function createVehicleCompany(data: CompanyCreateFormValues) {
   const parsed = companyCreateSchema.parse(data)
+  const existing = await prisma.vehicleCompany.findFirst({
+    where: { name: { equals: parsed.name, mode: "insensitive" } },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Vehicle company name already exists.")
+
   const company = await prisma.vehicleCompany.create({
     data: {
       name: parsed.name,
@@ -38,6 +44,15 @@ export async function createVehicleCompany(data: CompanyCreateFormValues) {
 
 export async function updateVehicleCompany(id: string, data: CompanyFormValues) {
   const parsed = companySchema.parse(data)
+  const existing = await prisma.vehicleCompany.findFirst({
+    where: {
+      name: { equals: parsed.name, mode: "insensitive" },
+      id: { not: id },
+    },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Vehicle company name already exists.")
+
   const company = await prisma.vehicleCompany.update({ where: { id }, data: parsed })
   refreshVehicleData()
   return company
@@ -51,6 +66,15 @@ export async function deleteVehicleCompany(id: string) {
 
 export async function createVehicleModel(data: ModelFormValues) {
   const parsed = modelSchema.parse(data)
+  const existing = await prisma.vehicleModel.findFirst({
+    where: {
+      companyId: parsed.companyId,
+      name: { equals: parsed.name, mode: "insensitive" },
+    },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Vehicle model already exists for this company.")
+
   const model = await prisma.vehicleModel.create({ data: parsed })
   refreshVehicleData()
   return model
@@ -58,6 +82,15 @@ export async function createVehicleModel(data: ModelFormValues) {
 
 export async function updateVehicleModel(id: string, data: ModelFormValues) {
   const parsed = modelSchema.parse(data)
+  const existing = await prisma.vehicleModel.findFirst({
+    where: {
+      companyId: parsed.companyId,
+      name: { equals: parsed.name, mode: "insensitive" },
+      id: { not: id },
+    },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Vehicle model already exists for this company.")
   const model = await prisma.vehicleModel.update({ where: { id }, data: parsed })
   refreshVehicleData()
   return model

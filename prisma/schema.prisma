@@ -299,6 +299,7 @@ model Purchase {
   grandTotal       Float             @default(0)
   paidAmount       Float             @default(0)
   pendingAmount    Float             @default(0)
+  paymeterReimbursed Float             @default(0)
   items            PurchaseItem[]
   batches          InventoryBatch[]
   purchasePayments PurchasePayment[]

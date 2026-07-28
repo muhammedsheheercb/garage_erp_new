@@ -114,23 +114,23 @@ export function PaymeterList() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h2 className="text-xl font-bold tracking-tight">{t.settings.databaseTab.ledgersAccounts}</h2>
-        
+
         <div className="flex gap-2">
-          <DatePickerWithRange 
-            date={dateRange} 
-            setDate={setDateRange} 
+          <DatePickerWithRange
+            date={dateRange}
+            setDate={setDateRange}
           />
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger render={
               <Button><Plus className="mr-2 h-4 w-4" /> {t.settings.databaseTab.addPaymeter}</Button>
             } />
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{t.settings.databaseTab.addNewPaymeter}</DialogTitle>
-            </DialogHeader>
-            <PaymeterForm onSuccess={() => setIsAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{t.settings.databaseTab.addNewPaymeter}</DialogTitle>
+              </DialogHeader>
+              <PaymeterForm onSuccess={() => setIsAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -153,12 +153,12 @@ export function PaymeterList() {
                 <TableRow key={pm.id}>
                   <TableCell className="font-medium">{pm.name}</TableCell>
                   <TableCell>
-                    {(fromDateStr || toDateStr) 
-                      ? pm.filteredSpentAmount?.toFixed(3) 
+                    {(fromDateStr || toDateStr)
+                      ? pm.filteredSpentAmount?.toFixed(3)
                       : pm.spentAmount?.toFixed(3)} OMR
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    
+
                     <Dialog open={settlingPaymeter?.id === pm.id} onOpenChange={(open) => !open && setSettlingPaymeter(null)}>
                       <DialogTrigger render={
                         <Button variant="ghost" size="icon" onClick={() => setSettlingPaymeter(pm)} title={t.purchases.settlePurchases}>
@@ -185,7 +185,7 @@ export function PaymeterList() {
                                 </TableHeader>
                                 <TableBody>
                                   {(() => {
-                                    const filtered = pm.purchases.filter((p: any) => p.pendingAmount > 0);
+                                    const filtered = pm.purchases.filter((p: any) => (p.paymeterAdvanceAmount || 0) > (p.paymeterReimbursed || 0));
                                     if (filtered.length === 0) return <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle}</TableCell></TableRow>;
                                     const paginated = filtered.slice((pursePurchasesPage - 1) * 5, pursePurchasesPage * 5);
                                     return (
@@ -203,14 +203,14 @@ export function PaymeterList() {
                                                 )}
                                               </div>
                                             </TableCell>
-                                            <TableCell className="text-right">{purchase.grandTotal.toFixed(3)}</TableCell>
-                                            <TableCell className="text-right">{purchase.paidAmount.toFixed(3)}</TableCell>
-                                            <TableCell className="text-right text-red-500 font-medium">{purchase.pendingAmount.toFixed(3)}</TableCell>
+                                            <TableCell className="text-right">{(purchase.paymeterAdvanceAmount || 0).toFixed(3)}</TableCell>
+                                            <TableCell className="text-right">{(purchase.paymeterReimbursed || 0).toFixed(3)}</TableCell>
+                                            <TableCell className="text-right text-red-500 font-medium">{((purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0)).toFixed(3)}</TableCell>
                                             <TableCell className="text-right">
                                               <form onSubmit={(e) => {
                                                 e.preventDefault()
                                                 const amount = parseFloat(settlementAmounts[purchase.id] || "0")
-                                                if (amount > 0 && amount <= purchase.pendingAmount) {
+                                                if (amount > 0 && amount <= ((purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0))) {
                                                   payPurchaseMutation.mutate({ purchaseId: purchase.id, amount })
                                                 }
                                               }} className="flex items-center gap-2 justify-end">
@@ -220,7 +220,7 @@ export function PaymeterList() {
                                                   step="0.001"
                                                   required
                                                   min="0.001"
-                                                  max={purchase.pendingAmount}
+                                                  max={(purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0)}
                                                   className="w-24 h-8"
                                                   placeholder="0.000"
                                                   value={settlementAmounts[purchase.id] ?? ""}
@@ -262,50 +262,61 @@ export function PaymeterList() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {pm.expenses.filter((e: any) => e.pendingAmount > 0).map((expense: any) => (
-                                      <TableRow key={expense.id}>
-                                        <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>{expense.category}</TableCell>
-                                        <TableCell className="text-right">{expense.amount.toFixed(3)}</TableCell>
-                                        <TableCell className="text-right">{(expense.paidAmount || 0).toFixed(3)}</TableCell>
-                                        <TableCell className="text-right text-red-500 font-medium">{(expense.pendingAmount || 0).toFixed(3)}</TableCell>
-                                        <TableCell className="text-right">
-                                          <form onSubmit={(e) => {
-                                            e.preventDefault()
-                                            const amount = parseFloat(settlementAmounts[expense.id] || "0")
-                                            if (amount > 0 && amount <= expense.pendingAmount) {
-                                              payExpenseMutation.mutate({ expenseId: expense.id, amount })
-                                            }
-                                          }} className="flex items-center gap-2 justify-end">
-                                            <Input
-                                              name="amount"
-                                              type="number"
-                                              step="0.001"
-                                              required
-                                              min="0.001"
-                                              max={expense.pendingAmount}
-                                              className="w-24 h-8"
-                                              placeholder="0.000"
-                                              value={settlementAmounts[expense.id] ?? ""}
-                                              onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [expense.id]: event.target.value }))}
-                                            />
-                                            <Button type="submit" size="sm" disabled={payExpenseMutation.isPending}>{t.payments.pay}</Button>
-                                          </form>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                    {pm.expenses.filter((e: any) => e.pendingAmount > 0).length === 0 && (
-                                      <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle || "No pending amounts to settle"}</TableCell>
-                                      </TableRow>
-                                    )}
+                                    {(() => {
+                                      const filtered = pm.expenses.filter((e: any) => e.pendingAmount > 0);
+                                      if (filtered.length === 0) return <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle || "No pending amounts to settle"}</TableCell></TableRow>;
+                                      const paginated = filtered.slice((purseExpensesPage - 1) * 5, purseExpensesPage * 5);
+                                      return (
+                                        <>
+                                          {paginated.map((expense: any) => (
+                                            <TableRow key={expense.id}>
+                                              <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                                              <TableCell>{expense.category}</TableCell>
+                                              <TableCell className="text-right">{expense.amount.toFixed(3)}</TableCell>
+                                              <TableCell className="text-right">{(expense.paidAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right text-red-500 font-medium">{(expense.pendingAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right">
+                                                <form onSubmit={(e) => {
+                                                  e.preventDefault()
+                                                  const amount = parseFloat(settlementAmounts[expense.id] || "0")
+                                                  if (amount > 0 && amount <= expense.pendingAmount) {
+                                                    payExpenseMutation.mutate({ expenseId: expense.id, amount })
+                                                  }
+                                                }} className="flex items-center gap-2 justify-end">
+                                                  <Input
+                                                    name="amount"
+                                                    type="number"
+                                                    step="0.001"
+                                                    required
+                                                    min="0.001"
+                                                    max={expense.pendingAmount}
+                                                    className="w-24 h-8"
+                                                    placeholder="0.000"
+                                                    value={settlementAmounts[expense.id] ?? ""}
+                                                    onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [expense.id]: event.target.value }))}
+                                                  />
+                                                  <Button type="submit" size="sm" disabled={payExpenseMutation.isPending}>{t.payments.pay}</Button>
+                                                </form>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                          {filtered.length > 5 && (
+                                            <TableRow>
+                                              <TableCell colSpan={6} className="p-0 border-b-0">
+                                                <Pagination page={purseExpensesPage} setPage={setPurseExpensesPage} total={filtered.length} limit={5} />
+                                              </TableCell>
+                                            </TableRow>
+                                          )}
+                                        </>
+                                      )
+                                    })()}
                                   </TableBody>
                                 </Table>
                               ) : (
                                 <p className="text-center text-muted-foreground py-8">No expenses found.</p>
                               )}
                             </div>
-                            
+
                             <div className="mt-8 border-t pt-6">
                               <h3 className="font-semibold mb-3">{(t.suppliers as any)?.supplierPayments || "Supplier Payments"}</h3>
                               {pm.purchasePayments && pm.purchasePayments.length > 0 ? (
@@ -321,43 +332,54 @@ export function PaymeterList() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {pm.purchasePayments.filter((p: any) => p.pendingAmount > 0).map((payment: any) => (
-                                      <TableRow key={payment.id}>
-                                        <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
-                                        <TableCell className="text-right">{payment.amount.toFixed(3)}</TableCell>
-                                        <TableCell className="text-right">{(payment.paidAmount || 0).toFixed(3)}</TableCell>
-                                        <TableCell className="text-right text-red-500 font-medium">{(payment.pendingAmount || 0).toFixed(3)}</TableCell>
-                                        <TableCell className="text-right">
-                                          <form onSubmit={(e) => {
-                                            e.preventDefault()
-                                            const amount = parseFloat(settlementAmounts[payment.id] || "0")
-                                            if (amount > 0 && amount <= payment.pendingAmount) {
-                                              paySupplierMutation.mutate({ paymentId: payment.id, amount })
-                                            }
-                                          }} className="flex items-center gap-2 justify-end">
-                                            <Input
-                                              name="amount"
-                                              type="number"
-                                              step="0.001"
-                                              required
-                                              min="0.001"
-                                              max={payment.pendingAmount}
-                                              className="w-24 h-8"
-                                              placeholder="0.000"
-                                              value={settlementAmounts[payment.id] ?? ""}
-                                              onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [payment.id]: event.target.value }))}
-                                            />
-                                            <Button type="submit" size="sm" disabled={paySupplierMutation.isPending}>{t.payments.pay}</Button>
-                                          </form>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                    {pm.purchasePayments.filter((p: any) => p.pendingAmount > 0).length === 0 && (
-                                      <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle || "No pending amounts to settle"}</TableCell>
-                                      </TableRow>
-                                    )}
+                                    {(() => {
+                                      const filtered = pm.purchasePayments.filter((p: any) => p.pendingAmount > 0);
+                                      if (filtered.length === 0) return <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle || "No pending amounts to settle"}</TableCell></TableRow>;
+                                      const paginated = filtered.slice((purseSupplierPage - 1) * 5, purseSupplierPage * 5);
+                                      return (
+                                        <>
+                                          {paginated.map((payment: any) => (
+                                            <TableRow key={payment.id}>
+                                              <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                                              <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
+                                              <TableCell className="text-right">{payment.amount.toFixed(3)}</TableCell>
+                                              <TableCell className="text-right">{(payment.paidAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right text-red-500 font-medium">{(payment.pendingAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right">
+                                                <form onSubmit={(e) => {
+                                                  e.preventDefault()
+                                                  const amount = parseFloat(settlementAmounts[payment.id] || "0")
+                                                  if (amount > 0 && amount <= payment.pendingAmount) {
+                                                    paySupplierMutation.mutate({ paymentId: payment.id, amount })
+                                                  }
+                                                }} className="flex items-center gap-2 justify-end">
+                                                  <Input
+                                                    name="amount"
+                                                    type="number"
+                                                    step="0.001"
+                                                    required
+                                                    min="0.001"
+                                                    max={payment.pendingAmount}
+                                                    className="w-24 h-8"
+                                                    placeholder="0.000"
+                                                    value={settlementAmounts[payment.id] ?? ""}
+                                                    onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [payment.id]: event.target.value }))}
+                                                  />
+                                                  <Button type="submit" size="sm" disabled={paySupplierMutation.isPending}>{t.payments.pay}</Button>
+                                                </form>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                          {filtered.length > 5 && (
+                                            <TableRow>
+                                              <TableCell colSpan={6} className="p-0 border-b-0">
+                                                <Pagination page={purseSupplierPage} setPage={setPurseSupplierPage} total={filtered.length} limit={5} />
+                                              </TableCell>
+                                            </TableRow>
+                                          )}
+                                        </>
+                                      )
+                                    })()}
                                   </TableBody>
                                 </Table>
                               ) : (
@@ -368,11 +390,11 @@ export function PaymeterList() {
                         </DialogContent>
                       )}
                     </Dialog>
-                    
+
                     <Dialog>
                       <DialogTrigger render={
                         <Button variant="ghost" size="icon" title={t.purchases.viewDetails}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye h-4 w-4"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye h-4 w-4"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></svg>
                         </Button>
                       } />
                       <DialogContent className="sm:max-w-4xl">
@@ -390,22 +412,37 @@ export function PaymeterList() {
                                       <TableHead>{t.payments.date}</TableHead>
                                       <TableHead>{t.purchases.purchaseNo}</TableHead>
                                       <TableHead>{t.suppliers.supplierTitle}</TableHead>
-                                      <TableHead className="text-right">{t.invoicesMod.grandTotal}</TableHead>
+                                      <TableHead className="text-right">{t.payments.total}</TableHead>
                                       <TableHead className="text-right">{t.payments.paid}</TableHead>
                                       <TableHead className="text-right">{t.purchases.pending}</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {pm.purchases.map((purchase: any) => (
-                                      <TableRow key={purchase.id}>
-                                        <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
-                                        <TableCell>{purchase.purchaseNumber}</TableCell>
-                                        <TableCell>{purchase.supplier?.name || t.common.unknown}</TableCell>
-                                        <TableCell className="text-right font-medium">{purchase.grandTotal.toFixed(3)}</TableCell>
-                                        <TableCell className="text-right text-green-600 font-medium">{(purchase.paidAmount || 0).toFixed(3)}</TableCell>
-                                        <TableCell className="text-right text-destructive font-medium">{(purchase.pendingAmount || 0).toFixed(3)}</TableCell>
-                                      </TableRow>
-                                    ))}
+                                    {(() => {
+                                      const items = pm.purchases;
+                                      const paginated = items.slice((eyePurchasesPage - 1) * 5, eyePurchasesPage * 5);
+                                      return (
+                                        <>
+                                          {paginated.map((purchase: any) => (
+                                            <TableRow key={purchase.id}>
+                                              <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
+                                              <TableCell>{purchase.purchaseNumber}</TableCell>
+                                              <TableCell>{purchase.supplier?.name || t.common.unknown}</TableCell>
+                                              <TableCell className="text-right font-medium">{(purchase.paymeterAdvanceAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right text-green-600 font-medium">{(purchase.paymeterReimbursed || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right text-destructive font-medium">{((purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0)).toFixed(3)}</TableCell>
+                                            </TableRow>
+                                          ))}
+                                          {items.length > 5 && (
+                                            <TableRow>
+                                              <TableCell colSpan={6} className="p-0 border-b-0">
+                                                <Pagination page={eyePurchasesPage} setPage={setEyePurchasesPage} total={items.length} limit={5} />
+                                              </TableCell>
+                                            </TableRow>
+                                          )}
+                                        </>
+                                      )
+                                    })()}
                                   </TableBody>
                                 </Table>
                               </div>
@@ -413,7 +450,7 @@ export function PaymeterList() {
                               <p className="text-center text-muted-foreground py-4 border rounded-md">{t.purchases.noPurchasesFound}</p>
                             )}
                           </div>
-                          
+
                           <div>
                             <h3 className="font-semibold mb-3">{t.expensesMod?.title || "Expenses"}</h3>
                             {pm.expenses && pm.expenses.length > 0 ? (
@@ -430,16 +467,31 @@ export function PaymeterList() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {pm.expenses.map((expense: any) => (
-                                      <TableRow key={expense.id}>
-                                        <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>{expense.category}</TableCell>
-                                        <TableCell>{expense.description || '-'}</TableCell>
-                                        <TableCell className="text-right font-medium">{expense.amount.toFixed(3)}</TableCell>
-                                        <TableCell className="text-right text-green-600 font-medium">{(expense.paidAmount || 0).toFixed(3)}</TableCell>
-                                        <TableCell className="text-right text-destructive font-medium">{(expense.pendingAmount || 0).toFixed(3)}</TableCell>
-                                      </TableRow>
-                                    ))}
+                                    {(() => {
+                                      const items = pm.expenses;
+                                      const paginated = items.slice((eyeExpensesPage - 1) * 5, eyeExpensesPage * 5);
+                                      return (
+                                        <>
+                                          {paginated.map((expense: any) => (
+                                            <TableRow key={expense.id}>
+                                              <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                                              <TableCell>{expense.category}</TableCell>
+                                              <TableCell>{expense.description || '-'}</TableCell>
+                                              <TableCell className="text-right font-medium">{expense.amount.toFixed(3)}</TableCell>
+                                              <TableCell className="text-right text-green-600 font-medium">{(expense.paidAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right text-destructive font-medium">{(expense.pendingAmount || 0).toFixed(3)}</TableCell>
+                                            </TableRow>
+                                          ))}
+                                          {items.length > 5 && (
+                                            <TableRow>
+                                              <TableCell colSpan={6} className="p-0 border-b-0">
+                                                <Pagination page={eyeExpensesPage} setPage={setEyeExpensesPage} total={items.length} limit={5} />
+                                              </TableCell>
+                                            </TableRow>
+                                          )}
+                                        </>
+                                      )
+                                    })()}
                                   </TableBody>
                                 </Table>
                               </div>
@@ -447,7 +499,7 @@ export function PaymeterList() {
                               <p className="text-center text-muted-foreground py-4 border rounded-md">No expenses found.</p>
                             )}
                           </div>
-                          
+
                           <div>
                             <h3 className="font-semibold mb-3">{(t.suppliers as any)?.supplierPayments || "Supplier Payments"}</h3>
                             {pm.purchasePayments && pm.purchasePayments.length > 0 ? (
@@ -457,21 +509,36 @@ export function PaymeterList() {
                                     <TableRow>
                                       <TableHead>{t.payments.date}</TableHead>
                                       <TableHead>{t.suppliers?.supplierTitle || "Supplier"}</TableHead>
-                                      <TableHead className="text-right">{t.expensesMod?.amount || "Amount"}</TableHead>
+                                      <TableHead className="text-right">{t.payments.total}</TableHead>
                                       <TableHead className="text-right">{t.payments.paid}</TableHead>
                                       <TableHead className="text-right">{t.purchases.pending}</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {pm.purchasePayments.map((payment: any) => (
-                                      <TableRow key={payment.id}>
-                                        <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
-                                        <TableCell className="text-right font-medium">{payment.amount.toFixed(3)}</TableCell>
-                                        <TableCell className="text-right text-green-600 font-medium">{(payment.paidAmount || 0).toFixed(3)}</TableCell>
-                                        <TableCell className="text-right text-destructive font-medium">{(payment.pendingAmount || 0).toFixed(3)}</TableCell>
-                                      </TableRow>
-                                    ))}
+                                    {(() => {
+                                      const items = pm.purchasePayments;
+                                      const paginated = items.slice((eyeSupplierPage - 1) * 5, eyeSupplierPage * 5);
+                                      return (
+                                        <>
+                                          {paginated.map((payment: any) => (
+                                            <TableRow key={payment.id}>
+                                              <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                                              <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
+                                              <TableCell className="text-right font-medium">{payment.amount.toFixed(3)}</TableCell>
+                                              <TableCell className="text-right text-green-600 font-medium">{(payment.paidAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right text-destructive font-medium">{(payment.pendingAmount || 0).toFixed(3)}</TableCell>
+                                            </TableRow>
+                                          ))}
+                                          {items.length > 5 && (
+                                            <TableRow>
+                                              <TableCell colSpan={5} className="p-0 border-b-0">
+                                                <Pagination page={eyeSupplierPage} setPage={setEyeSupplierPage} total={items.length} limit={5} />
+                                              </TableCell>
+                                            </TableRow>
+                                          )}
+                                        </>
+                                      )
+                                    })()}
                                   </TableBody>
                                 </Table>
                               </div>
@@ -494,9 +561,9 @@ export function PaymeterList() {
                           <DialogHeader>
                             <DialogTitle>{t.settings.databaseTab.editPaymeter}</DialogTitle>
                           </DialogHeader>
-                          <PaymeterForm 
-                            initialData={editingPaymeter} 
-                            onSuccess={() => setEditingPaymeter(null)} 
+                          <PaymeterForm
+                            initialData={editingPaymeter}
+                            onSuccess={() => setEditingPaymeter(null)}
                           />
                         </DialogContent>
                       )}

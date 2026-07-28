@@ -228,16 +228,9 @@ export async function createSupplierPayment(supplierId: string, data: SupplierPa
     })
 
     await tx.paymeter.update({
-      where: { id: purchase.paymentMethodId },
-      data: { spentAmount: { decrement: parsed.amount } },
+      where: { id: selectedPaymeterId },
+      data: { spentAmount: { increment: parsed.amount } },
     })
-
-    if (purchase.paymentMethodId !== selectedPaymeterId) {
-      await tx.paymeter.update({
-        where: { id: selectedPaymeterId },
-        data: { spentAmount: { increment: parsed.amount } },
-      })
-    }
 
     return createdPayment
   })
@@ -266,16 +259,9 @@ export async function deletePurchasePayment(paymentId: string) {
       },
     })
     await tx.paymeter.update({
-      where: { id: payment.purchase.paymentMethodId },
-      data: { spentAmount: { increment: payment.amount } },
+      where: { id: payment.paymeterId },
+      data: { spentAmount: { decrement: payment.amount } },
     })
-    
-    if (payment.purchase.paymentMethodId !== payment.paymeterId) {
-      await tx.paymeter.update({
-        where: { id: payment.paymeterId },
-        data: { spentAmount: { decrement: payment.amount } },
-      })
-    }
   })
 
   revalidatePath('/suppliers')

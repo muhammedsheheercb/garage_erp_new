@@ -30,7 +30,10 @@ export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
             include: {
               vehicle: true
             }
-          }
+          },
+          // A purchase can also have later supplier payments. Those payments
+          // must not be added to the amount originally advanced by this ledger.
+          purchasePayments: true
         },
         orderBy: { purchaseDate: 'desc' }
       },
@@ -55,12 +58,40 @@ export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
   
   // Calculate dynamic spent amount for the selected date range
   return paymeters.map((pm: any) => {
-    const purchaseTotal = pm.purchases.reduce((acc: number, p: any) => acc + (p.grandTotal || 0), 0);
+    // We no longer sum purchase.grandTotal because all actual payments
+    // (including initial ones) are recorded as PurchasePayments (supplierPaymentTotal).
     const expenseTotal = pm.expenses.reduce((acc: number, e: any) => acc + (e.amount || 0), 0);
-    const supplierPaymentTotal = (pm.purchasePayments || []).reduce((acc: number, p: any) => acc + (p.amount || 0), 0);
+    const allPurchasePaymentTotal = (pm.purchasePayments || []).reduce(
+      (acc: number, payment: any) => acc + (payment.amount || 0),
+      0,
+    )
+    const supplierPayments = (pm.purchasePayments || []).filter(
+      (payment: any) => payment.pendingAmount > 0 || payment.paidAmount > 0,
+    )
+
     return {
       ...pm,
-      filteredSpentAmount: purchaseTotal + expenseTotal + supplierPaymentTotal
+      // `Purchase.paidAmount` includes supplier payments made later from the
+      // supplier screen. Subtract those here so the purchase row represents
+      // only its original paymeter advance.
+      purchases: (pm.purchases || []).map((purchase: any) => {
+        const purchaseSupplierPayments = (purchase.purchasePayments || []).filter(
+          (payment: any) => payment.pendingAmount > 0 || payment.paidAmount > 0,
+        )
+        const laterSupplierPayments = purchaseSupplierPayments.reduce(
+          (acc: number, payment: any) => acc + (payment.amount || 0),
+          0,
+        )
+
+        return {
+          ...purchase,
+          paymeterAdvanceAmount: Math.max(0, purchase.paidAmount - laterSupplierPayments),
+        }
+      }),
+      // Do not show the initial purchase-payment bookkeeping row as a
+      // supplier payment. It has paidAmount=0 and pendingAmount=0.
+      purchasePayments: supplierPayments,
+      filteredSpentAmount: expenseTotal + allPurchasePaymentTotal
     }
   });
 }
@@ -74,6 +105,12 @@ export async function getPaymetersDropdown() {
 
 export async function createPaymeter(data: PaymeterFormValues) {
   const parsed = paymeterSchema.parse(data)
+
+  const existing = await prisma.paymeter.findFirst({
+    where: { name: { equals: parsed.name, mode: "insensitive" } },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Paymeter name already exists.")
   
   // Enforce spentAmount and initialSpentAmount are 0 on backend
   const paymeter = await prisma.paymeter.create({
@@ -90,6 +127,15 @@ export async function createPaymeter(data: PaymeterFormValues) {
 
 export async function updatePaymeter(id: string, data: PaymeterFormValues) {
   const parsed = paymeterSchema.parse(data)
+
+  const existing = await prisma.paymeter.findFirst({
+    where: {
+      name: { equals: parsed.name, mode: "insensitive" },
+      id: { not: id },
+    },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Paymeter name already exists.")
   
   const paymeter = await prisma.paymeter.update({
     where: { id },

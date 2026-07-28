@@ -78,6 +78,12 @@ export async function getVehicleCatalog() {
 export async function createVehicle(data: VehicleFormValues) {
   await requirePagePermission("vehicles", "create")
   const parsed = vehicleSchema.parse(data)
+
+  const existing = await prisma.vehicle.findFirst({
+    where: { plateNumber: { equals: parsed.plateNumber, mode: "insensitive" } },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Vehicle number already exists.")
   
   const vehicle = await prisma.vehicle.create({
     data: {
@@ -97,6 +103,15 @@ export async function createVehicle(data: VehicleFormValues) {
 export async function updateVehicle(id: string, data: VehicleFormValues) {
   await requirePagePermission("vehicles", "edit")
   const parsed = vehicleSchema.parse(data)
+
+  const existing = await prisma.vehicle.findFirst({
+    where: {
+      plateNumber: { equals: parsed.plateNumber, mode: "insensitive" },
+      id: { not: id },
+    },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Vehicle number already exists.")
   
   const vehicle = await prisma.vehicle.update({
     where: { id },

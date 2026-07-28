@@ -52,6 +52,11 @@ export async function getEmployees(fromDate?: string, toDate?: string) {
 export async function createEmployee(data: EmployeeInput) {
   await requireAdmin()
   const parsed = createEmployeeSchema.parse(data)
+  const existing = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT "id" FROM "Employee" WHERE LOWER("username") = LOWER(${parsed.username}) LIMIT 1
+  `)
+  if (existing.length > 0) throw new Error("Username already exists.")
+
   const [employee] = await prisma.$queryRaw<{ id: string; username: string; isActive: boolean }[]>(Prisma.sql`
     INSERT INTO "Employee" ("id", "name", "username", "email", "password", "permissions", "isActive", "createdAt", "updatedAt")
     VALUES (gen_random_uuid()::text, ${parsed.username}, ${parsed.username}, 'employee@garage.com', ${await bcrypt.hash(parsed.password, 12)}, ${JSON.stringify(parsed.permissions)}, true, NOW(), NOW())
@@ -64,6 +69,11 @@ export async function createEmployee(data: EmployeeInput) {
 export async function updateEmployee(id: string, data: EmployeeInput) {
   await requireAdmin()
   const parsed = updateEmployeeSchema.parse(data)
+  const existing = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT "id" FROM "Employee" WHERE LOWER("username") = LOWER(${parsed.username}) AND "id" <> ${id} LIMIT 1
+  `)
+  if (existing.length > 0) throw new Error("Username already exists.")
+
   const passwordSql = parsed.password ? Prisma.sql`, "password" = ${await bcrypt.hash(parsed.password, 12)}` : Prisma.empty
   await prisma.$executeRaw(Prisma.sql`UPDATE "Employee" SET "name" = ${parsed.username}, "username" = ${parsed.username}, "permissions" = ${JSON.stringify(parsed.permissions)}${passwordSql}, "updatedAt" = NOW() WHERE "id" = ${id}`)
   revalidatePath("/employees")

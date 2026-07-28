@@ -181,11 +181,13 @@ export async function createPurchase(data: PurchaseFormValues) {
       }
     })
 
-    // 2. Record the purchase against its selected ledger or direct-payment ledger.
-    await tx.paymeter.update({
-      where: { id: selectedPaymentMethodId },
-      data: { spentAmount: { increment: grandTotal } }
-    })
+    // 2. Record the purchase initial payment against its selected ledger or direct-payment ledger.
+    if (parsed.paidAmount > 0) {
+      await tx.paymeter.update({
+        where: { id: selectedPaymentMethodId },
+        data: { spentAmount: { increment: parsed.paidAmount } }
+      })
+    }
 
     // 3. If paidAmount > 0, create a PurchasePayment record
     if (parsed.paidAmount > 0) {
@@ -280,11 +282,13 @@ export async function deletePurchase(id: string) {
       data: { purchaseId: null }
     })
 
-    // 2. Revert Paymeter spentAmount by full grandTotal (purchase commitment is cancelled)
-    await tx.paymeter.update({
-      where: { id: purchase.paymentMethodId },
-      data: { spentAmount: { decrement: purchase.grandTotal } }
-    })
+    // 2. Revert Paymeter spentAmount by paidAmount (since only paidAmount was added)
+    if (purchase.paidAmount > 0) {
+      await tx.paymeter.update({
+        where: { id: purchase.paymentMethodId },
+        data: { spentAmount: { decrement: purchase.paidAmount } }
+      })
+    }
 
     // 3. Delete the purchase (cascades items and payments, but batches are now safe)
     await tx.purchase.delete({
@@ -305,34 +309,33 @@ export async function deletePurchase(id: string) {
 export async function payPurchase(purchaseId: string, amount: number) {
   if (amount <= 0) throw new Error("Amount must be greater than 0")
 
-  const purchase = await prisma.purchase.findUnique({ where: { id: purchaseId } })
+  const purchase = await prisma.purchase.findUnique({
+    where: { id: purchaseId },
+    include: { purchasePayments: true },
+  })
   if (!purchase) throw new Error("Purchase not found")
 
-  if (amount > purchase.pendingAmount) {
-    throw new Error("Payment cannot exceed pending amount")
+  // Supplier-screen payments are separate liabilities. Only the amount
+  // originally advanced from the purchase's paymeter can be reimbursed here.
+  const supplierPayments = purchase.purchasePayments
+    .filter((payment) => payment.pendingAmount > 0 || payment.paidAmount > 0)
+    .reduce((total, payment) => total + payment.amount, 0)
+  const originalPaymeterAdvance = Math.max(0, purchase.paidAmount - supplierPayments)
+  const maxReimbursable = originalPaymeterAdvance - purchase.paymeterReimbursed;
+  if (amount > maxReimbursable) {
+    throw new Error("Payment cannot exceed pending reimbursement amount")
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Create PurchasePayment
-    await tx.purchasePayment.create({
-      data: {
-        purchaseId,
-        paymeterId: purchase.paymentMethodId,
-        amount,
-        date: new Date()
-      }
-    })
-
-    // 2. Update Purchase amounts
+    // 1. Update Purchase paymeterReimbursed amount
     const updatedPurchase = await tx.purchase.update({
       where: { id: purchaseId },
       data: {
-        paidAmount: { increment: amount },
-        pendingAmount: { decrement: amount }
+        paymeterReimbursed: { increment: amount }
       }
     })
 
-    // 3. Update Paymeter spent amount (settling the purchase reduces what's owed)
+    // 2. Decrement Paymeter spent amount (money is returned to the paymeter)
     await tx.paymeter.update({
       where: { id: purchase.paymentMethodId },
       data: { spentAmount: { decrement: amount } }
@@ -390,10 +393,12 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
     const selectedPaymentMethodId = paymentMethodId || await getDirectPaymeterId(tx, parsed.directPaymentMethod!)
     
     // 1. Revert old paymeter spentAmount
-    await tx.paymeter.update({
-      where: { id: existingPurchase.paymentMethodId },
-      data: { spentAmount: { decrement: existingPurchase.grandTotal } }
-    })
+    if (existingPurchase.paidAmount > 0) {
+      await tx.paymeter.update({
+        where: { id: existingPurchase.paymentMethodId },
+        data: { spentAmount: { decrement: existingPurchase.paidAmount } }
+      })
+    }
 
     // 2. Handle old JobCard parts and totals
     if (existingPurchase.purchaseType === 'VEHICLE' && existingPurchase.jobCardId) {
@@ -452,11 +457,13 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
       }
     })
 
-    // 4. Record the new purchase against its selected ledger
-    await tx.paymeter.update({
-      where: { id: selectedPaymentMethodId },
-      data: { spentAmount: { increment: grandTotal } }
-    })
+    // 4. Record the new purchase initial payment against its selected ledger
+    if (parsed.paidAmount > 0) {
+      await tx.paymeter.update({
+        where: { id: selectedPaymentMethodId },
+        data: { spentAmount: { increment: parsed.paidAmount } }
+      })
+    }
 
     // 5. If paidAmount > 0, create a PurchasePayment record
     if (parsed.paidAmount > 0) {

@@ -43,8 +43,8 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
       queryClient.invalidateQueries({ queryKey: ['services'] })
       onSuccess?.()
     },
-    onError: () => {
-      toast.error(t.common.somethingWrong)
+    onError: (error: any) => {
+      toast.error(error.message || t.common.somethingWrong)
     }
   })
 

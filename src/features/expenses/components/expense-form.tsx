@@ -85,6 +85,7 @@ export function ExpenseForm({
       );
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["monthly-expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["paymeters"] });
       onSuccess?.();
     },
     onError: (error: any) => {

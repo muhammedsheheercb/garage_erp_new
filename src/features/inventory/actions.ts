@@ -77,6 +77,12 @@ export async function getNextPartNumber() {
 export async function createInventoryItem(data: InventoryFormValues) {
   const partNumber = await getNextPartNumber()
   const parsed = inventorySchema.parse({ ...data, partNumber })
+
+  const existing = await prisma.inventory.findFirst({
+    where: { itemName: { equals: parsed.itemName, mode: "insensitive" } },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Inventory item name already exists.")
   
   const item = await prisma.inventory.create({
     data: {
@@ -93,6 +99,15 @@ export async function createInventoryItem(data: InventoryFormValues) {
 
 export async function updateInventoryItem(id: string, data: InventoryFormValues) {
   const parsed = inventorySchema.parse(data)
+
+  const existing = await prisma.inventory.findFirst({
+    where: {
+      itemName: { equals: parsed.itemName, mode: "insensitive" },
+      id: { not: id },
+    },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Inventory item name already exists.")
   
   const item = await prisma.inventory.update({
     where: { id },

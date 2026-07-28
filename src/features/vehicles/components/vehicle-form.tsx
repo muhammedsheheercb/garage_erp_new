@@ -71,8 +71,8 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
       onSuccess?.(data)
     },
-    onError: () => {
-      toast.error(t.common.somethingWrong)
+    onError: (error: any) => {
+      toast.error(error.message || t.common.somethingWrong)
     }
   })
 

@@ -44,6 +44,12 @@ export async function getServices(page = 1, search = "", fromDate?: string, toDa
 
 export async function createService(data: ServiceFormValues) {
   const parsed = serviceSchema.parse(data)
+
+  const existing = await prisma.service.findFirst({
+    where: { name: { equals: parsed.name, mode: "insensitive" } },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Service name already exists.")
   
   const service = await prisma.service.create({
     data: {
@@ -60,6 +66,15 @@ export async function createService(data: ServiceFormValues) {
 
 export async function updateService(id: string, data: ServiceFormValues) {
   const parsed = serviceSchema.parse(data)
+
+  const existing = await prisma.service.findFirst({
+    where: {
+      name: { equals: parsed.name, mode: "insensitive" },
+      id: { not: id },
+    },
+    select: { id: true },
+  })
+  if (existing) throw new Error("Service name already exists.")
   
   const service = await prisma.service.update({
     where: { id },

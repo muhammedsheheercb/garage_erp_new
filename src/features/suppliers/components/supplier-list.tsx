@@ -6,7 +6,7 @@ import { getSuppliers, deleteSupplier, getSupplierDetails } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Eye, Package, DollarSign } from "lucide-react"
+import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Eye, Package } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { SupplierForm } from "./supplier-form"
@@ -90,11 +90,11 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
           <div className="text-xl font-bold">{details.purchases.length}</div>
         </div>
         <div className="bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground mb-1 flex items-center"><DollarSign className="h-4 w-4 mr-1" /> {t.suppliers.totalPaid}</div>
+          <div className="text-sm text-muted-foreground mb-1 flex items-center"><img src="/Omr_symbol.svg" alt="OMR" className="h-4 w-4 mr-1 object-contain" /> {t.suppliers.totalPaid}</div>
           <div className="text-xl font-bold text-green-600">{totalPaid.toFixed(3)} OMR</div>
         </div>
         <div className="bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground mb-1 flex items-center"><DollarSign className="h-4 w-4 mr-1" /> {t.suppliers.pendingAmount}</div>
+          <div className="text-sm text-muted-foreground mb-1 flex items-center"><img src="/Omr_symbol.svg" alt="OMR" className="h-4 w-4 mr-1 object-contain" /> {t.suppliers.pendingAmount}</div>
           <div className="text-xl font-bold text-destructive">{pendingAmount.toFixed(3)} OMR</div>
         </div>
       </div>
