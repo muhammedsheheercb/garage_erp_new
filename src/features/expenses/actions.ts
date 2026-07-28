@@ -79,8 +79,13 @@ export async function createExpense(data: ExpenseFormValues) {
   }
   
   const expense = await prisma.$transaction(async (tx) => {
+    const dataToSave = {
+      ...dbData,
+      pendingAmount: paymentType === "PAYMETER" ? dbData.amount : 0
+    }
+    
     const newExpense = await tx.expense.create({
-      data: dbData
+      data: dataToSave
     })
     
     if (dbData.paymeterId) {
@@ -116,9 +121,16 @@ export async function updateExpense(id: string, data: ExpenseFormValues) {
       })
     }
 
+    const newPendingAmount = paymentType === "PAYMETER"
+      ? Math.max(0, oldExpense.pendingAmount + (dbData.amount - oldExpense.amount))
+      : 0;
+
     const newExpense = await tx.expense.update({
       where: { id },
-      data: dbData
+      data: {
+        ...dbData,
+        pendingAmount: newPendingAmount
+      }
     })
 
     if (dbData.paymeterId) {
@@ -152,4 +164,42 @@ export async function deleteExpense(id: string) {
   
   revalidatePath('/expenses')
   return { success: true }
+}
+
+export async function payExpense(expenseId: string, amount: number) {
+  if (amount <= 0) throw new Error("Amount must be greater than 0")
+
+  const expense = await prisma.expense.findUnique({ where: { id: expenseId } })
+  if (!expense) throw new Error("Expense not found")
+
+  if (amount > expense.pendingAmount) {
+    throw new Error("Payment cannot exceed pending amount")
+  }
+
+  if (!expense.paymeterId) {
+    throw new Error("Expense is not associated with a paymeter")
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Update Expense amounts
+    const updatedExpense = await tx.expense.update({
+      where: { id: expenseId },
+      data: {
+        paidAmount: { increment: amount },
+        pendingAmount: { decrement: amount }
+      }
+    })
+
+    // 2. Update Paymeter spent amount (settling the expense reduces what's owed)
+    await tx.paymeter.update({
+      where: { id: expense.paymeterId! },
+      data: { spentAmount: { decrement: amount } }
+    })
+
+    return updatedExpense
+  })
+
+  revalidatePath('/expenses')
+  revalidatePath('/paymeters')
+  return result
 }

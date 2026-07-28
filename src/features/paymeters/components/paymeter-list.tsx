@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getPaymeters, deletePaymeter } from "../actions"
 import { payPurchase } from "@/features/purchases/actions"
+import { payExpense } from "@/features/expenses/actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Plus, Edit, Trash, Wallet } from "lucide-react"
@@ -53,6 +54,19 @@ export function PaymeterList() {
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
       setSettlementAmounts((amounts) => ({ ...amounts, [variables.purchaseId]: "0" }))
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t.common.somethingWrong)
+    }
+  })
+
+  const payExpenseMutation = useMutation({
+    mutationFn: ({ expenseId, amount }: { expenseId: string, amount: number }) => payExpense(expenseId, amount),
+    onSuccess: (_data, variables) => {
+      toast.success(t.payments.paymentAdded || "Payment added")
+      queryClient.invalidateQueries({ queryKey: ['paymeters'] })
+      queryClient.invalidateQueries({ queryKey: ['expenses'] })
+      setSettlementAmounts((amounts) => ({ ...amounts, [variables.expenseId]: "0" }))
     },
     onError: (error: any) => {
       toast.error(error.message || t.common.somethingWrong)
@@ -175,6 +189,65 @@ export function PaymeterList() {
                             ) : (
                               <p className="text-center text-muted-foreground py-8">{t.purchases.noPurchasesFound}</p>
                             )}
+
+                            <div className="mt-8 border-t pt-6">
+                              <h3 className="font-semibold mb-3">{t.expensesMod?.title || "Expenses"}</h3>
+                              {pm.expenses && pm.expenses.length > 0 ? (
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>{t.payments.date}</TableHead>
+                                      <TableHead>{t.expensesMod?.expenseCategory || "Category"}</TableHead>
+                                      <TableHead className="text-right">{t.payments.total}</TableHead>
+                                      <TableHead className="text-right">{t.payments.paid}</TableHead>
+                                      <TableHead className="text-right">{t.purchases.pending}</TableHead>
+                                      <TableHead className="text-right">{t.purchases.payAmount}</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {pm.expenses.filter((e: any) => e.pendingAmount > 0).map((expense: any) => (
+                                      <TableRow key={expense.id}>
+                                        <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                                        <TableCell>{expense.category}</TableCell>
+                                        <TableCell className="text-right">{expense.amount.toFixed(3)}</TableCell>
+                                        <TableCell className="text-right">{(expense.paidAmount || 0).toFixed(3)}</TableCell>
+                                        <TableCell className="text-right text-red-500 font-medium">{(expense.pendingAmount || 0).toFixed(3)}</TableCell>
+                                        <TableCell className="text-right">
+                                          <form onSubmit={(e) => {
+                                            e.preventDefault()
+                                            const amount = parseFloat(settlementAmounts[expense.id] || "0")
+                                            if (amount > 0 && amount <= expense.pendingAmount) {
+                                              payExpenseMutation.mutate({ expenseId: expense.id, amount })
+                                            }
+                                          }} className="flex items-center gap-2 justify-end">
+                                            <Input
+                                              name="amount"
+                                              type="number"
+                                              step="0.001"
+                                              required
+                                              min="0.001"
+                                              max={expense.pendingAmount}
+                                              className="w-24 h-8"
+                                              placeholder="0.000"
+                                              value={settlementAmounts[expense.id] ?? ""}
+                                              onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [expense.id]: event.target.value }))}
+                                            />
+                                            <Button type="submit" size="sm" disabled={payExpenseMutation.isPending}>{t.payments.pay}</Button>
+                                          </form>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                    {pm.expenses.filter((e: any) => e.pendingAmount > 0).length === 0 && (
+                                      <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle || "No pending amounts to settle"}</TableCell>
+                                      </TableRow>
+                                    )}
+                                  </TableBody>
+                                </Table>
+                              ) : (
+                                <p className="text-center text-muted-foreground py-8">No expenses found.</p>
+                              )}
+                            </div>
                           </div>
                         </DialogContent>
                       )}

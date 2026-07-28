@@ -232,6 +232,8 @@ model Expense {
   amount      Float
   description String?
   date        DateTime @default(now())
+  paidAmount  Float    @default(0)
+  pendingAmount Float  @default(0)
   paymentMethod String @default("CASH") // CASH, CARD, TRANSFER, PAYMETER
   paymeterId  String?
   paymeter    Paymeter? @relation(fields: [paymeterId], references: [id])
