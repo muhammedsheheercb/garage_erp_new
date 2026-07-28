@@ -56,6 +56,8 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
     onSuccess: () => {
       toast.success(t.payments.paymentRecordedSuccess)
       queryClient.invalidateQueries({ queryKey: ['supplier', supplierId] })
+      queryClient.invalidateQueries({ queryKey: ['paymeters'] })
+      queryClient.invalidateQueries({ queryKey: ['purchases'] })
       onSuccess?.()
     },
     onError: (error: any) => {
@@ -132,7 +134,15 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
                 setValue("paymeterId", "")
                 setValue("directPaymentMethod", undefined)
               }} value={field.value}>
-                <SelectTrigger id="paymentSource"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="paymentSource">
+                  <SelectValue>
+                    {(value: string) => {
+                      if (value === "PAYMETER") return t.purchases.paymeterLedger
+                      if (value === "DIRECT") return t.payments.directPayment
+                      return null
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PAYMETER">{t.purchases.paymeterLedger}</SelectItem>
                   <SelectItem value="DIRECT">{t.payments.directPayment}</SelectItem>
@@ -151,7 +161,12 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>
                 <SelectTrigger id="paymeterId">
-                  <SelectValue placeholder={t.payments.selectMethod} />
+                  <SelectValue placeholder={t.payments.selectMethod}>
+                    {(value: string) => {
+                      const pm = paymentMethods.find((m) => m.id === value)
+                      return pm ? getPaymentMethodLabel(pm.name) : null
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {paymentMethods.map((method) => (
@@ -171,7 +186,16 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
             name="directPaymentMethod"
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value || ""}>
-                <SelectTrigger id="directPaymentMethod"><SelectValue placeholder={t.payments.selectMethod} /></SelectTrigger>
+                <SelectTrigger id="directPaymentMethod">
+                  <SelectValue placeholder={t.payments.selectMethod}>
+                    {(value: string) => {
+                      if (value === "CASH") return t.payments.cash
+                      if (value === "BANK_TRANSFER") return t.payments.bankTransfer
+                      if (value === "CARD") return t.payments.card
+                      return null
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="CASH">{t.payments.cash}</SelectItem>
                   <SelectItem value="BANK_TRANSFER">{t.payments.bankTransfer}</SelectItem>

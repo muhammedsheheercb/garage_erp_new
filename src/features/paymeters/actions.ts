@@ -37,6 +37,17 @@ export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
       expenses: {
         where: expenseWhere,
         orderBy: { date: 'desc' }
+      },
+      purchasePayments: {
+        where: expenseWhere, // Reusing expenseWhere as it filters on 'date', same as purchasePayments
+        include: {
+          purchase: {
+            include: {
+              supplier: true,
+            }
+          }
+        },
+        orderBy: { date: 'desc' }
       }
     },
     orderBy: { name: 'asc' }
@@ -46,9 +57,10 @@ export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
   return paymeters.map((pm: any) => {
     const purchaseTotal = pm.purchases.reduce((acc: number, p: any) => acc + (p.grandTotal || 0), 0);
     const expenseTotal = pm.expenses.reduce((acc: number, e: any) => acc + (e.amount || 0), 0);
+    const supplierPaymentTotal = (pm.purchasePayments || []).reduce((acc: number, p: any) => acc + (p.amount || 0), 0);
     return {
       ...pm,
-      filteredSpentAmount: purchaseTotal + expenseTotal
+      filteredSpentAmount: purchaseTotal + expenseTotal + supplierPaymentTotal
     }
   });
 }
@@ -145,4 +157,38 @@ export async function settlePaymeter(id: string, amount: number) {
   
   revalidatePath('/paymeters')
   return paymeter
+}
+
+export async function payPurchasePayment(paymentId: string, amount: number) {
+  if (amount <= 0) throw new Error("Amount must be greater than 0")
+  
+  const payment = await prisma.purchasePayment.findUnique({
+    where: { id: paymentId }
+  })
+
+  if (!payment) {
+    throw new Error("Payment not found")
+  }
+
+  if (amount > payment.pendingAmount) {
+    throw new Error("Amount exceeds pending amount")
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.purchasePayment.update({
+      where: { id: paymentId },
+      data: {
+        paidAmount: { increment: amount },
+        pendingAmount: { decrement: amount }
+      }
+    })
+
+    await tx.paymeter.update({
+      where: { id: payment.paymeterId },
+      data: { spentAmount: { decrement: amount } }
+    })
+  })
+
+  revalidatePath('/paymeters')
+  return { success: true }
 }

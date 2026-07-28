@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { getPaymeters, deletePaymeter } from "../actions"
+import { getPaymeters, deletePaymeter, payPurchasePayment } from "../actions"
 import { payPurchase } from "@/features/purchases/actions"
 import { payExpense } from "@/features/expenses/actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -18,6 +18,22 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
 
+function Pagination({ page, setPage, total, limit }: { page: number, setPage: (p: number) => void, total: number, limit: number }) {
+  const totalPages = Math.ceil(total / limit)
+  if (totalPages <= 1) return null
+  return (
+    <div className="flex items-center justify-between mt-2 px-2">
+      <div className="text-sm text-muted-foreground">
+        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total} entries
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={page === 1}>Previous</Button>
+        <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page === totalPages}>Next</Button>
+      </div>
+    </div>
+  )
+}
+
 export function PaymeterList() {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
@@ -27,6 +43,13 @@ export function PaymeterList() {
   const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({})
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
+
+  const [pursePurchasesPage, setPursePurchasesPage] = useState(1)
+  const [purseExpensesPage, setPurseExpensesPage] = useState(1)
+  const [purseSupplierPage, setPurseSupplierPage] = useState(1)
+  const [eyePurchasesPage, setEyePurchasesPage] = useState(1)
+  const [eyeExpensesPage, setEyeExpensesPage] = useState(1)
+  const [eyeSupplierPage, setEyeSupplierPage] = useState(1)
 
   const fromDateStr = dateRange?.from?.toISOString()
   const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
@@ -67,6 +90,20 @@ export function PaymeterList() {
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
       setSettlementAmounts((amounts) => ({ ...amounts, [variables.expenseId]: "0" }))
+    },
+    onError: (error: any) => {
+      toast.error(error.message || t.common.somethingWrong)
+    }
+  })
+
+  const paySupplierMutation = useMutation({
+    mutationFn: ({ paymentId, amount }: { paymentId: string, amount: number }) => payPurchasePayment(paymentId, amount),
+    onSuccess: (_data, variables) => {
+      toast.success("Payment added")
+      queryClient.invalidateQueries({ queryKey: ['paymeters'] })
+      queryClient.invalidateQueries({ queryKey: ['purchases'] })
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] })
+      setSettlementAmounts((amounts) => ({ ...amounts, [variables.paymentId]: "0" }))
     },
     onError: (error: any) => {
       toast.error(error.message || t.common.somethingWrong)
@@ -147,52 +184,63 @@ export function PaymeterList() {
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {pm.purchases.filter((p: any) => p.pendingAmount > 0).map((purchase: any) => (
-                                    <TableRow key={purchase.id}>
-                                      <TableCell>{purchase.purchaseNumber}</TableCell>
-                                      <TableCell>
-                                        <div className="flex flex-col text-xs">
-                                          <span className="font-medium text-muted-foreground">{purchase.purchaseType === 'VEHICLE' ? 'Vehicle Purchase' : 'Stock Purchase'}</span>
-                                          {purchase.purchaseType === 'VEHICLE' && purchase.jobCard ? (
-                                            <span className="font-semibold">{purchase.jobCard.vehicle.plateNumber}</span>
-                                          ) : (
-                                            <span className="font-semibold">{purchase.supplier?.name || t.common.unknown}</span>
-                                          )}
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="text-right">{purchase.grandTotal.toFixed(3)}</TableCell>
-                                      <TableCell className="text-right">{purchase.paidAmount.toFixed(3)}</TableCell>
-                                      <TableCell className="text-right text-red-500 font-medium">{purchase.pendingAmount.toFixed(3)}</TableCell>
-                                      <TableCell className="text-right">
-                                        <form onSubmit={(e) => {
-                                          e.preventDefault()
-                                          const amount = parseFloat(settlementAmounts[purchase.id] || "0")
-                                          if (amount > 0 && amount <= purchase.pendingAmount) {
-                                            payPurchaseMutation.mutate({ purchaseId: purchase.id, amount })
-                                          }
-                                        }} className="flex items-center gap-2 justify-end">
-                                          <Input
-                                            name="amount"
-                                            type="number"
-                                            step="0.001"
-                                            required
-                                            min="0.001"
-                                            max={purchase.pendingAmount}
-                                            className="w-24 h-8"
-                                            placeholder="0.000"
-                                            value={settlementAmounts[purchase.id] ?? ""}
-                                            onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [purchase.id]: event.target.value }))}
-                                          />
-                                          <Button type="submit" size="sm" disabled={payPurchaseMutation.isPending}>{t.payments.pay}</Button>
-                                        </form>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                  {pm.purchases.filter((p: any) => p.pendingAmount > 0).length === 0 && (
-                                    <TableRow>
-                                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle}</TableCell>
-                                    </TableRow>
-                                  )}
+                                  {(() => {
+                                    const filtered = pm.purchases.filter((p: any) => p.pendingAmount > 0);
+                                    if (filtered.length === 0) return <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle}</TableCell></TableRow>;
+                                    const paginated = filtered.slice((pursePurchasesPage - 1) * 5, pursePurchasesPage * 5);
+                                    return (
+                                      <>
+                                        {paginated.map((purchase: any) => (
+                                          <TableRow key={purchase.id}>
+                                            <TableCell>{purchase.purchaseNumber}</TableCell>
+                                            <TableCell>
+                                              <div className="flex flex-col text-xs">
+                                                <span className="font-medium text-muted-foreground">{purchase.purchaseType === 'VEHICLE' ? 'Vehicle Purchase' : 'Stock Purchase'}</span>
+                                                {purchase.purchaseType === 'VEHICLE' && purchase.jobCard ? (
+                                                  <span className="font-semibold">{purchase.jobCard.vehicle.plateNumber}</span>
+                                                ) : (
+                                                  <span className="font-semibold">{purchase.supplier?.name || t.common.unknown}</span>
+                                                )}
+                                              </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">{purchase.grandTotal.toFixed(3)}</TableCell>
+                                            <TableCell className="text-right">{purchase.paidAmount.toFixed(3)}</TableCell>
+                                            <TableCell className="text-right text-red-500 font-medium">{purchase.pendingAmount.toFixed(3)}</TableCell>
+                                            <TableCell className="text-right">
+                                              <form onSubmit={(e) => {
+                                                e.preventDefault()
+                                                const amount = parseFloat(settlementAmounts[purchase.id] || "0")
+                                                if (amount > 0 && amount <= purchase.pendingAmount) {
+                                                  payPurchaseMutation.mutate({ purchaseId: purchase.id, amount })
+                                                }
+                                              }} className="flex items-center gap-2 justify-end">
+                                                <Input
+                                                  name="amount"
+                                                  type="number"
+                                                  step="0.001"
+                                                  required
+                                                  min="0.001"
+                                                  max={purchase.pendingAmount}
+                                                  className="w-24 h-8"
+                                                  placeholder="0.000"
+                                                  value={settlementAmounts[purchase.id] ?? ""}
+                                                  onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [purchase.id]: event.target.value }))}
+                                                />
+                                                <Button type="submit" size="sm" disabled={payPurchaseMutation.isPending}>{t.payments.pay}</Button>
+                                              </form>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                        {filtered.length > 5 && (
+                                          <TableRow>
+                                            <TableCell colSpan={6} className="p-0 border-b-0">
+                                              <Pagination page={pursePurchasesPage} setPage={setPursePurchasesPage} total={filtered.length} limit={5} />
+                                            </TableCell>
+                                          </TableRow>
+                                        )}
+                                      </>
+                                    )
+                                  })()}
                                 </TableBody>
                               </Table>
                             ) : (
@@ -257,6 +305,65 @@ export function PaymeterList() {
                                 <p className="text-center text-muted-foreground py-8">No expenses found.</p>
                               )}
                             </div>
+                            
+                            <div className="mt-8 border-t pt-6">
+                              <h3 className="font-semibold mb-3">{(t.suppliers as any)?.supplierPayments || "Supplier Payments"}</h3>
+                              {pm.purchasePayments && pm.purchasePayments.length > 0 ? (
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>{t.payments.date}</TableHead>
+                                      <TableHead>{t.suppliers?.supplierTitle || "Supplier"}</TableHead>
+                                      <TableHead className="text-right">{t.payments.total}</TableHead>
+                                      <TableHead className="text-right">{t.payments.paid}</TableHead>
+                                      <TableHead className="text-right">{t.purchases.pending}</TableHead>
+                                      <TableHead className="text-right">{t.purchases.payAmount}</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {pm.purchasePayments.filter((p: any) => p.pendingAmount > 0).map((payment: any) => (
+                                      <TableRow key={payment.id}>
+                                        <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                                        <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
+                                        <TableCell className="text-right">{payment.amount.toFixed(3)}</TableCell>
+                                        <TableCell className="text-right">{(payment.paidAmount || 0).toFixed(3)}</TableCell>
+                                        <TableCell className="text-right text-red-500 font-medium">{(payment.pendingAmount || 0).toFixed(3)}</TableCell>
+                                        <TableCell className="text-right">
+                                          <form onSubmit={(e) => {
+                                            e.preventDefault()
+                                            const amount = parseFloat(settlementAmounts[payment.id] || "0")
+                                            if (amount > 0 && amount <= payment.pendingAmount) {
+                                              paySupplierMutation.mutate({ paymentId: payment.id, amount })
+                                            }
+                                          }} className="flex items-center gap-2 justify-end">
+                                            <Input
+                                              name="amount"
+                                              type="number"
+                                              step="0.001"
+                                              required
+                                              min="0.001"
+                                              max={payment.pendingAmount}
+                                              className="w-24 h-8"
+                                              placeholder="0.000"
+                                              value={settlementAmounts[payment.id] ?? ""}
+                                              onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [payment.id]: event.target.value }))}
+                                            />
+                                            <Button type="submit" size="sm" disabled={paySupplierMutation.isPending}>{t.payments.pay}</Button>
+                                          </form>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                    {pm.purchasePayments.filter((p: any) => p.pendingAmount > 0).length === 0 && (
+                                      <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle || "No pending amounts to settle"}</TableCell>
+                                      </TableRow>
+                                    )}
+                                  </TableBody>
+                                </Table>
+                              ) : (
+                                <p className="text-center text-muted-foreground py-8">{t.suppliers?.noPayments || "No supplier payments found."}</p>
+                              )}
+                            </div>
                           </div>
                         </DialogContent>
                       )}
@@ -284,6 +391,8 @@ export function PaymeterList() {
                                       <TableHead>{t.purchases.purchaseNo}</TableHead>
                                       <TableHead>{t.suppliers.supplierTitle}</TableHead>
                                       <TableHead className="text-right">{t.invoicesMod.grandTotal}</TableHead>
+                                      <TableHead className="text-right">{t.payments.paid}</TableHead>
+                                      <TableHead className="text-right">{t.purchases.pending}</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
@@ -293,6 +402,8 @@ export function PaymeterList() {
                                         <TableCell>{purchase.purchaseNumber}</TableCell>
                                         <TableCell>{purchase.supplier?.name || t.common.unknown}</TableCell>
                                         <TableCell className="text-right font-medium">{purchase.grandTotal.toFixed(3)}</TableCell>
+                                        <TableCell className="text-right text-green-600 font-medium">{(purchase.paidAmount || 0).toFixed(3)}</TableCell>
+                                        <TableCell className="text-right text-destructive font-medium">{(purchase.pendingAmount || 0).toFixed(3)}</TableCell>
                                       </TableRow>
                                     ))}
                                   </TableBody>
@@ -314,6 +425,8 @@ export function PaymeterList() {
                                       <TableHead>{t.expensesMod?.expenseCategory || "Category"}</TableHead>
                                       <TableHead>{t.expensesMod?.expenseDescription || "Description"}</TableHead>
                                       <TableHead className="text-right">{t.expensesMod?.amount || "Amount"}</TableHead>
+                                      <TableHead className="text-right">{t.payments.paid}</TableHead>
+                                      <TableHead className="text-right">{t.purchases.pending}</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
@@ -323,6 +436,8 @@ export function PaymeterList() {
                                         <TableCell>{expense.category}</TableCell>
                                         <TableCell>{expense.description || '-'}</TableCell>
                                         <TableCell className="text-right font-medium">{expense.amount.toFixed(3)}</TableCell>
+                                        <TableCell className="text-right text-green-600 font-medium">{(expense.paidAmount || 0).toFixed(3)}</TableCell>
+                                        <TableCell className="text-right text-destructive font-medium">{(expense.pendingAmount || 0).toFixed(3)}</TableCell>
                                       </TableRow>
                                     ))}
                                   </TableBody>
@@ -330,6 +445,38 @@ export function PaymeterList() {
                               </div>
                             ) : (
                               <p className="text-center text-muted-foreground py-4 border rounded-md">No expenses found.</p>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-semibold mb-3">{(t.suppliers as any)?.supplierPayments || "Supplier Payments"}</h3>
+                            {pm.purchasePayments && pm.purchasePayments.length > 0 ? (
+                              <div className="border rounded-md">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>{t.payments.date}</TableHead>
+                                      <TableHead>{t.suppliers?.supplierTitle || "Supplier"}</TableHead>
+                                      <TableHead className="text-right">{t.expensesMod?.amount || "Amount"}</TableHead>
+                                      <TableHead className="text-right">{t.payments.paid}</TableHead>
+                                      <TableHead className="text-right">{t.purchases.pending}</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {pm.purchasePayments.map((payment: any) => (
+                                      <TableRow key={payment.id}>
+                                        <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                                        <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
+                                        <TableCell className="text-right font-medium">{payment.amount.toFixed(3)}</TableCell>
+                                        <TableCell className="text-right text-green-600 font-medium">{(payment.paidAmount || 0).toFixed(3)}</TableCell>
+                                        <TableCell className="text-right text-destructive font-medium">{(payment.pendingAmount || 0).toFixed(3)}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            ) : (
+                              <p className="text-center text-muted-foreground py-4 border rounded-md">{t.suppliers?.noPayments || "No supplier payments found."}</p>
                             )}
                           </div>
                         </div>
