@@ -4,7 +4,9 @@ import prisma from "@/lib/prisma"
 import { PaymeterFormValues, paymeterSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
-export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
+export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: string) {
+  const limit = 5
+  const skip = (page - 1) * limit
   const purchaseWhere: any = {};
   const expenseWhere: any = {};
   if (fromDateStr || toDateStr) {
@@ -20,7 +22,10 @@ export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
     }
   }
 
-  const paymeters = await prisma.paymeter.findMany({
+  const [paymeters, total] = await Promise.all([
+    prisma.paymeter.findMany({
+    skip,
+    take: limit,
     include: {
       purchases: {
         where: purchaseWhere,
@@ -54,10 +59,12 @@ export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
       }
     },
     orderBy: { name: 'asc' }
-  });
+    }),
+    prisma.paymeter.count()
+  ])
   
   // Calculate dynamic spent amount for the selected date range
-  return paymeters.map((pm: any) => {
+  const data = paymeters.map((pm: any) => {
     // We no longer sum purchase.grandTotal because all actual payments
     // (including initial ones) are recorded as PurchasePayments (supplierPaymentTotal).
     const expenseTotal = pm.expenses.reduce((acc: number, e: any) => acc + (e.amount || 0), 0);
@@ -94,6 +101,7 @@ export async function getPaymeters(fromDateStr?: string, toDateStr?: string) {
       filteredSpentAmount: expenseTotal + allPurchasePaymentTotal
     }
   });
+  return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } }
 }
 
 export async function getPaymetersDropdown() {

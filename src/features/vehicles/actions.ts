@@ -7,7 +7,7 @@ import { requirePagePermission } from "@/lib/authorization"
 
 export async function getVehicles(page = 1, search = "", fromDate?: string, toDate?: string) {
   await requirePagePermission("vehicles", "view")
-  const limit = 10;
+  const limit = 5;
   const skip = (page - 1) * limit;
 
   const where: any = {

@@ -5,7 +5,7 @@ import { InvoiceFormValues, invoiceSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
 export async function getInvoices(page = 1, search = "", fromDate?: string, toDate?: string) {
-  const limit = 10;
+  const limit = 5;
   const skip = (page - 1) * limit;
 
   const where: any = search ? {

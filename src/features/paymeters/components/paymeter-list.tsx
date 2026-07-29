@@ -41,6 +41,7 @@ export function PaymeterList() {
   const [editingPaymeter, setEditingPaymeter] = useState<any>(null)
   const [settlingPaymeter, setSettlingPaymeter] = useState<any>(null)
   const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({})
+  const [paymeterPage, setPaymeterPage] = useState(1)
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
 
@@ -54,10 +55,11 @@ export function PaymeterList() {
   const fromDateStr = dateRange?.from?.toISOString()
   const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
 
-  const { data: paymeters = [], isLoading } = useQuery({
-    queryKey: ['paymeters', fromDateStr, toDateStr],
-    queryFn: () => getPaymeters(fromDateStr, toDateStr)
+  const { data: paymeterResult, isLoading } = useQuery({
+    queryKey: ['paymeters', paymeterPage, fromDateStr, toDateStr],
+    queryFn: () => getPaymeters(paymeterPage, fromDateStr, toDateStr)
   })
+  const paymeters = paymeterResult?.data ?? []
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deletePaymeter(id),
@@ -597,6 +599,14 @@ export function PaymeterList() {
           </TableBody>
         </Table>
       </div>
+      {paymeterResult?.meta && paymeterResult.meta.totalPages > 1 && (
+        <Pagination
+          page={paymeterPage}
+          setPage={setPaymeterPage}
+          total={paymeterResult.meta.total}
+          limit={paymeterResult.meta.limit}
+        />
+      )}
     </div>
   )
 }

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, Eye, EyeOff, Plus, Trash2 } from "lucide-react"
+import { Edit, Eye, EyeOff, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
@@ -72,6 +72,7 @@ export function EmployeeList() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Employee | undefined>()
+  const [page, setPage] = useState(1)
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
 
   const fromDateStr = dateRange?.from?.toISOString()
@@ -116,7 +117,7 @@ export function EmployeeList() {
                 </TableCell>
               </TableRow>
             ) : (
-              employees.map((employee) => (
+              employees.slice((page - 1) * 5, page * 5).map((employee) => (
                 <TableRow key={employee.id}>
                   <TableCell className="font-medium">
                     {employee.username ?? <span className="text-muted-foreground">Not set</span>}
@@ -206,6 +207,13 @@ export function EmployeeList() {
           </TableBody>
         </Table>
       </div>
+      {employees.length > 5 && (
+        <div className="flex items-center justify-end gap-2 py-4 text-sm">
+          <Button variant="outline" size="sm" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}><ChevronLeft className="h-4 w-4" /></Button>
+          <span className="text-muted-foreground">{page} / {Math.ceil(employees.length / 5)}</span>
+          <Button variant="outline" size="sm" onClick={() => setPage((current) => Math.min(Math.ceil(employees.length / 5), current + 1))} disabled={page === Math.ceil(employees.length / 5)}><ChevronRight className="h-4 w-4" /></Button>
+        </div>
+      )}
       <Dialog
         open={open}
         onOpenChange={(value) => {

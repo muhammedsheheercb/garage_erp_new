@@ -27,6 +27,8 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
   })
 
   const [selectedJobCard, setSelectedJobCard] = useState<any>(null)
+  const [jobPages, setJobPages] = useState<Record<string, number>>({})
+  const [vehiclePage, setVehiclePage] = useState(1)
 
   const handleDateChange = (newDate: DateRange | undefined) => {
     setDateRange(newDate)
@@ -105,7 +107,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
           <p className="text-muted-foreground">No vehicles found.</p>
         )}
         
-        {customer.vehicles.map((vehicle: any) => (
+        {customer.vehicles.slice((vehiclePage - 1) * 5, vehiclePage * 5).map((vehicle: any) => (
           <Card key={vehicle.id} className="overflow-hidden">
             <CardHeader className="bg-muted/40">
               <div className="flex items-center justify-between">
@@ -139,7 +141,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {vehicle.jobCards.map((jc: any) => (
+                    {vehicle.jobCards.slice(((jobPages[vehicle.id] || 1) - 1) * 5, (jobPages[vehicle.id] || 1) * 5).map((jc: any) => (
                       <TableRow key={jc.id}>
                         <TableCell>{format(new Date(jc.createdAt), 'dd MMM yyyy')}</TableCell>
                         <TableCell>
@@ -162,9 +164,23 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                   </TableBody>
                 </Table>
               )}
+              {vehicle.jobCards.length > 5 && (
+                <div className="flex items-center justify-end gap-2 p-3 text-sm">
+                  <Button variant="outline" size="sm" onClick={() => setJobPages((pages) => ({ ...pages, [vehicle.id]: Math.max(1, (pages[vehicle.id] || 1) - 1) }))} disabled={(jobPages[vehicle.id] || 1) === 1}><span>Previous</span></Button>
+                  <span className="text-muted-foreground">{jobPages[vehicle.id] || 1} / {Math.ceil(vehicle.jobCards.length / 5)}</span>
+                  <Button variant="outline" size="sm" onClick={() => setJobPages((pages) => ({ ...pages, [vehicle.id]: Math.min(Math.ceil(vehicle.jobCards.length / 5), (pages[vehicle.id] || 1) + 1) }))} disabled={(jobPages[vehicle.id] || 1) === Math.ceil(vehicle.jobCards.length / 5)}><span>Next</span></Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
+        {customer.vehicles.length > 5 && (
+          <div className="flex items-center justify-end gap-2 text-sm">
+            <Button variant="outline" size="sm" onClick={() => setVehiclePage((page) => Math.max(1, page - 1))} disabled={vehiclePage === 1}>Previous</Button>
+            <span className="text-muted-foreground">{vehiclePage} / {Math.ceil(customer.vehicles.length / 5)}</span>
+            <Button variant="outline" size="sm" onClick={() => setVehiclePage((page) => Math.min(Math.ceil(customer.vehicles.length / 5), page + 1))} disabled={vehiclePage === Math.ceil(customer.vehicles.length / 5)}>Next</Button>
+          </div>
+        )}
       </div>
 
       <Dialog open={!!selectedJobCard} onOpenChange={(open) => !open && setSelectedJobCard(null)}>

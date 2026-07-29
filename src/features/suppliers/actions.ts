@@ -23,7 +23,7 @@ async function getDirectPaymeterId(
 }
 
 export async function getSuppliers(page = 1, search = "", fromDateStr?: string, toDateStr?: string) {
-  const limit = 10;
+  const limit = 5;
   const skip = (page - 1) * limit;
 
   const where: any = {

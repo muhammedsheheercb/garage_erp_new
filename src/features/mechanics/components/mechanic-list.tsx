@@ -25,6 +25,7 @@ export function MechanicList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingMechanic, setEditingMechanic] = useState<any>(null)
   const [viewingJobs, setViewingJobs] = useState<any>(null)
+  const [jobPage, setJobPage] = useState(1)
   const { t } = useTranslation()
   const { can } = usePermissions()
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
@@ -136,7 +137,7 @@ export function MechanicList() {
                               <DialogTitle>{mechanic.name}'s Active Jobs</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 mt-4">
-                              {mechanic.jobCards.map((job: any) => (
+                              {mechanic.jobCards.slice((jobPage - 1) * 5, jobPage * 5).map((job: any) => (
                                 <div key={job.id} className="border rounded-lg p-4 space-y-3 bg-muted/30">
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -162,6 +163,13 @@ export function MechanicList() {
                                   </div>
                                 </div>
                               ))}
+                              {mechanic.jobCards.length > 5 && (
+                                <div className="flex items-center justify-end gap-2 pt-2 text-sm">
+                                  <Button variant="outline" size="sm" onClick={() => setJobPage((page) => Math.max(1, page - 1))} disabled={jobPage === 1}><ChevronLeft className="h-4 w-4" /></Button>
+                                  <span className="text-muted-foreground">{jobPage} / {Math.ceil(mechanic.jobCards.length / 5)}</span>
+                                  <Button variant="outline" size="sm" onClick={() => setJobPage((page) => Math.min(Math.ceil(mechanic.jobCards.length / 5), page + 1))} disabled={jobPage === Math.ceil(mechanic.jobCards.length / 5)}><ChevronRight className="h-4 w-4" /></Button>
+                                </div>
+                              )}
                             </div>
                           </DialogContent>
                         )}

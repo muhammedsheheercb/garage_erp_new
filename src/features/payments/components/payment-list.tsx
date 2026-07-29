@@ -22,6 +22,7 @@ export function PaymentList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [pendingSearch, setPendingSearch] = useState("")
+  const [pendingPage, setPendingPage] = useState(1)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"history" | "pending">("history")
@@ -41,8 +42,8 @@ export function PaymentList() {
   })
 
   const { data: pendingData, isLoading: pendingLoading } = useQuery({
-    queryKey: ['pending-invoices'],
-    queryFn: () => getPendingInvoices()
+    queryKey: ['pending-invoices', pendingPage, pendingSearch],
+    queryFn: () => getPendingInvoices(pendingPage, pendingSearch)
   })
 
   const getMethodIcon = (method: string) => {
@@ -54,14 +55,7 @@ export function PaymentList() {
     }
   }
 
-  const pendingInvoices = pendingData?.filter((invoice) => {
-    const query = pendingSearch.trim().toLocaleLowerCase()
-    if (!query) return true
-
-    return [invoice.customer.name, invoice.jobCard?.vehicle?.plateNumber]
-      .filter(Boolean)
-      .some((value) => value!.toLocaleLowerCase().includes(query))
-  })
+  const pendingInvoices = pendingData?.data ?? []
 
   return (
     <div className="space-y-4">
@@ -80,9 +74,9 @@ export function PaymentList() {
             className="flex-1 sm:flex-none relative"
           >
             {t.payments.pendingInvoices}
-            {pendingData && pendingData.length > 0 && (
+            {pendingData && pendingData.meta.total > 0 && (
               <span className="absolute -top-2 -right-2 bg-destructive text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {pendingData.length}
+                {pendingData.meta.total}
               </span>
             )}
           </Button>
@@ -115,8 +109,8 @@ export function PaymentList() {
               <Input
                 placeholder={t.payments.searchPendingInvoices}
                 className="pl-8 w-full"
-                value={pendingSearch}
-                onChange={(e) => setPendingSearch(e.target.value)}
+                  value={pendingSearch}
+                  onChange={(e) => { setPendingSearch(e.target.value); setPendingPage(1) }}
               />
             </div>
           )}
@@ -214,12 +208,12 @@ export function PaymentList() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {pendingLoading ? (
             <div className="col-span-full text-center py-12 text-muted-foreground">{t.common.loading}</div>
-          ) : pendingData?.length === 0 ? (
+          ) : pendingData?.meta.total === 0 ? (
             <div className="col-span-full text-center py-12 text-muted-foreground">{t.payments.allCaughtUp}</div>
-          ) : pendingInvoices?.length === 0 ? (
+          ) : pendingInvoices.length === 0 ? (
             <div className="col-span-full text-center py-12 text-muted-foreground">{t.common.noResults}</div>
           ) : (
-            pendingInvoices?.map((inv) => {
+            pendingInvoices.map((inv) => {
               const paidAmount = inv.payments.reduce((acc, p) => acc + p.amount, 0)
               const due = inv.grandTotal - paidAmount
               
@@ -283,6 +277,19 @@ export function PaymentList() {
               )
             })
           )}
+        </div>
+      )}
+      {activeTab === "pending" && pendingData?.meta && pendingData.meta.totalPages > 1 && (
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <Button variant="outline" size="sm" onClick={() => setPendingPage((page) => Math.max(1, page - 1))} disabled={pendingPage === 1}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> {t.common.previous}
+          </Button>
+          <div className="text-sm text-muted-foreground">
+            {t.common.page} {pendingPage} {t.common.of} {pendingData.meta.totalPages}
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setPendingPage((page) => Math.min(pendingData.meta.totalPages, page + 1))} disabled={pendingPage === pendingData.meta.totalPages}>
+            {t.common.next} <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
         </div>
       )}
     </div>

@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getReportsDashboardTotals,
   getRevenueExpenseChartData,
-  getDetailedReportData,
 } from "../actions";
 import {
   Card,
@@ -103,10 +102,6 @@ function BreakdownCard({
 export function ReportsDashboard() {
   const { t } = useTranslation();
   const [chartPeriod, setChartPeriod] = useState<"daily" | "monthly">("daily");
-  const [reportType, setReportType] = useState<
-    "revenue" | "expenses" | "jobs" | "customers" | "vehicles"
-  >("revenue");
-  
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const fromDateStr = dateRange?.from?.toISOString();
   const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined;
@@ -119,11 +114,6 @@ export function ReportsDashboard() {
   const { data: chartData, isLoading: chartLoading } = useQuery({
     queryKey: ["report-chart", chartPeriod],
     queryFn: () => getRevenueExpenseChartData(chartPeriod),
-  });
-
-  const { data: detailData, isLoading: detailLoading } = useQuery({
-    queryKey: ["report-details", reportType, chartPeriod],
-    queryFn: () => getDetailedReportData(reportType, chartPeriod),
   });
 
   const handlePrint = () => {

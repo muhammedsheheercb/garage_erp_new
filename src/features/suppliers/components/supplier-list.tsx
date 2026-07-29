@@ -55,10 +55,22 @@ function SimpleTabs({ tabs, active, onChange }: { tabs: { id: string, label: str
   )
 }
 
+function DetailPagination({ page, setPage, total }: { page: number; setPage: (page: number) => void; total: number }) {
+  const totalPages = Math.ceil(total / 5)
+  if (totalPages <= 1) return null
+  return <div className="flex items-center justify-end gap-2 pt-2 text-sm">
+    <Button variant="outline" size="sm" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}><ChevronLeft className="h-4 w-4" /></Button>
+    <span className="text-muted-foreground">{page} / {totalPages}</span>
+    <Button variant="outline" size="sm" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}><ChevronRight className="h-4 w-4" /></Button>
+  </div>
+}
+
 function SupplierDetails({ supplierId }: { supplierId: string }) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState("inventory")
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
+  const [purchasePage, setPurchasePage] = useState(1)
+  const [paymentPage, setPaymentPage] = useState(1)
   const { t } = useTranslation()
   const getPaymentMethodLabel = (name: string) => ({
     "Direct Cash": t.payments.cash,
@@ -120,7 +132,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
               {details.purchases.length === 0 ? (
                 <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t.suppliers.noPurchases}</TableCell></TableRow>
               ) : (
-                details.purchases.map((purchase: any) => (
+                details.purchases.slice((purchasePage - 1) * 5, purchasePage * 5).map((purchase: any) => (
                   <TableRow key={purchase.id}>
                     <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
                     <TableCell className="font-medium">{purchase.purchaseNumber}</TableCell>
@@ -131,6 +143,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
               )}
             </TableBody>
           </Table>
+          <DetailPagination page={purchasePage} setPage={setPurchasePage} total={details.purchases.length} />
         </div>
       )}
 
@@ -163,7 +176,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
                 {purchasePayments.length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t.suppliers.noPayments}</TableCell></TableRow>
                 ) : (
-                  purchasePayments.map((payment: any) => (
+                  purchasePayments.slice((paymentPage - 1) * 5, paymentPage * 5).map((payment: any) => (
                     <TableRow key={payment.id}>
                       <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
                       <TableCell className="font-medium">{payment.purchase.purchaseNumber}</TableCell>
@@ -171,9 +184,10 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
                       <TableCell className="text-right font-medium text-green-600">{payment.amount.toFixed(3)}</TableCell>
                     </TableRow>
                   ))
-                )}
-              </TableBody>
-            </Table>
+              )}
+            </TableBody>
+          </Table>
+          <DetailPagination page={paymentPage} setPage={setPaymentPage} total={purchasePayments.length} />
           </div>
         </div>
       )}
