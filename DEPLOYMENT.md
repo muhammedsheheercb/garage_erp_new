@@ -76,3 +76,16 @@ payment in one runtime. Refresh the matching page in the other runtime; it
 reads the same Neon rows. Reports and settings use the same Prisma client and
 tables. Login uses the same `Admin` table and encrypted cookie implementation,
 with separate browser cookie stores per origin.
+
+## Applying performance indexes
+
+The Prisma schema includes indexes for the list, date-filter, status, and
+relationship queries used by the hosted pages. Apply them once to the hosted
+PostgreSQL database after deploying this change:
+
+```bash
+pnpm prisma db push
+```
+
+This adds indexes only; it does not delete application rows. For a production
+migration workflow, generate and deploy a reviewed Prisma migration instead.

@@ -137,7 +137,7 @@ export function CustomerList() {
     queryKey: ['customers', page, debouncedSearch, fromDateStr, toDateStr],
     queryFn: () => getCustomers(page, debouncedSearch, fromDateStr, toDateStr),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes to avoid redundant fetches
+    staleTime: 1000 * 30,
   })
 
   const deleteMutation = useMutation({

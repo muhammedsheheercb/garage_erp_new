@@ -17,11 +17,16 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   };
 }
 
-// Create a client with a default staleTime of 5 minutes to make navigation fast
+// Keep navigation fast while still showing records added from another browser.
+// Mutations invalidate affected queries immediately; this short window covers
+// changes made elsewhere without forcing a request on every render.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
+      staleTime: 1000 * 30,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
     },
   },
 })

@@ -309,12 +309,22 @@ export async function getRecentActivities() {
     prisma.invoice.findMany({
       take: 3,
       orderBy: { createdAt: 'desc' },
-      include: { customer: true }
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        customer: { select: { name: true } },
+      }
     }),
     prisma.jobCard.findMany({
       take: 3,
       orderBy: { createdAt: 'desc' },
-      include: { customer: true }
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        customer: { select: { name: true } },
+      }
     })
   ])
   

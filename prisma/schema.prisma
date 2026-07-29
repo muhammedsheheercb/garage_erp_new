@@ -43,6 +43,7 @@ model Customer {
   invoices  Invoice[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  @@index([createdAt])
 }
 
 model Vehicle {
@@ -57,6 +58,8 @@ model Vehicle {
   jobCards    JobCard[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  @@index([customerId])
+  @@index([createdAt])
 }
 
 model VehicleCompany {
@@ -76,6 +79,7 @@ model VehicleModel {
   updatedAt DateTime       @updatedAt
 
   @@unique([companyId, name])
+  @@index([companyId])
 }
 
 model Mechanic {
@@ -86,6 +90,7 @@ model Mechanic {
   jobCards  JobCard[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  @@index([createdAt])
 }
 
 model Service {
@@ -97,6 +102,7 @@ model Service {
   jobCards      JobCardService[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+  @@index([createdAt])
 }
 
 model JobCard {
@@ -126,6 +132,11 @@ model JobCard {
   invoice   Invoice?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@index([customerId])
+  @@index([vehicleId])
+  @@index([mechanicId])
+  @@index([status, createdAt])
+  @@index([expectedFinishDate])
 }
 
 // Join table for many-to-many relationship between JobCard and Service
@@ -141,6 +152,7 @@ model JobCardService {
   updatedAt DateTime @updatedAt
 
   @@unique([jobCardId, serviceId])
+  @@index([serviceId])
 }
 
 model JobCardPart {
@@ -155,6 +167,7 @@ model JobCardPart {
   updatedAt DateTime       @updatedAt
 
   @@unique([jobCardId, batchId])
+  @@index([batchId])
 }
 
 model Invoice {
@@ -178,6 +191,9 @@ model Invoice {
   payments        Payment[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 model Payment {
@@ -188,6 +204,8 @@ model Payment {
   invoice   Invoice  @relation(fields: [invoiceId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@index([invoiceId])
+  @@index([createdAt])
 }
 
 model Supplier {
@@ -200,6 +218,7 @@ model Supplier {
   purchases Purchase[]
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
+  @@index([createdAt])
 }
 
 model Inventory {
@@ -210,6 +229,7 @@ model Inventory {
   batches       InventoryBatch[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+  @@index([createdAt])
 }
 
 model InventoryBatch {
@@ -225,6 +245,9 @@ model InventoryBatch {
   jobCardParts  JobCardPart[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  @@index([inventoryId])
+  @@index([purchaseId])
+  @@index([createdAt])
 }
 
 model Expense {
@@ -240,6 +263,9 @@ model Expense {
   paymeter      Paymeter? @relation(fields: [paymeterId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  @@index([date])
+  @@index([paymeterId])
+  @@index([createdAt])
 }
 
 model SupplierPayment {
@@ -252,6 +278,8 @@ model SupplierPayment {
   supplier   Supplier @relation(fields: [supplierId], references: [id])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  @@index([supplierId])
+  @@index([date])
 }
 
 model Setting {
@@ -305,6 +333,9 @@ model Purchase {
   purchasePayments PurchasePayment[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  @@index([supplierId])
+  @@index([jobCardId])
+  @@index([createdAt])
 }
 
 model PurchaseItem {
@@ -319,6 +350,8 @@ model PurchaseItem {
   itemTotal     Float
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  @@index([purchaseId])
+  @@index([inventoryId])
 }
 
 model PurchasePayment {
@@ -333,4 +366,7 @@ model PurchasePayment {
   date          DateTime @default(now())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  @@index([purchaseId])
+  @@index([paymeterId])
+  @@index([date])
 }
