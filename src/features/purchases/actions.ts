@@ -28,8 +28,8 @@ export async function getPurchases(page = 1, search = "", fromDate?: string, toD
 
   const where: any = search ? {
     OR: [
-      { purchaseNumber: { contains: search } },
-      { supplier: { name: { contains: search } } }
+      { purchaseNumber: { contains: search, mode: "insensitive" } },
+      { supplier: { name: { contains: search, mode: "insensitive" } } }
     ]
   } : {};
 

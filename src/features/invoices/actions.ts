@@ -10,8 +10,8 @@ export async function getInvoices(page = 1, search = "", fromDate?: string, toDa
 
   const where: any = search ? {
     OR: [
-      { customer: { name: { contains: search } } },
-      { jobCard: { vehicle: { plateNumber: { contains: search } } } },
+      { customer: { name: { contains: search, mode: "insensitive" } } },
+      { jobCard: { vehicle: { plateNumber: { contains: search, mode: "insensitive" } } } },
     ]
   } : {};
 

@@ -28,9 +28,9 @@ export async function getSuppliers(page = 1, search = "", fromDateStr?: string, 
 
   const where: any = {
     OR: [
-      { name: { contains: search } },
-      { contact: { contains: search } },
-      { email: { contains: search } },
+      { name: { contains: search, mode: "insensitive" } },
+      { contact: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
     ]
   };
 

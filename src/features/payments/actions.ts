@@ -10,8 +10,8 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
 
   const where: any = search ? {
     OR: [
-      { invoice: { id: { contains: search } } },
-      { invoice: { customer: { name: { contains: search } } } }
+      { invoice: { id: { contains: search, mode: "insensitive" } } },
+      { invoice: { customer: { name: { contains: search, mode: "insensitive" } } } }
     ]
   } : {};
 

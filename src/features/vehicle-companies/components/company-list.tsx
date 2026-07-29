@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, Edit, Trash, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Edit, Trash, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
@@ -25,17 +26,22 @@ export function CompanyList() {
   const [editingModel, setEditingModel] = useState<{ companyId: string; model: any } | null>(null)
   const [companyPage, setCompanyPage] = useState(1)
   const [modelPages, setModelPages] = useState<Record<string, number>>({})
+  const [search, setSearch] = useState("")
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const fromDateStr = dateRange?.from?.toISOString()
   const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
 
-  const { data: companies = [], isLoading } = useQuery({ queryKey: ["vehicle-companies", fromDateStr, toDateStr], queryFn: () => getVehicleCompanies(fromDateStr, toDateStr) })
+  const { data: companies = [], isLoading } = useQuery({ queryKey: ["vehicle-companies", search, fromDateStr, toDateStr], queryFn: () => getVehicleCompanies(fromDateStr, toDateStr, search) })
   const companyDelete = useMutation({ mutationFn: deleteVehicleCompany, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["vehicle-companies"] }); queryClient.invalidateQueries({ queryKey: ["vehicle-catalog"] }); toast.success(t.vehicles.companyDeleted) }, onError: (e: Error) => toast.error(e.message || t.common.somethingWrong) })
   const modelDelete = useMutation({ mutationFn: deleteVehicleModel, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["vehicle-companies"] }); queryClient.invalidateQueries({ queryKey: ["vehicle-catalog"] }); toast.success(t.vehicles.modelDeleted) }, onError: (e: Error) => toast.error(e.message || t.common.somethingWrong) })
 
   return <div className="space-y-4">
     <div className="flex justify-between items-center gap-4">
+      <div className="relative w-full sm:max-w-xs">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Search companies..." className="pl-8" value={search} onChange={(event) => { setSearch(event.target.value); setCompanyPage(1) }} />
+      </div>
       <DatePickerWithRange 
         date={dateRange} 
         setDate={setDateRange} 

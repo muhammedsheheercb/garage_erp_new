@@ -12,10 +12,10 @@ export async function getVehicles(page = 1, search = "", fromDate?: string, toDa
 
   const where: any = {
     OR: [
-      { plateNumber: { contains: search } },
-      { brand: { contains: search } },
-      { model: { contains: search } },
-      { customer: { name: { contains: search } } },
+      { plateNumber: { contains: search, mode: "insensitive" } },
+      { brand: { contains: search, mode: "insensitive" } },
+      { model: { contains: search, mode: "insensitive" } },
+      { customer: { name: { contains: search, mode: "insensitive" } } },
     ]
   };
 

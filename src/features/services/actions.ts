@@ -10,8 +10,8 @@ export async function getServices(page = 1, search = "", fromDate?: string, toDa
 
   const where: any = {
     OR: [
-      { name: { contains: search } },
-      { category: { contains: search } },
+      { name: { contains: search, mode: "insensitive" } },
+      { category: { contains: search, mode: "insensitive" } },
     ]
   };
 

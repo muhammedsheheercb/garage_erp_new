@@ -10,8 +10,8 @@ export async function getExpenses(page = 1, search = "", fromDate?: string, toDa
 
   const where: any = search ? {
     OR: [
-      { category: { contains: search } },
-      { description: { contains: search } }
+      { category: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } }
     ]
   } : {};
 

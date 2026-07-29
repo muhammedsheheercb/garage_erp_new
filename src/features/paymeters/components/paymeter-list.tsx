@@ -7,7 +7,7 @@ import { payPurchase } from "@/features/purchases/actions"
 import { payExpense } from "@/features/expenses/actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Plus, Edit, Trash, Wallet } from "lucide-react"
+import { Plus, Edit, Trash, Wallet, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
@@ -42,6 +42,7 @@ export function PaymeterList() {
   const [settlingPaymeter, setSettlingPaymeter] = useState<any>(null)
   const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({})
   const [paymeterPage, setPaymeterPage] = useState(1)
+  const [search, setSearch] = useState("")
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
 
@@ -56,8 +57,8 @@ export function PaymeterList() {
   const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
 
   const { data: paymeterResult, isLoading } = useQuery({
-    queryKey: ['paymeters', paymeterPage, fromDateStr, toDateStr],
-    queryFn: () => getPaymeters(paymeterPage, fromDateStr, toDateStr)
+    queryKey: ['paymeters', paymeterPage, search, fromDateStr, toDateStr],
+    queryFn: () => getPaymeters(paymeterPage, fromDateStr, toDateStr, search)
   })
   const paymeters = paymeterResult?.data ?? []
 
@@ -115,7 +116,10 @@ export function PaymeterList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h2 className="text-xl font-bold tracking-tight">{t.settings.databaseTab.ledgersAccounts}</h2>
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search paymeters..." className="pl-8" value={search} onChange={(event) => { setSearch(event.target.value); setPaymeterPage(1) }} />
+        </div>
 
         <div className="flex gap-2">
           <DatePickerWithRange

@@ -10,9 +10,9 @@ export async function getCustomers(page = 1, search = "", fromDate?: string, toD
 
   const where: any = {
     OR: [
-      { name: { contains: search } },
-      { email: { contains: search } },
-      { phone: { contains: search } },
+      { name: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { phone: { contains: search, mode: "insensitive" } },
     ]
   };
 

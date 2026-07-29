@@ -10,8 +10,8 @@ export async function getInventory(page = 1, search = "", fromDate?: string, toD
 
   const where: any = {
     OR: [
-      { itemName: { contains: search } },
-      { partNumber: { contains: search } },
+      { itemName: { contains: search, mode: "insensitive" } },
+      { partNumber: { contains: search, mode: "insensitive" } },
     ]
   };
 

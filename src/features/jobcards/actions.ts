@@ -19,9 +19,9 @@ export async function getJobCards(
 
   const where: any = {
     OR: [
-      { complaint: { contains: search } },
-      { customer: { name: { contains: search } } },
-      { vehicle: { plateNumber: { contains: search } } },
+      { complaint: { contains: search, mode: "insensitive" } },
+      { customer: { name: { contains: search, mode: "insensitive" } } },
+      { vehicle: { plateNumber: { contains: search, mode: "insensitive" } } },
     ]
   };
 
@@ -125,7 +125,7 @@ export async function getServicesList(search = "") {
   await requirePagePermission("jobcards")
   return prisma.service.findMany({
     where: {
-      name: { contains: search }
+      name: { contains: search, mode: "insensitive" }
     },
     take: 20
   })
@@ -138,8 +138,8 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
       quantity: { gt: 0 },
       inventory: {
         OR: [
-          { itemName: { contains: search } },
-          { partNumber: { contains: search } }
+          { itemName: { contains: search, mode: "insensitive" } },
+          { partNumber: { contains: search, mode: "insensitive" } }
         ]
       }
     },

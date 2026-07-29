@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 import { PaymeterFormValues, paymeterSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
-export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: string) {
+export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: string, search = "") {
   const limit = 5
   const skip = (page - 1) * limit
   const purchaseWhere: any = {};
@@ -22,10 +22,13 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
     }
   }
 
+  const nameWhere = search.trim() ? { contains: search.trim(), mode: "insensitive" as const } : undefined
+  const where = nameWhere ? { name: nameWhere } : undefined
   const [paymeters, total] = await Promise.all([
     prisma.paymeter.findMany({
     skip,
     take: limit,
+    where,
     include: {
       purchases: {
         where: purchaseWhere,
@@ -60,7 +63,7 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
     },
     orderBy: { name: 'asc' }
     }),
-    prisma.paymeter.count()
+    prisma.paymeter.count({ where })
   ])
   
   // Calculate dynamic spent amount for the selected date range

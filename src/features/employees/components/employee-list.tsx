@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, Eye, EyeOff, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Edit, Eye, EyeOff, Plus, Trash2, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { toast } from "sonner"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
@@ -73,18 +73,23 @@ export function EmployeeList() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Employee | undefined>()
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState("")
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
 
   const fromDateStr = dateRange?.from?.toISOString()
   const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
 
-  const { data: employees = [], isLoading } = useQuery<Employee[]>({ queryKey: ["employees", fromDateStr, toDateStr], queryFn: () => getEmployees(fromDateStr, toDateStr) })
+  const { data: employees = [], isLoading } = useQuery<Employee[]>({ queryKey: ["employees", search, fromDateStr, toDateStr], queryFn: () => getEmployees(fromDateStr, toDateStr, search) })
   const toggleActive = useMutation({ mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => setEmployeeActive(id, isActive), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }) })
   const removeEmployee = useMutation({ mutationFn: deleteEmployee, onSuccess: () => { toast.success("User deleted"); queryClient.invalidateQueries({ queryKey: ["employees"] }) }, onError: (error: Error) => toast.error(error.message || "Unable to delete user") })
   const close = () => { setOpen(false); setEditing(undefined); queryClient.invalidateQueries({ queryKey: ["employees"] }) }
   return (
     <div className="space-y-4">
       <div className="flex justify-between gap-4 items-center">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search users..." className="pl-8" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} />
+        </div>
         <DatePickerWithRange 
           date={dateRange} 
           setDate={setDateRange} 

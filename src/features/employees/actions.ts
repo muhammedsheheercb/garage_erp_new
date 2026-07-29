@@ -29,24 +29,22 @@ export type EmployeeInput = {
 
 type EmployeeRow = { id: string; username: string | null; permissions: string; isActive: boolean; createdAt: Date }
 
-export async function getEmployees(fromDate?: string, toDate?: string) {
+export async function getEmployees(fromDate?: string, toDate?: string, search = "") {
   await requireAdmin()
-  let sql = `SELECT "id", "username", "permissions", "isActive", "createdAt" FROM "Employee"`
-  let whereClauses: string[] = []
-  
-  if (fromDate) {
-    whereClauses.push(`"createdAt" >= '${new Date(fromDate).toISOString()}'`)
+  const where: any = {}
+  if (fromDate || toDate) {
+    where.createdAt = {}
+    if (fromDate) where.createdAt.gte = new Date(fromDate)
+    if (toDate) where.createdAt.lte = new Date(toDate)
   }
-  if (toDate) {
-    whereClauses.push(`"createdAt" <= '${new Date(toDate).toISOString()}'`)
+  if (search.trim()) {
+    where.username = { contains: search.trim(), mode: "insensitive" }
   }
-
-  if (whereClauses.length > 0) {
-    sql += ` WHERE ${whereClauses.join(" AND ")}`
-  }
-  sql += ` ORDER BY "createdAt" DESC`
-  
-  return prisma.$queryRawUnsafe<EmployeeRow[]>(sql)
+  return prisma.employee.findMany({
+    where,
+    select: { id: true, username: true, permissions: true, isActive: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  })
 }
 
 export async function createEmployee(data: EmployeeInput) {
