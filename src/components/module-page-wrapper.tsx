@@ -3,6 +3,7 @@
 import { useTranslation } from "@/i18n";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -26,6 +27,7 @@ export function ModulePageWrapper({
   children,
 }: ModulePageWrapperProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -47,7 +49,7 @@ export function ModulePageWrapper({
       <div className="max-w-screen-2xl mx-auto space-y-6">
         <div className="flex flex-col gap-4">
           <div suppressHydrationWarning>
-            <Link href="/" passHref>
+            <Link href="/" prefetch onMouseEnter={() => router.prefetch("/")} passHref>
               <Button
                 variant="ghost"
                 size="sm"
