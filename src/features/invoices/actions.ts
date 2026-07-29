@@ -63,6 +63,9 @@ export async function getInvoiceById(id: string) {
           vehicle: true,
           mechanic: true
         }
+      },
+      payments: {
+        orderBy: { createdAt: "asc" }
       }
     }
   })

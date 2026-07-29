@@ -55,25 +55,28 @@ function BreakdownCard({
   value,
   icon: Icon,
   color,
-  breakdown
+  breakdown,
+  details,
 }: {
   title: string;
   value: string;
   icon: any;
   color: string;
   breakdown?: Record<string, number>;
+  details?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const expandable = Boolean(breakdown || details);
   
   return (
     <Card className="shadow-sm transition-all h-fit">
       <CardHeader 
-        className={`flex flex-row items-center justify-between pb-2 space-y-0 ${breakdown ? "cursor-pointer hover:bg-muted/30" : ""}`} 
-        onClick={() => breakdown && setOpen(!open)}
+        className={`flex flex-row items-center justify-between pb-2 space-y-0 ${expandable ? "cursor-pointer hover:bg-muted/30" : ""}`}
+        onClick={() => expandable && setOpen(!open)}
       >
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1 select-none">
           {title}
-          {breakdown && (open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+          {expandable && (open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
         </CardTitle>
         <Icon className={`h-4 w-4 ${color}`} />
       </CardHeader>
@@ -91,6 +94,7 @@ function BreakdownCard({
             ))}
           </div>
         )}
+        {open && details}
       </CardContent>
     </Card>
   )
@@ -168,7 +172,7 @@ export function ReportsDashboard() {
       </div>
 
       {/* KPIs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-start">
         <BreakdownCard 
           title="Total Income" 
           value={`${stats?.totalIncome.toFixed(3) || "0.000"} OMR`}
@@ -181,6 +185,7 @@ export function ReportsDashboard() {
           value={`${stats?.totalExpense.toFixed(3) || "0.000"} OMR`}
           icon={TrendingUp}
           color="text-red-500"
+          breakdown={stats?.expenseBySource}
         />
         <BreakdownCard 
           title="Total Purchase" 
@@ -188,6 +193,13 @@ export function ReportsDashboard() {
           icon={Package}
           color="text-orange-500"
           breakdown={stats?.purchaseByMethod}
+        />
+        <BreakdownCard
+          title="Total Paymeter Paid"
+          value={`${stats?.totalPaymeterPaid.toFixed(3) || "0.000"} OMR`}
+          icon={OmanIcon}
+          color="text-orange-500"
+          breakdown={stats?.paymeterByName}
         />
         <BreakdownCard 
           title="Total Revenue" 

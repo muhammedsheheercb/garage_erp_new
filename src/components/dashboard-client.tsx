@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Wrench, Users, Car, CheckCircle2, Clock, PlusCircle, FileText, Activity, Briefcase, CreditCard, Package, Truck, UserCog } from "lucide-react"
+import { Wrench, Users, Car, CheckCircle2, FileText, Activity, Briefcase, CreditCard, Package, Truck, UserCog } from "lucide-react"
 import { SignOutButton } from "@/components/sign-out-button"
 import { Currency, OmanIcon } from "@/components/currency"
 import Link from "next/link"
@@ -19,6 +19,7 @@ interface DashboardClientProps {
     dailyPurchase: number
     dailyExpense: number
     dailyProfit: number
+    dailyPaymeterPaid: number
     pendingJobs: number
     completedJobs: number
     profit: number
@@ -50,8 +51,8 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
     { title: t.dashboard.todaysIncome, value: <Currency amount={realStats.dailyRevenue} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.paymentsReceivedToday },
     { title: "Today's Purchase", value: <Currency amount={realStats.dailyPurchase} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total purchases today" },
     { title: t.dashboard.todaysExpense, value: <Currency amount={realStats.dailyExpense} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total expenses today" },
+    { title: "Today's Paymeter Paid", value: <Currency amount={realStats.dailyPaymeterPaid} size={1.2} />, icon: CreditCard, description: "Money taken from paymeters today" },
     { title: t.dashboard.todaysRevenue, value: <Currency amount={realStats.dailyProfit} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.incomeMinusExpense },
-    { title: t.dashboard.pendingJobs, value: realStats.pendingJobs.toString(), icon: Clock, description: t.dashboard.needsAttention },
     { title: t.dashboard.completedJobsMonth, value: realStats.completedJobs.toString(), icon: CheckCircle2, description: t.dashboard.thisMonth },
   ]
 

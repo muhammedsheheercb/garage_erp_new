@@ -8,6 +8,9 @@ export default async function PrintInvoicePage({ params }: { params: { id: strin
   
   if (!invoice) return notFound()
 
+  const paidAmount = invoice.payments.reduce((total, payment) => total + payment.amount, 0)
+  const balance = Math.max(0, invoice.grandTotal - paidAmount)
+
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white text-black min-h-screen font-sans">
       <PrintActions />
@@ -102,6 +105,14 @@ export default async function PrintInvoicePage({ params }: { params: { id: strin
                 <tr className="text-xl font-bold bg-gray-100">
                   <td className="py-4 px-4 text-left">Grand Total:</td>
                   <td className="py-4 px-4">{invoice.grandTotal.toFixed(3)} OMR</td>
+                </tr>
+                <tr className="border-b text-green-700">
+                  <td className="py-2 px-4 text-left">Paid:</td>
+                  <td className="py-2 px-4">-{paidAmount.toFixed(3)} OMR</td>
+                </tr>
+                <tr className="text-xl font-bold bg-red-50 text-red-700">
+                  <td className="py-4 px-4 text-left">Balance:</td>
+                  <td className="py-4 px-4">{balance.toFixed(3)} OMR</td>
                 </tr>
               </tbody>
             </table>
