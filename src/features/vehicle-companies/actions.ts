@@ -31,7 +31,7 @@ export async function createVehicleCompany(data: CompanyCreateFormValues) {
     where: { name: { equals: parsed.name, mode: "insensitive" } },
     select: { id: true },
   })
-  if (existing) throw new Error("Vehicle company name already exists.")
+  if (existing) return { success: false as const, message: "Vehicle company name already exists." }
 
   const company = await prisma.vehicleCompany.create({
     data: {
@@ -52,7 +52,7 @@ export async function updateVehicleCompany(id: string, data: CompanyFormValues) 
     },
     select: { id: true },
   })
-  if (existing) throw new Error("Vehicle company name already exists.")
+  if (existing) return { success: false as const, message: "Vehicle company name already exists." }
 
   const company = await prisma.vehicleCompany.update({ where: { id }, data: parsed })
   refreshVehicleData()
@@ -74,7 +74,7 @@ export async function createVehicleModel(data: ModelFormValues) {
     },
     select: { id: true },
   })
-  if (existing) throw new Error("Vehicle model already exists for this company.")
+  if (existing) return { success: false as const, message: "Vehicle model already exists for this company." }
 
   const model = await prisma.vehicleModel.create({ data: parsed })
   refreshVehicleData()
@@ -91,7 +91,7 @@ export async function updateVehicleModel(id: string, data: ModelFormValues) {
     },
     select: { id: true },
   })
-  if (existing) throw new Error("Vehicle model already exists for this company.")
+  if (existing) return { success: false as const, message: "Vehicle model already exists for this company." }
   const model = await prisma.vehicleModel.update({ where: { id }, data: parsed })
   refreshVehicleData()
   return model

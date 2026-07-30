@@ -35,10 +35,16 @@ function EmployeeForm({ employee, onDone }: { employee?: Employee; onDone: () =>
   const [errors, setErrors] = useState<FormErrors>({})
   const mutation = useMutation({
     mutationFn: async () => {
-      if (employee) await updateEmployee(employee.id, { username, password, permissions })
-      else await createEmployee({ username, password, permissions })
+      if (employee) return updateEmployee(employee.id, { username, password, permissions })
+      return createEmployee({ username, password, permissions })
     },
-    onSuccess: () => { toast.success(employee ? "User updated" : "User created"); onDone() },
+    onSuccess: (result) => {
+      if (result && "success" in result && result.success === false) {
+        toast.error(result.message || "Unable to save user")
+        return
+      }
+      toast.success(employee ? "User updated" : "User created"); onDone()
+    },
     onError: (error: Error) => toast.error(error.message || "Unable to save user"),
   })
   const togglePermission = (page: PagePermission, action: PermissionAction) => setPermissions((current) => {

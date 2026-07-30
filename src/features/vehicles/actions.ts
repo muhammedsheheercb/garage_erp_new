@@ -83,7 +83,7 @@ export async function createVehicle(data: VehicleFormValues) {
     where: { plateNumber: { equals: parsed.plateNumber, mode: "insensitive" } },
     select: { id: true },
   })
-  if (existing) throw new Error("Vehicle number already exists.")
+  if (existing) return { success: false as const, message: "Vehicle number already exists." }
   
   const vehicle = await prisma.vehicle.create({
     data: {
@@ -111,7 +111,7 @@ export async function updateVehicle(id: string, data: VehicleFormValues) {
     },
     select: { id: true },
   })
-  if (existing) throw new Error("Vehicle number already exists.")
+  if (existing) return { success: false as const, message: "Vehicle number already exists." }
   
   const vehicle = await prisma.vehicle.update({
     where: { id },

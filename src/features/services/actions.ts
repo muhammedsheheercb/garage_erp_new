@@ -49,7 +49,7 @@ export async function createService(data: ServiceFormValues) {
     where: { name: { equals: parsed.name, mode: "insensitive" } },
     select: { id: true },
   })
-  if (existing) throw new Error("Service name already exists.")
+  if (existing) return { success: false as const, message: "Service name already exists." }
   
   const service = await prisma.service.create({
     data: {
@@ -74,7 +74,7 @@ export async function updateService(id: string, data: ServiceFormValues) {
     },
     select: { id: true },
   })
-  if (existing) throw new Error("Service name already exists.")
+  if (existing) return { success: false as const, message: "Service name already exists." }
   
   const service = await prisma.service.update({
     where: { id },

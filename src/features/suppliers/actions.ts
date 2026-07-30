@@ -103,7 +103,7 @@ export async function createSupplier(data: SupplierFormValues) {
     where: { name: { equals: parsed.name, mode: 'insensitive' } }
   })
   if (existingName) {
-    throw new Error("This supplier name is already used.")
+    return { success: false as const, message: "This supplier name is already used." }
   }
 
   if (parsed.contact) {
@@ -111,7 +111,7 @@ export async function createSupplier(data: SupplierFormValues) {
       where: { contact: parsed.contact }
     })
     if (existingContact) {
-      throw new Error("This contact number is already used by another supplier.")
+      return { success: false as const, message: "This contact number is already used by another supplier." }
     }
   }
 
@@ -138,7 +138,7 @@ export async function updateSupplier(id: string, data: SupplierFormValues) {
     }
   })
   if (existingName) {
-    throw new Error("This supplier name is already used.")
+    return { success: false as const, message: "This supplier name is already used." }
   }
 
   if (parsed.contact) {
@@ -149,7 +149,7 @@ export async function updateSupplier(id: string, data: SupplierFormValues) {
       }
     })
     if (existingContact) {
-      throw new Error("This contact number is already used by another supplier.")
+      return { success: false as const, message: "This contact number is already used by another supplier." }
     }
   }
 

@@ -17,7 +17,13 @@ export function ModelForm({ companyId, model, onSuccess }: { companyId: string; 
   const { register, handleSubmit, formState: { errors } } = useForm<ModelFormValues>({ resolver: zodResolver(modelSchema), defaultValues: { companyId, name: model?.name || "" } })
   const mutation = useMutation({
     mutationFn: (data: ModelFormValues) => model ? updateVehicleModel(model.id, data) : createVehicleModel(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["vehicle-companies"] }); queryClient.invalidateQueries({ queryKey: ["vehicle-catalog"] }); toast.success(model ? t.common.update : t.common.save); onSuccess() },
+    onSuccess: (result) => {
+      if ("success" in result && result.success === false) {
+        toast.error(result.message || t.common.somethingWrong)
+        return
+      }
+      queryClient.invalidateQueries({ queryKey: ["vehicle-companies"] }); queryClient.invalidateQueries({ queryKey: ["vehicle-catalog"] }); toast.success(model ? t.common.update : t.common.save); onSuccess()
+    },
     onError: (error: Error) => toast.error(error.message || t.common.somethingWrong),
   })
   return <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4">

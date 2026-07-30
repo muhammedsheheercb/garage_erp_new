@@ -36,7 +36,11 @@ export function MechanicForm({ initialData, onSuccess }: MechanicFormProps) {
       }
       return createMechanic(data)
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if ("success" in result && result.success === false) {
+        toast.error(result.message || t.common.somethingWrong)
+        return
+      }
       toast.success(initialData?.id ? t.mechanics.mechanicUpdated : t.mechanics.mechanicAdded)
       queryClient.invalidateQueries({ queryKey: ['mechanics'] })
       onSuccess?.()

@@ -121,7 +121,7 @@ export async function createPaymeter(data: PaymeterFormValues) {
     where: { name: { equals: parsed.name, mode: "insensitive" } },
     select: { id: true },
   })
-  if (existing) throw new Error("Paymeter name already exists.")
+  if (existing) return { success: false as const, message: "Paymeter name already exists." }
   
   // Enforce spentAmount and initialSpentAmount are 0 on backend
   const paymeter = await prisma.paymeter.create({
@@ -146,7 +146,7 @@ export async function updatePaymeter(id: string, data: PaymeterFormValues) {
     },
     select: { id: true },
   })
-  if (existing) throw new Error("Paymeter name already exists.")
+  if (existing) return { success: false as const, message: "Paymeter name already exists." }
   
   const paymeter = await prisma.paymeter.update({
     where: { id },

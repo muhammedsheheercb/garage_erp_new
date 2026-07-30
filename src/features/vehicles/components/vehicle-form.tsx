@@ -67,6 +67,10 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
       return createVehicle(data)
     },
     onSuccess: (data) => {
+      if ("success" in data && data.success === false) {
+        toast.error(data.message || t.common.somethingWrong)
+        return
+      }
       toast.success(initialData?.id ? t.vehicles.vehicleUpdated : t.vehicles.vehicleCreated)
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
       onSuccess?.(data)

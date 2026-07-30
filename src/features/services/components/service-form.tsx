@@ -38,7 +38,11 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
       }
       return createService(data)
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if ("success" in result && result.success === false) {
+        toast.error(result.message || t.common.somethingWrong)
+        return
+      }
       toast.success(initialData?.id ? t.services.serviceUpdated : t.services.serviceCreated)
       queryClient.invalidateQueries({ queryKey: ['services'] })
       onSuccess?.()

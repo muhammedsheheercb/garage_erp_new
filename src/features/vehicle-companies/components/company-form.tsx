@@ -20,7 +20,11 @@ export function CompanyForm({ company, onSuccess }: { company?: { id: string; na
   })
   const mutation = useMutation({
     mutationFn: (data: CompanyCreateFormValues) => company ? updateVehicleCompany(company.id, { name: data.name }) : createVehicleCompany(data),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if ("success" in result && result.success === false) {
+        toast.error(result.message || t.common.somethingWrong)
+        return
+      }
       queryClient.invalidateQueries({ queryKey: ["vehicle-companies"] })
       queryClient.invalidateQueries({ queryKey: ["vehicle-catalog"] })
       toast.success(company ? t.common.update : t.common.save)

@@ -57,7 +57,7 @@ export async function createCustomer(data: CustomerFormValues) {
     where: { name: { equals: parsed.name, mode: 'insensitive' } }
   })
   if (existingName) {
-    throw new Error("This customer name is already used.")
+    return { success: false as const, message: "This customer name is already used." }
   }
 
   if (parsed.phone) {
@@ -65,7 +65,7 @@ export async function createCustomer(data: CustomerFormValues) {
       where: { phone: parsed.phone }
     })
     if (existingPhone) {
-      throw new Error("This mobile number is already used by another customer.")
+      return { success: false as const, message: "This mobile number is already used by another customer." }
     }
   }
 
@@ -92,7 +92,7 @@ export async function updateCustomer(id: string, data: CustomerFormValues) {
     }
   })
   if (existingName) {
-    throw new Error("This customer name is already used.")
+    return { success: false as const, message: "This customer name is already used." }
   }
 
   if (parsed.phone) {
@@ -103,7 +103,7 @@ export async function updateCustomer(id: string, data: CustomerFormValues) {
       }
     })
     if (existingPhone) {
-      throw new Error("This mobile number is already used by another customer.")
+      return { success: false as const, message: "This mobile number is already used by another customer." }
     }
   }
 

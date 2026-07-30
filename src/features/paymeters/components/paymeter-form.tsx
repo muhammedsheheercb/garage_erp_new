@@ -34,7 +34,11 @@ export function PaymeterForm({ initialData, onSuccess }: PaymeterFormProps) {
       }
       return createPaymeter(data)
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if ("success" in result && result.success === false) {
+        toast.error(result.message || t.common.somethingWrong)
+        return
+      }
       toast.success(initialData?.id ? t.settings.databaseTab.paymeterUpdated : t.settings.databaseTab.paymeterCreated)
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
       onSuccess?.()

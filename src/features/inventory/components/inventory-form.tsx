@@ -40,7 +40,11 @@ export function InventoryForm({ initialData, onSuccess }: InventoryFormProps) {
   const mutation = useMutation({
     mutationFn: (data: InventoryFormValues) => 
       initialData ? updateInventoryItem(initialData.id, data) : createInventoryItem(data),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if ("success" in result && result.success === false) {
+        toast.error(result.message || t.common.somethingWrong)
+        return
+      }
       toast.success(initialData ? t.inventoryMod.itemUpdated : t.inventoryMod.itemCreated)
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
       queryClient.invalidateQueries({ queryKey: ['purchases'] })

@@ -82,7 +82,7 @@ export async function createInventoryItem(data: InventoryFormValues) {
     where: { itemName: { equals: parsed.itemName, mode: "insensitive" } },
     select: { id: true },
   })
-  if (existing) throw new Error("Inventory item name already exists.")
+  if (existing) return { success: false as const, message: "Inventory item name already exists." }
   
   const item = await prisma.inventory.create({
     data: {
@@ -107,7 +107,7 @@ export async function updateInventoryItem(id: string, data: InventoryFormValues)
     },
     select: { id: true },
   })
-  if (existing) throw new Error("Inventory item name already exists.")
+  if (existing) return { success: false as const, message: "Inventory item name already exists." }
   
   const item = await prisma.inventory.update({
     where: { id },

@@ -46,6 +46,11 @@ export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
       return createCustomer(data);
     },
     onSuccess: (data) => {
+      if ("success" in data && data.success === false) {
+        toast.error(data.message);
+        return;
+      }
+
       toast.success(
         initialData?.id
           ? t.customers.customerUpdated

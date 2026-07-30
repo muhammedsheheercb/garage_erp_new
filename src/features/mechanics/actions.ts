@@ -64,7 +64,7 @@ export async function createMechanic(data: MechanicFormValues) {
     where: { name: { equals: parsed.name, mode: 'insensitive' } }
   })
   if (existingName) {
-    throw new Error("This mechanic name is already used.")
+    return { success: false as const, message: "This mechanic name is already used." }
   }
 
   if (parsed.phone) {
@@ -72,7 +72,7 @@ export async function createMechanic(data: MechanicFormValues) {
       where: { phone: parsed.phone }
     })
     if (existingPhone) {
-      throw new Error("This mobile number is already used by another mechanic.")
+      return { success: false as const, message: "This mobile number is already used by another mechanic." }
     }
   }
 
@@ -98,7 +98,7 @@ export async function updateMechanic(id: string, data: MechanicFormValues) {
     }
   })
   if (existingName) {
-    throw new Error("This mechanic name is already used.")
+    return { success: false as const, message: "This mechanic name is already used." }
   }
 
   if (parsed.phone) {
@@ -109,7 +109,7 @@ export async function updateMechanic(id: string, data: MechanicFormValues) {
       }
     })
     if (existingPhone) {
-      throw new Error("This mobile number is already used by another mechanic.")
+      return { success: false as const, message: "This mobile number is already used by another mechanic." }
     }
   }
 

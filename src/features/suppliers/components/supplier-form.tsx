@@ -35,6 +35,10 @@ export function SupplierForm({ initialData, onSuccess }: SupplierFormProps) {
     mutationFn: (data: SupplierFormValues) => 
       initialData ? updateSupplier(initialData.id, data) : createSupplier(data),
     onSuccess: (data) => {
+      if ("success" in data && data.success === false) {
+        toast.error(data.message || t.common.somethingWrong)
+        return
+      }
       toast.success(initialData ? t.suppliers.supplierUpdated : t.suppliers.supplierCreated)
       queryClient.invalidateQueries({ queryKey: ['suppliers'] })
       queryClient.invalidateQueries({ queryKey: ['supplier', initialData?.id] })
