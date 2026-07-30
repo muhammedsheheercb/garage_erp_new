@@ -441,6 +441,7 @@ export const ar: TranslationKeys = {
     description:
       "إدارة القطع ومتابعة مستويات المخزون ومراقبة أسعار الشراء والبيع.",
     addItem: "إضافة صنف",
+    addOpeningStock: "المخزون الافتتاحي",
     addNewItem: "إضافة صنف جديد",
     searchInventory: "البحث في المخزون...",
     searchItems: "البحث عن الأصناف...",
@@ -449,6 +450,7 @@ export const ar: TranslationKeys = {
     partName: "اسم القطعة",
     itemName: "اسم الصنف",
     stock: "المخزون",
+    openingStock: "المخزون الافتتاحي",
     buyPrice: "سعر الشراء",
     sellPrice: "سعر البيع",
     prices: "الأسعار",

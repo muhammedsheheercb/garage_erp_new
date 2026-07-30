@@ -63,7 +63,7 @@ export function MechanicForm({ initialData, onSuccess }: MechanicFormProps) {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="phone">{t.common.phone} <span className="text-destructive">*</span></Label>
+        <Label htmlFor="phone">{t.common.phone}</Label>
         <Input id="phone" placeholder={t.mechanics.phonePlaceholder} {...register("phone")} />
         {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
       </div>

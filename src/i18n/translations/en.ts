@@ -443,6 +443,7 @@ export const en = {
     description:
       "Manage parts, track stock levels, and monitor purchase and selling prices.",
     addItem: "Add Item",
+    addOpeningStock: "Opening Stock",
     addNewItem: "Add New Item",
     searchInventory: "Search inventory...",
     searchItems: "Search items...",
@@ -451,6 +452,7 @@ export const en = {
     partName: "Part Name",
     itemName: "Item Name",
     stock: "Stock",
+    openingStock: "Opening Stock",
     buyPrice: "Buy Price",
     sellPrice: "Sell Price",
     prices: "Prices",

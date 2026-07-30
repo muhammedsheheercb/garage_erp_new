@@ -1,7 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
-import { InventoryFormValues, inventorySchema } from "./schema"
+import { InventoryFormValues, inventorySchema, openingStockSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
 export async function getInventory(page = 1, search = "", fromDate?: string, toDate?: string) {
@@ -74,9 +74,9 @@ export async function getNextPartNumber() {
   return `PART-${String(nextNum).padStart(6, '0')}`
 }
 
-export async function createInventoryItem(data: InventoryFormValues) {
+export async function createInventoryItem(data: InventoryFormValues, withOpeningStock = false) {
   const partNumber = await getNextPartNumber()
-  const parsed = inventorySchema.parse({ ...data, partNumber })
+  const parsed = (withOpeningStock ? openingStockSchema : inventorySchema).parse({ ...data, partNumber })
 
   const existing = await prisma.inventory.findFirst({
     where: { itemName: { equals: parsed.itemName, mode: "insensitive" } },
@@ -88,6 +88,16 @@ export async function createInventoryItem(data: InventoryFormValues) {
     data: {
       itemName: parsed.itemName,
       partNumber: parsed.partNumber,
+      ...(withOpeningStock ? {
+        batches: {
+          create: {
+            batchNumber: `OPENING-${parsed.partNumber}`,
+            quantity: parsed.openingStock,
+            purchasePrice: parsed.purchasePrice,
+            sellingPrice: parsed.sellingPrice,
+          }
+        }
+      } : {})
     }
   })
   
@@ -109,11 +119,15 @@ export async function updateInventoryItem(id: string, data: InventoryFormValues)
   })
   if (existing) return { success: false as const, message: "Inventory item name already exists." }
   
+  const existingItem = await prisma.inventory.findUnique({ where: { id }, select: { partNumber: true } })
+  if (!existingItem) throw new Error("Inventory item not found.")
+
   const item = await prisma.inventory.update({
     where: { id },
     data: {
       itemName: parsed.itemName,
-      partNumber: parsed.partNumber,
+      // Part numbers are generated once and cannot be edited.
+      partNumber: existingItem.partNumber,
     }
   })
   

@@ -22,6 +22,7 @@ export function InventoryList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isOpeningStockOpen, setIsOpeningStockOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const { t } = useTranslation()
   const { can } = usePermissions()
@@ -65,10 +66,9 @@ export function InventoryList() {
         />
 
         {can("inventory", "create") && (
+          <>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-            <DialogTrigger render={
-              <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.inventoryMod.addItem}</Button>
-            } />
+            <DialogTrigger render={<Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.inventoryMod.addItem}</Button>} />
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{t.inventoryMod.addNewItem}</DialogTitle>
@@ -76,6 +76,16 @@ export function InventoryList() {
               <InventoryForm onSuccess={() => setIsAddOpen(false)} />
             </DialogContent>
           </Dialog>
+          <Dialog open={isOpeningStockOpen} onOpenChange={setIsOpeningStockOpen}>
+            <DialogTrigger render={<Button variant="outline" className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.inventoryMod.addOpeningStock}</Button>} />
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{t.inventoryMod.addOpeningStock}</DialogTitle>
+              </DialogHeader>
+              <InventoryForm openingStockMode onSuccess={() => setIsOpeningStockOpen(false)} />
+            </DialogContent>
+          </Dialog>
+          </>
         )}
       </div>
 
