@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { PurchaseForm } from "./purchase-form"
 import { toast } from "sonner"
-import { format, endOfDay } from "date-fns"
+import { endOfDay } from "date-fns"
+import { formatDisplayDate } from "@/lib/date-format"
 import { useTranslation } from "@/i18n"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
@@ -120,7 +121,7 @@ export function PurchaseList() {
                       </div>
                     ) : '-'}
                   </TableCell>
-                  <TableCell>{format(new Date(p.purchaseDate), 'dd-MM-yyyy')}</TableCell>
+                  <TableCell>{formatDisplayDate(p.purchaseDate)}</TableCell>
                   <TableCell>{p.grandTotal.toFixed(3)} OMR</TableCell>
                   <TableCell className="text-green-600 font-medium">{p.paidAmount.toFixed(3)} OMR</TableCell>
                   <TableCell className={p.pendingAmount > 0 ? "text-destructive font-medium" : "text-muted-foreground"}>
@@ -203,7 +204,7 @@ export function PurchaseList() {
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground block">{t.purchases.purchaseDate}</span>
-                  <span className="font-semibold">{format(new Date(viewingPurchase.purchaseDate), 'dd-MM-yyyy')}</span>
+                  <span className="font-semibold">{formatDisplayDate(viewingPurchase.purchaseDate)}</span>
                 </div>
                 {viewingPurchase.purchaseType === 'VEHICLE' && viewingPurchase.jobCard && (
                   <div>

@@ -17,6 +17,7 @@ import { usePermissions } from "@/lib/use-permissions"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
+import { formatDisplayDate } from "@/lib/date-format"
 
 export function VehicleList() {
   const queryClient = useQueryClient()
@@ -169,7 +170,7 @@ export function VehicleList() {
                                     <div>
                                       <p className="text-sm font-medium">Job Card</p>
                                       <p className="text-xs text-muted-foreground">
-                                        {new Date(job.createdAt).toLocaleDateString()}
+                                        {formatDisplayDate(job.createdAt)}
                                       </p>
                                     </div>
                                     <Badge variant={job.status === 'COMPLETED' ? 'default' : 'secondary'}>

@@ -15,6 +15,7 @@ import { useTranslation } from "@/i18n"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
+import { formatDisplayDate } from "@/lib/date-format"
 
 export function PaymentList() {
   const router = useRouter()
@@ -151,7 +152,7 @@ export function PaymentList() {
                 ) : (
                   historyData?.data.map((payment) => (
                     <TableRow key={payment.id}>
-                      <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatDisplayDate(payment.createdAt)}</TableCell>
                       <TableCell>{payment.invoice.customer.name}</TableCell>
                       <TableCell>
                         <Button 

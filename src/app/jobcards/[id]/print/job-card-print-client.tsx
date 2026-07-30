@@ -4,7 +4,7 @@ import { useTranslation } from "@/i18n";
 import { Currency } from "@/components/currency";
 import { PrintButton } from "./print-button";
 import { useEffect } from "react";
-import { format } from "date-fns";
+import { formatDisplayDate } from "@/lib/date-format";
 
 export function JobCardPrintClient({ job }: { job: any }) {
   const { t, isRTL, locale } = useTranslation();
@@ -13,7 +13,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
     document.documentElement.dir = isRTL ? "rtl" : "ltr";
   }, [isRTL]);
 
-  const printDate = (value: Date | string) => format(new Date(value), "dd/MM/yyyy");
+  const printDate = (value: Date | string) => formatDisplayDate(value);
 
   return (
     <div className={`min-h-screen bg-white text-black p-8 print:p-0 ${isRTL ? "font-cairo" : ""}`} dir={isRTL ? "rtl" : "ltr"}>

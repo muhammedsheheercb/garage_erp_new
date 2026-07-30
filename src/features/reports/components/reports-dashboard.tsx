@@ -48,6 +48,9 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { endOfDay } from "date-fns";
 import { OmanIcon } from "@/components/currency";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { formatDisplayDate } from "@/lib/date-format";
 
 function BreakdownCard({
   title,
@@ -56,6 +59,7 @@ function BreakdownCard({
   color,
   breakdown,
   details,
+  detailsHref,
 }: {
   title: string;
   value: string;
@@ -63,6 +67,7 @@ function BreakdownCard({
   color: string;
   breakdown?: Record<string, number>;
   details?: React.ReactNode;
+  detailsHref?: string;
 }) {
   const [open, setOpen] = useState(false);
   const expandable = Boolean(breakdown || details);
@@ -83,6 +88,11 @@ function BreakdownCard({
         <div className={`text-2xl font-bold ${color}`}>
           {value}
         </div>
+        {detailsHref && (
+          <Link href={detailsHref} className={`${buttonVariants({ variant: "outline", size: "sm" })} mt-3 w-full`}>
+            Details
+          </Link>
+        )}
         {open && breakdown && (
           <div className="mt-4 space-y-2 border-t pt-2">
             {Object.entries(breakdown).map(([method, amount]) => (
@@ -157,7 +167,7 @@ export function ReportsDashboard() {
           {t.common.appName} - {t.nav.reports}
         </h1>
         <p className="text-center text-sm text-muted-foreground">
-          {t.payments.date}: {new Date().toLocaleDateString()}
+          {t.payments.date}: {formatDisplayDate(new Date())}
         </p>
       </div>
 
@@ -169,6 +179,7 @@ export function ReportsDashboard() {
           icon={OmanIcon}
           color="text-green-500"
           breakdown={stats?.incomeByMethod}
+          detailsHref="/payments"
         />
         <BreakdownCard 
           title="Total Expense" 
@@ -176,6 +187,7 @@ export function ReportsDashboard() {
           icon={TrendingUp}
           color="text-red-500"
           breakdown={stats?.expenseBySource}
+          detailsHref="/expenses"
         />
         <BreakdownCard 
           title="Total Purchase" 
@@ -183,6 +195,7 @@ export function ReportsDashboard() {
           icon={Package}
           color="text-orange-500"
           breakdown={stats?.purchaseByMethod}
+          detailsHref="/purchases"
         />
         <BreakdownCard
           title="Total Paymeter Paid"
@@ -190,6 +203,7 @@ export function ReportsDashboard() {
           icon={OmanIcon}
           color="text-orange-500"
           breakdown={stats?.paymeterByName}
+          detailsHref="/paymeters"
         />
         <BreakdownCard 
           title="Total Revenue" 

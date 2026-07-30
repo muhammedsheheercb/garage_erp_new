@@ -44,6 +44,7 @@ import {
 import { CustomerForm } from "@/features/customers/components/customer-form";
 import { VehicleForm } from "@/features/vehicles/components/vehicle-form";
 import { useTranslation } from "@/i18n";
+import { formatDisplayDate } from "@/lib/date-format";
 import { Badge } from "@/components/ui/badge";
 
 interface JobCardFormProps {
@@ -851,7 +852,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium">
-                        {new Date(job.createdAt).toLocaleDateString()}
+                        {formatDisplayDate(job.createdAt)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {job.mechanic?.name || t.jobcards.unassigned}

@@ -17,6 +17,7 @@ import { useTranslation } from "@/i18n"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
+import { formatDisplayDate } from "@/lib/date-format"
 
 function Pagination({ page, setPage, total, limit }: { page: number, setPage: (p: number) => void, total: number, limit: number }) {
   const totalPages = Math.ceil(total / limit)
@@ -276,7 +277,7 @@ export function PaymeterList() {
                                         <>
                                           {paginated.map((expense: any) => (
                                             <TableRow key={expense.id}>
-                                              <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                                              <TableCell>{formatDisplayDate(expense.date)}</TableCell>
                                               <TableCell>{expense.category}</TableCell>
                                               <TableCell className="text-right">{expense.amount.toFixed(3)}</TableCell>
                                               <TableCell className="text-right">{(expense.paidAmount || 0).toFixed(3)}</TableCell>
@@ -346,7 +347,7 @@ export function PaymeterList() {
                                         <>
                                           {paginated.map((payment: any) => (
                                             <TableRow key={payment.id}>
-                                              <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                                              <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                                               <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
                                               <TableCell className="text-right">{payment.amount.toFixed(3)}</TableCell>
                                               <TableCell className="text-right">{(payment.paidAmount || 0).toFixed(3)}</TableCell>
@@ -431,7 +432,7 @@ export function PaymeterList() {
                                         <>
                                           {paginated.map((purchase: any) => (
                                             <TableRow key={purchase.id}>
-                                              <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
+                                              <TableCell>{formatDisplayDate(purchase.purchaseDate)}</TableCell>
                                               <TableCell>{purchase.purchaseNumber}</TableCell>
                                               <TableCell>{purchase.supplier?.name || t.common.unknown}</TableCell>
                                               <TableCell className="text-right font-medium">{(purchase.paymeterAdvanceAmount || 0).toFixed(3)}</TableCell>
@@ -480,7 +481,7 @@ export function PaymeterList() {
                                         <>
                                           {paginated.map((expense: any) => (
                                             <TableRow key={expense.id}>
-                                              <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                                              <TableCell>{formatDisplayDate(expense.date)}</TableCell>
                                               <TableCell>{expense.category}</TableCell>
                                               <TableCell>{expense.description || '-'}</TableCell>
                                               <TableCell className="text-right font-medium">{expense.amount.toFixed(3)}</TableCell>
@@ -528,7 +529,7 @@ export function PaymeterList() {
                                         <>
                                           {paginated.map((payment: any) => (
                                             <TableRow key={payment.id}>
-                                              <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                                              <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                                               <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
                                               <TableCell className="text-right font-medium">{payment.amount.toFixed(3)}</TableCell>
                                               <TableCell className="text-right text-green-600 font-medium">{(payment.paidAmount || 0).toFixed(3)}</TableCell>

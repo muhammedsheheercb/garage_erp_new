@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { format, endOfDay } from "date-fns";
+import { endOfDay } from "date-fns";
+import { formatDisplayDate } from "@/lib/date-format";
 import {
   Pencil,
   Trash2,
@@ -222,7 +223,7 @@ export function ExpenseList() {
                   data?.data.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell>
-                        {format(new Date(expense.date), "dd MMM yyyy")}
+                        {formatDisplayDate(expense.date)}
                       </TableCell>
                       <TableCell>
                         <span className="px-2 py-1 bg-secondary text-secondary-foreground rounded-full text-xs font-medium">
@@ -455,7 +456,7 @@ export function ExpenseList() {
                                 {getTranslatedCategory(t, expense.category)}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {format(new Date(expense.date), "dd MMM")}{" "}
+                                {formatDisplayDate(expense.date)}{" "}
                                 {expense.description &&
                                   `• ${expense.description}`}
                               </div>

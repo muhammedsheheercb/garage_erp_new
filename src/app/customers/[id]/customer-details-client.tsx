@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
-import { endOfDay, format } from "date-fns"
+import { endOfDay } from "date-fns"
+import { formatDisplayDate } from "@/lib/date-format"
 import { ArrowLeft, Eye, Settings, Wrench } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -143,7 +144,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                   <TableBody>
                     {vehicle.jobCards.slice(((jobPages[vehicle.id] || 1) - 1) * 5, (jobPages[vehicle.id] || 1) * 5).map((jc: any) => (
                       <TableRow key={jc.id}>
-                        <TableCell>{format(new Date(jc.createdAt), 'dd MMM yyyy')}</TableCell>
+                        <TableCell>{formatDisplayDate(jc.createdAt)}</TableCell>
                         <TableCell>
                           <Badge variant={jc.status === 'COMPLETED' ? 'default' : jc.status === 'IN_PROGRESS' ? 'secondary' : 'outline'}>
                             {jc.status}
@@ -198,7 +199,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Date: </span>
-                  {format(new Date(selectedJobCard.createdAt), 'dd MMM yyyy HH:mm')}
+                  {formatDisplayDate(selectedJobCard.createdAt, true)}
                 </div>
                 <div className="col-span-2">
                   <span className="text-muted-foreground">Complaint: </span>

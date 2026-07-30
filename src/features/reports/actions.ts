@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths, format, subDays, eachDayOfInterval, eachMonthOfInterval } from "date-fns"
+import { formatDisplayDate } from "@/lib/date-format"
 
 export async function getDashboardStats() {
   const now = new Date()
@@ -148,17 +149,17 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     ])
 
     return interval.map(date => {
-      const dateString = format(date, 'MMM dd')
+      const dateString = formatDisplayDate(date)
       
-      const revenue = payments.filter(p => format(p.createdAt, 'MMM dd') === dateString)
+      const revenue = payments.filter(p => formatDisplayDate(p.createdAt) === dateString)
         .reduce((sum, p) => sum + p.amount, 0)
       
-      const regularExpense = expenses.filter(e => format(e.date, 'MMM dd') === dateString)
+      const regularExpense = expenses.filter(e => formatDisplayDate(e.date) === dateString)
         .reduce((sum, e) => sum + e.amount, 0)
       
-      const paymeterExpense = paymeterExpenses.filter(e => format(e.date, 'MMM dd') === dateString)
+      const paymeterExpense = paymeterExpenses.filter(e => formatDisplayDate(e.date) === dateString)
         .reduce((sum, e) => sum + e.amount, 0)
-      const paymeterPayment = paymeterPayments.filter(p => format(p.date, 'MMM dd') === dateString)
+      const paymeterPayment = paymeterPayments.filter(p => formatDisplayDate(p.date) === dateString)
         .reduce((sum, p) => sum + p.amount, 0)
       
       const expense = regularExpense + paymeterExpense + paymeterPayment
@@ -189,17 +190,17 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     ])
 
     return interval.map(date => {
-      const dateString = format(date, 'MMM yyyy')
+      const dateString = format(date, 'MM/yyyy')
       
-      const revenue = payments.filter(p => format(p.createdAt, 'MMM yyyy') === dateString)
+      const revenue = payments.filter(p => format(p.createdAt, 'MM/yyyy') === dateString)
         .reduce((sum, p) => sum + p.amount, 0)
       
-      const regularExpense = expenses.filter(e => format(e.date, 'MMM yyyy') === dateString)
+      const regularExpense = expenses.filter(e => format(e.date, 'MM/yyyy') === dateString)
         .reduce((sum, e) => sum + e.amount, 0)
       
-      const paymeterExpense = paymeterExpenses.filter(e => format(e.date, 'MMM yyyy') === dateString)
+      const paymeterExpense = paymeterExpenses.filter(e => format(e.date, 'MM/yyyy') === dateString)
         .reduce((sum, e) => sum + e.amount, 0)
-      const paymeterPayment = paymeterPayments.filter(p => format(p.date, 'MMM yyyy') === dateString)
+      const paymeterPayment = paymeterPayments.filter(p => format(p.date, 'MM/yyyy') === dateString)
         .reduce((sum, p) => sum + p.amount, 0)
       
       const expense = regularExpense + paymeterExpense + paymeterPayment
@@ -227,7 +228,7 @@ export async function getDetailedReportData(type: 'revenue' | 'expenses' | 'jobs
     
     return data.map(p => ({
       id: p.id,
-      date: format(p.createdAt, 'yyyy-MM-dd HH:mm'),
+      date: formatDisplayDate(p.createdAt, true),
       amount: p.amount,
       method: p.method,
       customer: p.invoice.customer.name,
@@ -244,7 +245,7 @@ export async function getDetailedReportData(type: 'revenue' | 'expenses' | 'jobs
     
     return data.map(e => ({
       id: e.id,
-      date: format(e.date, 'yyyy-MM-dd'),
+      date: formatDisplayDate(e.date),
       category: e.category,
       amount: e.amount,
       description: e.description || '-'
@@ -260,7 +261,7 @@ export async function getDetailedReportData(type: 'revenue' | 'expenses' | 'jobs
     
     return data.map(j => ({
       id: j.id,
-      date: format(j.createdAt, 'yyyy-MM-dd'),
+      date: formatDisplayDate(j.createdAt),
       customer: j.customer.name,
       vehicle: j.vehicle.plateNumber,
       mechanic: j.mechanic.name,
@@ -277,7 +278,7 @@ export async function getDetailedReportData(type: 'revenue' | 'expenses' | 'jobs
     
     return data.map(c => ({
       id: c.id,
-      dateJoined: format(c.createdAt, 'yyyy-MM-dd'),
+      dateJoined: formatDisplayDate(c.createdAt),
       name: c.name,
       email: c.email || '-',
       phone: c.phone || '-'
@@ -293,7 +294,7 @@ export async function getDetailedReportData(type: 'revenue' | 'expenses' | 'jobs
     
     return data.map(v => ({
       id: v.id,
-      dateAdded: format(v.createdAt, 'yyyy-MM-dd'),
+      dateAdded: formatDisplayDate(v.createdAt),
       plateNumber: v.plateNumber,
       brand: v.brand,
       model: v.model,
@@ -351,7 +352,7 @@ export async function getRecentActivities() {
     .slice(0, 5)
     .map(a => ({
       ...a,
-      time: format(a.time, 'MMM dd, HH:mm')
+      time: formatDisplayDate(a.time, true)
     }))
 }
 

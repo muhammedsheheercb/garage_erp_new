@@ -17,6 +17,7 @@ import { usePermissions } from "@/lib/use-permissions"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
+import { formatDisplayDate } from "@/lib/date-format"
 
 export function MechanicList() {
   const queryClient = useQueryClient()
@@ -147,7 +148,7 @@ export function MechanicList() {
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                       <Calendar className="h-4 w-4" />
-                                      {job.expectedFinishDate ? new Date(job.expectedFinishDate).toLocaleDateString() : "No date set"}
+                                      {job.expectedFinishDate ? formatDisplayDate(job.expectedFinishDate) : "No date set"}
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2 text-sm">

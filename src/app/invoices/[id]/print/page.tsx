@@ -1,6 +1,7 @@
 import { getInvoiceById } from "@/features/invoices/actions"
 import { notFound } from "next/navigation"
 import { PrintActions } from "./print-actions"
+import { formatDisplayDate } from "@/lib/date-format"
 
 export default async function PrintInvoicePage({ params }: { params: { id: string } }) {
   const { id } = await params
@@ -121,7 +122,7 @@ export default async function PrintInvoicePage({ params }: { params: { id: strin
         
         <div className="mt-16 text-center text-gray-500 text-sm">
           <p>Thank you for your business!</p>
-          <p>Generated on {new Date(invoice.createdAt).toLocaleDateString()}</p>
+          <p>Generated on {formatDisplayDate(invoice.createdAt)}</p>
         </div>
       </div>
     </div>

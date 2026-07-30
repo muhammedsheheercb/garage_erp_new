@@ -19,6 +19,7 @@ import { usePermissions } from "@/lib/use-permissions"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
+import { formatDisplayDate } from "@/lib/date-format"
 import { useEffect } from "react"
 
 // Custom hook for debouncing search input
@@ -134,7 +135,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
               ) : (
                 details.purchases.slice((purchasePage - 1) * 5, purchasePage * 5).map((purchase: any) => (
                   <TableRow key={purchase.id}>
-                    <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatDisplayDate(purchase.purchaseDate)}</TableCell>
                     <TableCell className="font-medium">{purchase.purchaseNumber}</TableCell>
                     <TableCell>{purchase.items.length} {t.suppliers.items}</TableCell>
                     <TableCell className="text-right font-medium">{purchase.grandTotal.toFixed(3)} OMR</TableCell>
@@ -178,7 +179,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
                 ) : (
                   purchasePayments.slice((paymentPage - 1) * 5, paymentPage * 5).map((payment: any) => (
                     <TableRow key={payment.id}>
-                      <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                       <TableCell className="font-medium">{payment.purchase.purchaseNumber}</TableCell>
                       <TableCell>{payment.paymeter ? getPaymentMethodLabel(payment.paymeter.name) : '-'}</TableCell>
                       <TableCell className="text-right font-medium text-green-600">{payment.amount.toFixed(3)}</TableCell>
