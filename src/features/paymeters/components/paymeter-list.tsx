@@ -65,7 +65,12 @@ export function PaymeterList() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deletePaymeter(id),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.message || t.common.somethingWrong)
+        return
+      }
+
       toast.success(t.settings.databaseTab.paymeterDeleted)
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
     },

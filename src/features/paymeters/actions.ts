@@ -160,6 +160,15 @@ export async function updatePaymeter(id: string, data: PaymeterFormValues) {
 }
 
 export async function deletePaymeter(id: string) {
+  const paymeter = await prisma.paymeter.findUnique({
+    where: { id },
+    select: { spentAmount: true },
+  })
+
+  if (!paymeter) {
+    return { success: false, message: "Paymeter not found." }
+  }
+
   const purchases = await prisma.purchase.findMany({
     where: { paymentMethodId: id },
     include: {
@@ -172,8 +181,11 @@ export async function deletePaymeter(id: string) {
   })
   
   const hasPending = purchases.some(p => p.pendingAmount > 0)
-  if (hasPending) {
-    throw new Error("Cannot delete this Paymeter because there are purchases with pending amounts.")
+  if (paymeter.spentAmount > 0 && hasPending) {
+    return {
+      success: false,
+      message: "Cannot delete this Paymeter because there are purchases with pending amounts.",
+    }
   }
 
   if (purchases.length > 0) {
