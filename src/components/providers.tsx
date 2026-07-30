@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { ThemeProvider as NextThemesProvider } from "next-themes"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { QueryClient, QueryClientProvider, keepPreviousData } from "@tanstack/react-query"
 import { Toaster } from "@/components/ui/sonner"
 import { LanguageInitializer } from "@/components/language-initializer"
 
@@ -18,14 +18,17 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
 }
 
 // Keep navigation fast while still showing records added from another browser.
-// Mutations invalidate affected queries immediately; this short window covers
-// changes made elsewhere without forcing a request on every render.
+// Mutations invalidate affected queries immediately, so a longer client cache
+// only avoids duplicate reads while navigating between modules.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 30,
+      staleTime: 1000 * 60,
+      gcTime: 1000 * 60 * 10,
+      placeholderData: keepPreviousData,
+      retry: 1,
       refetchOnMount: true,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true,
     },
   },

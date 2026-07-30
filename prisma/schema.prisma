@@ -68,6 +68,7 @@ model VehicleCompany {
   models    VehicleModel[]
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+  @@index([createdAt])
 }
 
 model VehicleModel {
@@ -80,6 +81,7 @@ model VehicleModel {
 
   @@unique([companyId, name])
   @@index([companyId])
+  @@index([createdAt])
 }
 
 model Mechanic {
@@ -219,6 +221,7 @@ model Supplier {
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
   @@index([createdAt])
+  @@index([name])
 }
 
 model Inventory {
@@ -307,6 +310,7 @@ model Paymeter {
   expenses           Expense[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
+  @@index([createdAt])
 }
 
 model Purchase {
@@ -336,6 +340,7 @@ model Purchase {
   @@index([supplierId])
   @@index([jobCardId])
   @@index([createdAt])
+  @@index([purchaseDate])
 }
 
 model PurchaseItem {

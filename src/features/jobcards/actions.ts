@@ -46,8 +46,6 @@ export async function getJobCards(
         customer: { select: { id: true, name: true, phone: true } },
         vehicle: { select: { id: true, plateNumber: true, brand: true, model: true } },
         mechanic: { select: { id: true, name: true } },
-        services: { include: { service: true } },
-        parts: { include: { batch: { include: { inventory: true } } } }
       },
       orderBy: { createdAt: 'desc' }
     }),

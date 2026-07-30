@@ -43,7 +43,8 @@ export function PaymentList() {
 
   const { data: pendingData, isLoading: pendingLoading } = useQuery({
     queryKey: ['pending-invoices', pendingPage, pendingSearch],
-    queryFn: () => getPendingInvoices(pendingPage, pendingSearch)
+    queryFn: () => getPendingInvoices(pendingPage, pendingSearch),
+    enabled: activeTab === "pending",
   })
 
   const getMethodIcon = (method: string) => {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getJobCards, deleteJobCard } from "../actions";
+import { getJobCards, getJobCardById, deleteJobCard } from "../actions";
 import {
   Table,
   TableBody,
@@ -67,7 +67,7 @@ export function JobCardList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [editingJob, setEditingJob] = useState<any>(null);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const { t } = useTranslation();
   const { can } = usePermissions();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -82,6 +82,14 @@ export function JobCardList() {
   const { data, isLoading } = useQuery({
     queryKey: ["jobcards", page, search, fromDateStr, toDateStr, expectedFromDateStr, expectedToDateStr],
     queryFn: () => getJobCards(page, search, fromDateStr, toDateStr, expectedFromDateStr, expectedToDateStr),
+  });
+
+  // The table endpoint intentionally returns only table fields. Load the
+  // complete record only when the edit dialog is actually opened.
+  const { data: editingJob, isLoading: editingJobLoading } = useQuery({
+    queryKey: ["jobcard", editingJobId],
+    queryFn: () => getJobCardById(editingJobId!),
+    enabled: Boolean(editingJobId),
   });
 
   const deleteMutation = useMutation({
@@ -233,30 +241,34 @@ export function JobCardList() {
 
                     {can("jobcards", "edit") && (
                       <Dialog
-                        open={editingJob?.id === job.id}
-                        onOpenChange={(open) => !open && setEditingJob(null)}
+                        open={editingJobId === job.id}
+                        onOpenChange={(open) => !open && setEditingJobId(null)}
                       >
                         <DialogTrigger
                           render={
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => setEditingJob(job)}
+                              onClick={() => setEditingJobId(job.id)}
                               title={t.jobcards.editJobCard}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                           }
                         />
-                        {editingJob?.id === job.id && (
+                        {editingJobId === job.id && (
                           <DialogContent className="max-w-6xl sm:max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>{t.jobcards.editJobCard}</DialogTitle>
                             </DialogHeader>
-                            <JobCardForm
-                              initialData={editingJob}
-                              onSuccess={() => setEditingJob(null)}
-                            />
+                            {editingJobLoading || !editingJob ? (
+                              <div className="p-6 text-center text-sm text-muted-foreground">{t.common.loading}</div>
+                            ) : (
+                              <JobCardForm
+                                initialData={editingJob}
+                                onSuccess={() => setEditingJobId(null)}
+                              />
+                            )}
                           </DialogContent>
                         )}
                       </Dialog>
