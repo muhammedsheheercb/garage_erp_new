@@ -74,6 +74,60 @@ export async function getNextPartNumber() {
   return `PART-${String(nextNum).padStart(6, '0')}`
 }
 
+export async function getInventoryItemOptions() {
+  const items = await prisma.inventory.findMany({
+    select: {
+      id: true,
+      itemName: true,
+      partNumber: true,
+      batches: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { purchasePrice: true, sellingPrice: true },
+      },
+    },
+    orderBy: { itemName: "asc" },
+  })
+
+  return items.map((item) => ({
+    id: item.id,
+    itemName: item.itemName,
+    partNumber: item.partNumber,
+    purchasePrice: item.batches[0]?.purchasePrice ?? 0,
+    sellingPrice: item.batches[0]?.sellingPrice ?? 0,
+  }))
+}
+
+export async function addOpeningStockToItem(
+  inventoryId: string,
+  data: Pick<InventoryFormValues, "openingStock" | "purchasePrice" | "sellingPrice">
+) {
+  const parsed = openingStockSchema
+    .pick({ openingStock: true, purchasePrice: true, sellingPrice: true })
+    .parse(data)
+  const item = await prisma.inventory.findUnique({
+    where: { id: inventoryId },
+    select: { id: true, partNumber: true },
+  })
+
+  if (!item) throw new Error("Inventory item not found.")
+
+  await prisma.inventoryBatch.create({
+    data: {
+      inventoryId: item.id,
+      batchNumber: `OPENING-${item.partNumber}-${Date.now()}`,
+      quantity: parsed.openingStock,
+      purchasePrice: parsed.purchasePrice,
+      sellingPrice: parsed.sellingPrice,
+    },
+  })
+
+  revalidatePath('/inventory')
+  revalidatePath('/purchases')
+  revalidatePath('/jobcards')
+  return { success: true as const }
+}
+
 export async function createInventoryItem(data: InventoryFormValues, withOpeningStock = false) {
   const partNumber = await getNextPartNumber()
   const parsed = (withOpeningStock ? openingStockSchema : inventorySchema).parse({ ...data, partNumber })
@@ -138,17 +192,18 @@ export async function updateInventoryItem(id: string, data: InventoryFormValues)
 }
 
 export async function deleteInventoryItem(id: string) {
-  const [batchCount, purchaseItemCount] = await Promise.all([
-    prisma.inventoryBatch.count({ where: { inventoryId: id } }),
-    prisma.purchaseItem.count({ where: { inventoryId: id } }),
-  ])
-  if (batchCount > 0 || purchaseItemCount > 0) {
-    throw new Error("This inventory item cannot be deleted because it has purchase or stock history.")
+  const jobCardPartCount = await prisma.jobCardPart.count({
+    where: { batch: { inventoryId: id } },
+  })
+  if (jobCardPartCount > 0) {
+    throw new Error("This inventory item is used in a job card and cannot be deleted.")
   }
 
-  await prisma.inventory.delete({
-    where: { id }
-  })
+  await prisma.$transaction([
+    prisma.purchaseItem.deleteMany({ where: { inventoryId: id } }),
+    prisma.inventoryBatch.deleteMany({ where: { inventoryId: id } }),
+    prisma.inventory.delete({ where: { id } }),
+  ])
   
   revalidatePath('/inventory')
   revalidatePath('/purchases')

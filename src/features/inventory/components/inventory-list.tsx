@@ -41,6 +41,9 @@ export function InventoryList() {
     onSuccess: () => {
       toast.success(t.inventoryMod.itemDeleted)
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || t.common.somethingWrong)
     }
   })
 
@@ -78,7 +81,7 @@ export function InventoryList() {
           </Dialog>
           <Dialog open={isOpeningStockOpen} onOpenChange={setIsOpeningStockOpen}>
             <DialogTrigger render={<Button variant="outline" className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.inventoryMod.addOpeningStock}</Button>} />
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-5xl sm:min-h-[440px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{t.inventoryMod.addOpeningStock}</DialogTitle>
               </DialogHeader>
