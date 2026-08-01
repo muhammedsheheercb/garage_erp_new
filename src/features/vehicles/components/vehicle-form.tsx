@@ -8,9 +8,12 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
+import { createPortal } from "react-dom"
 import { createVehicle, updateVehicle, getCustomersForDropdown, getVehicleCatalog } from "../actions"
 import { toast } from "sonner"
+import { useState } from "react"
 import { useTranslation } from "@/i18n"
+import { Check, Search, X } from "lucide-react"
 
 interface VehicleFormProps {
   initialData?: VehicleFormValues & { id?: string }
@@ -20,6 +23,12 @@ interface VehicleFormProps {
 export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
+  const [brandSearch, setBrandSearch] = useState("")
+  const [isBrandPickerOpen, setIsBrandPickerOpen] = useState(false)
+  const [brandPickerPosition, setBrandPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
+  const [ownerSearch, setOwnerSearch] = useState("")
+  const [isOwnerPickerOpen, setIsOwnerPickerOpen] = useState(false)
+  const [ownerPickerPosition, setOwnerPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
   const fuelTypeLabels: Record<string, string> = {
     Petrol: t.vehicles.fuelPetrol,
     Diesel: t.vehicles.fuelDiesel,
@@ -84,6 +93,16 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
     mutation.mutate(data)
   }
 
+  const updateBrandPickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    setBrandPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 240) })
+  }
+
+  const updateOwnerPickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    setOwnerPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) })
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
@@ -95,17 +114,62 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="brand">{t.vehicles.companyName} <span className="text-destructive">*</span></Label>
-          <Controller control={control} name="brand" render={({ field }) => (
-            <Select value={field.value} onValueChange={(brand) => {
-              field.onChange(brand)
-              setValue("model", "", { shouldValidate: true })
-            }}>
-              <SelectTrigger id="brand" className="w-full"><SelectValue placeholder={t.vehicles.selectCompany} /></SelectTrigger>
-              <SelectContent>
-                {Object.keys(vehicleCatalog).sort().map((brand) => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )} />
+          <Controller control={control} name="brand" render={({ field }) => {
+            const brands = Object.keys(vehicleCatalog).sort()
+            const filteredBrands = brands.filter((brand) => brand.toLowerCase().includes(brandSearch.trim().toLowerCase()))
+            return (
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="brand"
+                  value={isBrandPickerOpen ? brandSearch : (field.value || "")}
+                  placeholder={t.vehicles.selectCompany}
+                  className="pl-9 pr-9"
+                  autoComplete="off"
+                  onFocus={(event) => {
+                    setBrandSearch("")
+                    setIsBrandPickerOpen(true)
+                    updateBrandPickerPosition(event.currentTarget)
+                  }}
+                  onBlur={() => window.setTimeout(() => {
+                    setIsBrandPickerOpen(false)
+                    setBrandPickerPosition(null)
+                  }, 150)}
+                  onChange={(event) => {
+                    setBrandSearch(event.target.value)
+                    field.onChange("")
+                    setValue("model", "", { shouldValidate: true })
+                    setIsBrandPickerOpen(true)
+                    updateBrandPickerPosition(event.currentTarget)
+                  }}
+                />
+                {(field.value || brandSearch) && <button type="button" aria-label="Clear company" className="absolute right-2 top-1.5 z-10 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" onMouseDown={(event) => event.preventDefault()} onClick={(event) => {
+                  const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null
+                  field.onChange("")
+                  setValue("model", "", { shouldValidate: true })
+                  setBrandSearch("")
+                  setIsBrandPickerOpen(true)
+                  if (input) updateBrandPickerPosition(input)
+                }}><X className="h-4 w-4" /></button>}
+                {isBrandPickerOpen && brandPickerPosition && typeof document !== "undefined" && createPortal(
+                  <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={brandPickerPosition}>
+                    {filteredBrands.length > 0 ? filteredBrands.map((brand) => (
+                      <button key={brand} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                        field.onChange(brand)
+                        setValue("model", "", { shouldValidate: true })
+                        setBrandSearch(brand)
+                        setIsBrandPickerOpen(false)
+                        setBrandPickerPosition(null)
+                      }}>
+                        <span>{brand}</span>
+                        {field.value === brand && <Check className="h-4 w-4 text-primary" />}
+                      </button>
+                    )) : <p className="px-3 py-4 text-center text-sm text-muted-foreground">No matching companies found.</p>}
+                  </div>, document.body
+                )}
+              </div>
+            )
+          }} />
           {errors.brand && <p className="text-sm text-destructive">{errors.brand.message}</p>}
         </div>
         
@@ -160,22 +224,63 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
         <Controller
           control={control}
           name="customerId"
-          render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange} disabled={customers.length === 0}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={customers.length > 0 ? t.vehicles.selectCustomer : t.common.loading}>
-                  {(value: string) => customers.find((customer) => customer.id === value)?.name || null}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name} {customer.phone ? `(${customer.phone})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          render={({ field }) => {
+            const selectedOwner = customers.find((customer) => customer.id === field.value)
+            const filteredOwners = customers.filter((customer) => {
+              const query = ownerSearch.trim().toLowerCase()
+              return !query || customer.name.toLowerCase().includes(query) || customer.phone?.toLowerCase().includes(query)
+            })
+            return (
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="customerId"
+                  value={isOwnerPickerOpen ? ownerSearch : (selectedOwner?.name || "")}
+                  placeholder={customers.length > 0 ? t.vehicles.selectCustomer : t.common.loading}
+                  className="pl-9 pr-9"
+                  autoComplete="off"
+                  disabled={customers.length === 0}
+                  onFocus={(event) => {
+                    setOwnerSearch("")
+                    setIsOwnerPickerOpen(true)
+                    updateOwnerPickerPosition(event.currentTarget)
+                  }}
+                  onBlur={() => window.setTimeout(() => {
+                    setIsOwnerPickerOpen(false)
+                    setOwnerPickerPosition(null)
+                  }, 150)}
+                  onChange={(event) => {
+                    setOwnerSearch(event.target.value)
+                    field.onChange("")
+                    setIsOwnerPickerOpen(true)
+                    updateOwnerPickerPosition(event.currentTarget)
+                  }}
+                />
+                {(selectedOwner || ownerSearch) && <button type="button" aria-label="Clear owner" className="absolute right-2 top-1.5 z-10 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" onMouseDown={(event) => event.preventDefault()} onClick={(event) => {
+                  const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null
+                  field.onChange("")
+                  setOwnerSearch("")
+                  setIsOwnerPickerOpen(true)
+                  if (input) updateOwnerPickerPosition(input)
+                }}><X className="h-4 w-4" /></button>}
+                {isOwnerPickerOpen && ownerPickerPosition && typeof document !== "undefined" && createPortal(
+                  <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={ownerPickerPosition}>
+                    {filteredOwners.length > 0 ? filteredOwners.map((customer) => (
+                      <button key={customer.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                        field.onChange(customer.id)
+                        setOwnerSearch(customer.name)
+                        setIsOwnerPickerOpen(false)
+                        setOwnerPickerPosition(null)
+                      }}>
+                        <span className="min-w-0"><span className="block truncate font-medium">{customer.name}</span>{customer.phone && <span className="block text-xs text-muted-foreground">{customer.phone}</span>}</span>
+                        {field.value === customer.id && <Check className="ml-3 h-4 w-4 text-primary" />}
+                      </button>
+                    )) : <p className="px-3 py-4 text-center text-sm text-muted-foreground">No matching owners found.</p>}
+                  </div>, document.body
+                )}
+              </div>
+            )
+          }}
         />
         {errors.customerId && <p className="text-sm text-destructive">{errors.customerId.message}</p>}
       </div>
