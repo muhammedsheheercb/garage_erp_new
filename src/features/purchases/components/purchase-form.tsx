@@ -78,6 +78,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const purchaseType = watch("purchaseType")
   const [vehicleSearch, setVehicleSearch] = useState("")
   const [isJobCardSelectOpen, setIsJobCardSelectOpen] = useState(false)
+  const [jobCardPickerPosition, setJobCardPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
   const [itemSearches, setItemSearches] = useState<Record<string, string>>({})
   const [openItemPicker, setOpenItemPicker] = useState<string | null>(null)
   const [itemPickerPosition, setItemPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
@@ -85,6 +86,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const [isSupplierPickerOpen, setIsSupplierPickerOpen] = useState(false)
   const [supplierPickerPosition, setSupplierPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
   const selectedJobCard = dropdownData?.jobCards?.find((jc: any) => jc.id === watch("jobCardId"))
+
+  const matchingPurchaseJobCards = dropdownData?.jobCards?.filter((jc: any) => {
+    const query = vehicleSearch.trim().toLowerCase()
+    return !query || jc.vehicle.plateNumber.toLowerCase().includes(query) || jc.customer.name.toLowerCase().includes(query) || jc.complaint.toLowerCase().includes(query)
+  }) || []
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -129,6 +135,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const taxAmount = (subTotal - discountVal) * (activeTaxRate / 100)
   const grandTotal = Math.max(0, subTotal + taxAmount - discountVal)
   const pendingAmount = Math.max(0, grandTotal - paidVal)
+
+  const updateJobCardPickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    setJobCardPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 320) })
+  }
 
   const updateItemPickerPosition = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect()
@@ -196,52 +207,62 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
       {purchaseType === "VEHICLE" && (
         <div className="bg-muted/30 p-4 rounded-lg border space-y-4">
           <h3 className="font-semibold">Vehicle & Job Card Selection</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Search Vehicle Plate Number</Label>
-              <Input 
-                placeholder="e.g. 1234 A" 
-                value={vehicleSearch} 
-                onChange={(e) => setVehicleSearch(e.target.value)} 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="jobCardId">Select Job Card <span className="text-destructive">*</span></Label>
-              <Controller
-                control={control}
-                name="jobCardId"
-                render={({ field }) => {
-                  const filteredJobCards = dropdownData?.jobCards?.filter((jc: any) => 
-                    jc.vehicle.plateNumber.toLowerCase().includes(vehicleSearch.toLowerCase())
-                  ) || []
-                  
-                  return (
-                    <Select value={field.value || ""} onValueChange={field.onChange} open={isJobCardSelectOpen} onOpenChange={setIsJobCardSelectOpen}>
-                      <SelectTrigger id="jobCardId">
-                        <SelectValue placeholder="Select Job Card">
-                          {(val: string) => {
-                            const jc = dropdownData?.jobCards?.find((j: any) => j.id === val)
-                            return jc ? `${jc.vehicle.plateNumber} - ${jc.customer.name}` : null
-                          }}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredJobCards.length > 0 ? (
-                          filteredJobCards.map((jc: any) => (
-                            <SelectItem key={jc.id} value={jc.id}>
-                              {jc.vehicle.plateNumber} - {jc.customer.name} (Complaints: {jc.complaint.substring(0, 20)})
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="p-2 text-sm text-muted-foreground text-center">No active job cards found</div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  )
-                }}
-              />
-              {errors.jobCardId && <p className="text-sm text-destructive">{errors.jobCardId.message}</p>}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="jobCardId">Select Job Card <span className="text-destructive">*</span></Label>
+            <Controller
+              control={control}
+              name="jobCardId"
+              render={({ field }) => (
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="jobCardId"
+                    value={isJobCardSelectOpen ? vehicleSearch : (selectedJobCard ? `${selectedJobCard.vehicle.plateNumber} - ${selectedJobCard.customer.name}` : "")}
+                    placeholder="Search and select job card"
+                    className="pl-9 pr-9"
+                    autoComplete="off"
+                    onFocus={(event) => {
+                      setVehicleSearch("")
+                      setIsJobCardSelectOpen(true)
+                      updateJobCardPickerPosition(event.currentTarget)
+                    }}
+                    onBlur={() => window.setTimeout(() => {
+                      setIsJobCardSelectOpen(false)
+                      setJobCardPickerPosition(null)
+                    }, 150)}
+                    onChange={(event) => {
+                      setVehicleSearch(event.target.value)
+                      field.onChange("")
+                      setIsJobCardSelectOpen(true)
+                      updateJobCardPickerPosition(event.currentTarget)
+                    }}
+                  />
+                  {(field.value || vehicleSearch) && <button type="button" aria-label="Clear job card" className="absolute right-2 top-1.5 z-10 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" onMouseDown={(event) => event.preventDefault()} onClick={(event) => {
+                    const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null
+                    field.onChange(null)
+                    setVehicleSearch("")
+                    setIsJobCardSelectOpen(true)
+                    if (input) updateJobCardPickerPosition(input)
+                  }}><X className="h-4 w-4" /></button>}
+                  {isJobCardSelectOpen && jobCardPickerPosition && typeof document !== "undefined" && createPortal(
+                    <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={jobCardPickerPosition}>
+                      {matchingPurchaseJobCards.length > 0 ? matchingPurchaseJobCards.map((jc: any) => (
+                        <button key={jc.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                          field.onChange(jc.id)
+                          setVehicleSearch(`${jc.vehicle.plateNumber} - ${jc.customer.name}`)
+                          setIsJobCardSelectOpen(false)
+                          setJobCardPickerPosition(null)
+                        }}>
+                          <span className="min-w-0"><span className="block font-medium">{jc.vehicle.plateNumber} - {jc.customer.name}</span><span className="block truncate text-xs text-muted-foreground">{jc.complaint}</span></span>
+                          {field.value === jc.id && <Check className="ml-3 h-4 w-4 text-primary" />}
+                        </button>
+                      )) : <p className="px-3 py-4 text-center text-sm text-muted-foreground">No active job cards found.</p>}
+                    </div>, document.body
+                  )}
+                </div>
+              )}
+            />
+            {errors.jobCardId && <p className="text-sm text-destructive">{errors.jobCardId.message}</p>}
           </div>
           
           {selectedJobCard && (
