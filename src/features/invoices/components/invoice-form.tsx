@@ -12,8 +12,9 @@ import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Trash, Trash2, Loader2, ClipboardList, AlertTriangle } from "lucide-react"
+import { Plus, Trash, Trash2, Loader2, ClipboardList, AlertTriangle, Search, Check, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useTranslation } from "@/i18n"
 
@@ -38,6 +39,9 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
   })
 
   const [isJobCardModalOpen, setIsJobCardModalOpen] = useState(false)
+  const [jobCardSearch, setJobCardSearch] = useState("")
+  const [isJobCardPickerOpen, setIsJobCardPickerOpen] = useState(false)
+  const [jobCardPickerPosition, setJobCardPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
 
   const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
@@ -123,6 +127,16 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
 
   const selectedJobCardDetails = availableJobCards.find((jc: any) => jc.id === watchJobCardId)
 
+  const filteredJobCards = availableJobCards.filter((jc: any) => {
+    const query = jobCardSearch.trim().toLowerCase()
+    return !query || jc.vehicle?.plateNumber?.toLowerCase().includes(query) || jc.customer?.name?.toLowerCase().includes(query) || jc.id.toLowerCase().includes(query)
+  })
+
+  const updateJobCardPickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    setJobCardPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 300) })
+  }
+
   const onSubmit = (data: InvoiceFormValues) => {
     mutation.mutate(data)
   }
@@ -147,25 +161,58 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
             <Controller
               control={control}
               name="jobCardId"
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={!!initialData || isPaidLock}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder={t.invoicesMod.selectJobCard}>
-                      {(val: string) => {
-                        const jc = availableJobCards.find((j: any) => j.id === val)
-                        return jc ? `${jc.vehicle?.plateNumber} - ${jc.customer?.name}` : null
+              render={({ field }) => {
+                const selected = availableJobCards.find((jc: any) => jc.id === field.value)
+                return (
+                  <div className="relative flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={isJobCardPickerOpen ? jobCardSearch : (selected ? `${selected.vehicle?.plateNumber} - ${selected.customer?.name}` : "")}
+                      placeholder={t.invoicesMod.selectJobCard}
+                      className="pl-9 pr-9"
+                      autoComplete="off"
+                      disabled={!!initialData || isPaidLock}
+                      onFocus={(event) => {
+                        setJobCardSearch("")
+                        setIsJobCardPickerOpen(true)
+                        updateJobCardPickerPosition(event.currentTarget)
                       }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableJobCards.map((jc: any) => (
-                      <SelectItem key={jc.id} value={jc.id}>
-                        {jc.vehicle?.plateNumber} - {jc.customer?.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+                      onBlur={() => window.setTimeout(() => {
+                        setIsJobCardPickerOpen(false)
+                        setJobCardPickerPosition(null)
+                      }, 150)}
+                      onChange={(event) => {
+                        setJobCardSearch(event.target.value)
+                        field.onChange("")
+                        setIsJobCardPickerOpen(true)
+                        updateJobCardPickerPosition(event.currentTarget)
+                      }}
+                    />
+                    {(selected || jobCardSearch) && <button type="button" aria-label="Clear job card" className="absolute right-2 top-1.5 z-10 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" onMouseDown={(event) => event.preventDefault()} onClick={(event) => {
+                      const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null
+                      field.onChange("")
+                      setJobCardSearch("")
+                      setIsJobCardPickerOpen(true)
+                      if (input) updateJobCardPickerPosition(input)
+                    }}><X className="h-4 w-4" /></button>}
+                    {isJobCardPickerOpen && jobCardPickerPosition && typeof document !== "undefined" && createPortal(
+                      <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={jobCardPickerPosition}>
+                        {filteredJobCards.length > 0 ? filteredJobCards.map((jc: any) => (
+                          <button key={jc.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                            field.onChange(jc.id)
+                            setJobCardSearch(`${jc.vehicle?.plateNumber} - ${jc.customer?.name}`)
+                            setIsJobCardPickerOpen(false)
+                            setJobCardPickerPosition(null)
+                          }}>
+                            <span className="min-w-0"><span className="block font-medium">{jc.vehicle?.plateNumber}</span><span className="block truncate text-xs text-muted-foreground">{jc.customer?.name}</span></span>
+                            {field.value === jc.id && <Check className="ml-3 h-4 w-4 text-primary" />}
+                          </button>
+                        )) : <p className="px-3 py-4 text-center text-sm text-muted-foreground">No matching job cards found.</p>}
+                      </div>, document.body
+                    )}
+                  </div>
+                )
+              }}
             />
             {watchJobCardId && selectedJobCardDetails && (
               <Dialog open={isJobCardModalOpen} onOpenChange={setIsJobCardModalOpen}>

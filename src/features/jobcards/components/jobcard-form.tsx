@@ -64,6 +64,9 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const [customerSearch, setCustomerSearch] = useState("");
   const [isCustomerPickerOpen, setIsCustomerPickerOpen] = useState(false);
   const [customerPickerPosition, setCustomerPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [mechanicSearch, setMechanicSearch] = useState("");
+  const [isMechanicPickerOpen, setIsMechanicPickerOpen] = useState(false);
+  const [mechanicPickerPosition, setMechanicPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const [isVehicleHistoryOpen, setIsVehicleHistoryOpen] = useState(false);
 
   const {
@@ -225,6 +228,11 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const updateCustomerPickerPosition = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
     setCustomerPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) });
+  };
+
+  const updateMechanicPickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    setMechanicPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) });
   };
 
   useEffect(() => {
@@ -567,28 +575,59 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
               <Controller
                 control={control}
                 name="mechanicId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || ""}
-                    onValueChange={field.onChange}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={t.jobcards.selectMechanic}>
-                        {(val: string) =>
-                          dropdowns.mechanics.find((m: any) => m.id === val)
-                            ?.name || null
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dropdowns.mechanics.map((m: any) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                render={({ field }) => {
+                  const selectedMechanic = dropdowns.mechanics.find((m: any) => m.id === field.value)
+                  const filteredMechanics = dropdowns.mechanics.filter((m: any) => m.name.toLowerCase().includes(mechanicSearch.trim().toLowerCase()))
+                  return (
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="mechanicId"
+                        value={isMechanicPickerOpen ? mechanicSearch : (selectedMechanic?.name || "")}
+                        placeholder={t.jobcards.selectMechanic}
+                        className="pl-9 pr-9"
+                        autoComplete="off"
+                        onFocus={(event) => {
+                          setMechanicSearch("");
+                          setIsMechanicPickerOpen(true);
+                          updateMechanicPickerPosition(event.currentTarget);
+                        }}
+                        onBlur={() => window.setTimeout(() => {
+                          setIsMechanicPickerOpen(false);
+                          setMechanicPickerPosition(null);
+                        }, 150)}
+                        onChange={(event) => {
+                          setMechanicSearch(event.target.value);
+                          field.onChange("");
+                          setIsMechanicPickerOpen(true);
+                          updateMechanicPickerPosition(event.currentTarget);
+                        }}
+                      />
+                      {(selectedMechanic || mechanicSearch) && <button type="button" aria-label="Clear mechanic" className="absolute right-2 top-1.5 z-10 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" onMouseDown={(event) => event.preventDefault()} onClick={(event) => {
+                        const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null;
+                        field.onChange("");
+                        setMechanicSearch("");
+                        setIsMechanicPickerOpen(true);
+                        if (input) updateMechanicPickerPosition(input);
+                      }}><X className="h-4 w-4" /></button>}
+                      {isMechanicPickerOpen && mechanicPickerPosition && typeof document !== "undefined" && createPortal(
+                        <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={mechanicPickerPosition}>
+                          {filteredMechanics.length > 0 ? filteredMechanics.map((mechanic: any) => (
+                            <button key={mechanic.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                              field.onChange(mechanic.id);
+                              setMechanicSearch(mechanic.name);
+                              setIsMechanicPickerOpen(false);
+                              setMechanicPickerPosition(null);
+                            }}>
+                              <span>{mechanic.name}</span>
+                              {field.value === mechanic.id && <Check className="h-4 w-4 text-primary" />}
+                            </button>
+                          )) : <p className="px-3 py-4 text-center text-sm text-muted-foreground">No matching mechanics found.</p>}
+                        </div>, document.body
+                      )}
+                    </div>
+                  );
+                }}
               />
               {errors.mechanicId && (
                 <p className="text-sm text-destructive">

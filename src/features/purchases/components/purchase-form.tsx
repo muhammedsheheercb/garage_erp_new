@@ -81,6 +81,9 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const [itemSearches, setItemSearches] = useState<Record<string, string>>({})
   const [openItemPicker, setOpenItemPicker] = useState<string | null>(null)
   const [itemPickerPosition, setItemPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
+  const [supplierSearch, setSupplierSearch] = useState("")
+  const [isSupplierPickerOpen, setIsSupplierPickerOpen] = useState(false)
+  const [supplierPickerPosition, setSupplierPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
   const selectedJobCard = dropdownData?.jobCards?.find((jc: any) => jc.id === watch("jobCardId"))
 
   const { fields, append, remove } = useFieldArray({
@@ -130,6 +133,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const updateItemPickerPosition = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect()
     setItemPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 260) })
+  }
+
+  const updateSupplierPickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    setSupplierPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) })
   }
 
   const onSubmit = (data: PurchaseFormValues) => {
@@ -284,20 +292,59 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
           <Controller
             control={control}
             name="supplierId"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="supplierId">
-                  <SelectValue placeholder={t.suppliers.selectSupplier}>
-                    {(val: string) => dropdownData?.suppliers.find((s: any) => s.id === val)?.name || null}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {dropdownData?.suppliers.map((s: any) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            render={({ field }) => {
+              const selectedSupplier = dropdownData?.suppliers.find((s: any) => s.id === field.value)
+              const filteredSuppliers = dropdownData?.suppliers.filter((s: any) => s.name.toLowerCase().includes(supplierSearch.trim().toLowerCase())) || []
+              return (
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="supplierId"
+                    value={isSupplierPickerOpen ? supplierSearch : (selectedSupplier?.name || "")}
+                    placeholder={t.suppliers.selectSupplier}
+                    className="pl-9 pr-9"
+                    autoComplete="off"
+                    onFocus={(event) => {
+                      setSupplierSearch("")
+                      setIsSupplierPickerOpen(true)
+                      updateSupplierPickerPosition(event.currentTarget)
+                    }}
+                    onBlur={() => window.setTimeout(() => {
+                      setIsSupplierPickerOpen(false)
+                      setSupplierPickerPosition(null)
+                    }, 150)}
+                    onChange={(event) => {
+                      setSupplierSearch(event.target.value)
+                      field.onChange("")
+                      setIsSupplierPickerOpen(true)
+                      updateSupplierPickerPosition(event.currentTarget)
+                    }}
+                  />
+                  {(selectedSupplier || supplierSearch) && <button type="button" aria-label="Clear supplier" className="absolute right-2 top-1.5 z-10 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" onMouseDown={(event) => event.preventDefault()} onClick={(event) => {
+                    const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null
+                    field.onChange("")
+                    setSupplierSearch("")
+                    setIsSupplierPickerOpen(true)
+                    if (input) updateSupplierPickerPosition(input)
+                  }}><X className="h-4 w-4" /></button>}
+                  {isSupplierPickerOpen && supplierPickerPosition && typeof document !== "undefined" && createPortal(
+                    <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={supplierPickerPosition}>
+                      {filteredSuppliers.length > 0 ? filteredSuppliers.map((supplier: any) => (
+                        <button key={supplier.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                          field.onChange(supplier.id)
+                          setSupplierSearch(supplier.name)
+                          setIsSupplierPickerOpen(false)
+                          setSupplierPickerPosition(null)
+                        }}>
+                          <span>{supplier.name}</span>
+                          {field.value === supplier.id && <Check className="h-4 w-4 text-primary" />}
+                        </button>
+                      )) : <p className="px-3 py-4 text-center text-sm text-muted-foreground">No matching suppliers found.</p>}
+                    </div>, document.body
+                  )}
+                </div>
+              )
+            }}
           />
           {errors.supplierId && <p className="text-sm text-destructive">{errors.supplierId.message}</p>}
         </div>
