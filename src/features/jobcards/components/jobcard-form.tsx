@@ -30,8 +30,9 @@ import {
   getVehicleHistory,
 } from "../actions";
 import { toast } from "sonner";
-import { Trash, Plus, Eye, CarFront } from "lucide-react";
+import { Trash, Plus, Eye, CarFront, Check, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ServiceSelectionModal } from "./service-selection-modal";
 import { PartSelectionModal } from "./part-selection-modal";
 import {
@@ -58,6 +59,11 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isNewVehicleOpen, setIsNewVehicleOpen] = useState(false);
   const [vehicleSearch, setVehicleSearch] = useState("");
+  const [isVehiclePickerOpen, setIsVehiclePickerOpen] = useState(false);
+  const [vehiclePickerPosition, setVehiclePickerPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [isCustomerPickerOpen, setIsCustomerPickerOpen] = useState(false);
+  const [customerPickerPosition, setCustomerPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const [isVehicleHistoryOpen, setIsVehicleHistoryOpen] = useState(false);
 
   const {
@@ -192,23 +198,46 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   };
 
   const selectedCustomerId = watch("customerId");
+  const selectedCustomer = dropdowns.customers.find(
+    (customer: any) => customer.id === selectedCustomerId,
+  );
   const selectedVehicleId = watch("vehicleId");
   const selectedVehicle = dropdowns.vehicles.find(
     (vehicle: any) => vehicle.id === selectedVehicleId,
   );
-  const matchingVehicles = vehicleSearch.trim()
-    ? dropdowns.vehicles.filter((vehicle: any) =>
-        vehicle.plateNumber
-          .toLowerCase()
-          .includes(vehicleSearch.trim().toLowerCase()),
-      )
-    : [];
+  const matchingVehicles = dropdowns.vehicles.filter((vehicle: any) => {
+    if (selectedCustomerId && vehicle.customerId !== selectedCustomerId) return false;
+    const query = vehicleSearch.trim().toLowerCase();
+    return !query || vehicle.plateNumber.toLowerCase().includes(query) ||
+      vehicle.brand.toLowerCase().includes(query) ||
+      vehicle.model.toLowerCase().includes(query);
+  });
+  const matchingCustomers = dropdowns.customers.filter((customer: any) => {
+    const query = customerSearch.trim().toLowerCase();
+    return !query || customer.name.toLowerCase().includes(query) || customer.phone?.toLowerCase().includes(query);
+  });
+
+  const updateVehiclePickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    setVehiclePickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) });
+  };
+
+  const updateCustomerPickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    setCustomerPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) });
+  };
 
   useEffect(() => {
     if (selectedVehicle) {
       setVehicleSearch(selectedVehicle.plateNumber);
     }
   }, [selectedVehicle]);
+
+  useEffect(() => {
+    if (selectedCustomer) {
+      setCustomerSearch(selectedCustomer.name);
+    }
+  }, [selectedCustomer]);
 
   const { data: vehicleHistory = [], isLoading: isVehicleHistoryLoading } =
     useQuery({
@@ -285,37 +314,85 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                   </Dialog>
                 )}
               </div>
-              <Controller
-                control={control}
-                name="customerId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value}
-                    onValueChange={(val) => {
-                      field.onChange(val);
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="customerId"
+                  value={isCustomerPickerOpen ? customerSearch : (selectedCustomer?.name || "")}
+                  placeholder={t.jobcards.selectCustomer}
+                  className="pl-9 pr-9"
+                  autoComplete="off"
+                  disabled={isLoading}
+                  onFocus={(event) => {
+                    setCustomerSearch("");
+                    setIsCustomerPickerOpen(true);
+                    updateCustomerPickerPosition(event.currentTarget);
+                  }}
+                  onBlur={() => window.setTimeout(() => {
+                    setIsCustomerPickerOpen(false);
+                    setCustomerPickerPosition(null);
+                  }, 150)}
+                  onChange={(event) => {
+                    setCustomerSearch(event.target.value);
+                    setValue("customerId", "");
+                    setValue("vehicleId", "");
+                    setVehicleSearch("");
+                    setIsCustomerPickerOpen(true);
+                    updateCustomerPickerPosition(event.currentTarget);
+                  }}
+                />
+                {(selectedCustomer || customerSearch) && (
+                  <button
+                    type="button"
+                    aria-label="Clear customer selection"
+                    className="absolute right-2 top-1.5 z-10 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={(event) => {
+                      const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null;
+                      setCustomerSearch("");
+                      setValue("customerId", "");
                       setValue("vehicleId", "");
                       setVehicleSearch("");
+                      setIsCustomerPickerOpen(true);
+                      if (input) updateCustomerPickerPosition(input);
                     }}
-                    disabled={isLoading}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={t.jobcards.selectCustomer}>
-                        {(val: string) =>
-                          dropdowns.customers.find((c: any) => c.id === val)
-                            ?.name || null
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dropdowns.customers.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <X className="h-4 w-4" />
+                  </button>
                 )}
-              />
+                {isCustomerPickerOpen && customerPickerPosition && typeof document !== "undefined" && createPortal(
+                  <div
+                    className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+                    style={{ top: customerPickerPosition.top, left: customerPickerPosition.left, width: customerPickerPosition.width }}
+                  >
+                    {matchingCustomers.length > 0 ? matchingCustomers.map((customer: any) => (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent focus:bg-accent"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setValue("customerId", customer.id, { shouldValidate: true });
+                          setValue("vehicleId", "");
+                          setVehicleSearch("");
+                          setCustomerSearch(customer.name);
+                          setIsCustomerPickerOpen(false);
+                          setCustomerPickerPosition(null);
+                        }}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{customer.name}</span>
+                          {customer.phone && <span className="block text-xs text-muted-foreground">{customer.phone}</span>}
+                        </span>
+                        {selectedCustomerId === customer.id && <Check className="ml-3 h-4 w-4 shrink-0 text-primary" />}
+                      </button>
+                    )) : (
+                      <p className="px-3 py-4 text-center text-sm text-muted-foreground">No matching customers found.</p>
+                    )}
+                  </div>,
+                  document.body
+                )}
+              </div>
               {errors.customerId && (
                 <p className="text-sm text-destructive">
                   {errors.customerId.message}
@@ -384,44 +461,81 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
               </div>
               <div className="flex gap-2">
                 <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="vehicleId"
                     value={vehicleSearch}
+                    onFocus={(event) => {
+                      setVehicleSearch("");
+                      setIsVehiclePickerOpen(true);
+                      updateVehiclePickerPosition(event.currentTarget);
+                    }}
+                    onBlur={() => window.setTimeout(() => {
+                      setIsVehiclePickerOpen(false);
+                      setVehiclePickerPosition(null);
+                    }, 150)}
                     onChange={(event) => {
-                      setVehicleSearch(event.target.value);
+                      const value = event.target.value;
+                      setVehicleSearch(value);
                       setValue("vehicleId", "");
+                      setIsVehiclePickerOpen(true);
+                      updateVehiclePickerPosition(event.currentTarget);
                     }}
                     placeholder={t.jobcards.searchVehiclesByPlate}
                     disabled={isLoading}
                     autoComplete="off"
+                    className="pl-9 pr-9"
                   />
-                  {matchingVehicles.length > 0 && !selectedVehicleId && (
-                    <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                      {matchingVehicles.map((vehicle: any) => (
+                  {vehicleSearch && (
+                    <button
+                      type="button"
+                      aria-label="Clear vehicle search"
+                      className="absolute right-2 top-1.5 z-10 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={(event) => {
+                        const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null;
+                        setVehicleSearch("");
+                        setValue("vehicleId", "");
+                        setIsVehiclePickerOpen(true);
+                        if (input) updateVehiclePickerPosition(input);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                  {isVehiclePickerOpen && vehiclePickerPosition && typeof document !== "undefined" && createPortal(
+                    <div
+                      className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+                      style={{ top: vehiclePickerPosition.top, left: vehiclePickerPosition.left, width: vehiclePickerPosition.width }}
+                    >
+                      {matchingVehicles.length > 0 ? matchingVehicles.map((vehicle: any) => (
                         <button
                           key={vehicle.id}
                           type="button"
-                          className="flex w-full flex-col rounded-sm px-3 py-2 text-left text-sm outline-none hover:bg-accent focus:bg-accent"
+                          className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm outline-none hover:bg-accent focus:bg-accent"
+                          onMouseDown={(event) => event.preventDefault()}
                           onClick={() => {
-                            setValue("vehicleId", vehicle.id, {
-                              shouldValidate: true,
-                            });
-                            setValue("customerId", vehicle.customerId, {
-                              shouldValidate: true,
-                            });
+                            setValue("vehicleId", vehicle.id, { shouldValidate: true });
+                            setValue("customerId", vehicle.customerId, { shouldValidate: true });
                             setVehicleSearch(vehicle.plateNumber);
+                            setIsVehiclePickerOpen(false);
+                            setVehiclePickerPosition(null);
                           }}
                         >
-                          <span className="font-mono font-medium">
-                            {vehicle.plateNumber}
+                          <span className="min-w-0">
+                            <span className="block font-mono font-medium">{vehicle.plateNumber}</span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {vehicle.brand} {vehicle.model} · {vehicle.customer.name}
+                              {vehicle.customer.phone ? ` · ${vehicle.customer.phone}` : ""}
+                            </span>
                           </span>
-                          <span className="text-xs text-muted-foreground">
-                            {vehicle.brand} {vehicle.model} · {vehicle.customer.name}
-                            {vehicle.customer.phone ? ` · ${vehicle.customer.phone}` : ""}
-                          </span>
+                          {selectedVehicleId === vehicle.id && <Check className="ml-3 h-4 w-4 shrink-0 text-primary" />}
                         </button>
-                      ))}
-                    </div>
+                      )) : (
+                        <p className="px-3 py-4 text-center text-sm text-muted-foreground">No matching vehicles found.</p>
+                      )}
+                    </div>,
+                    document.body
                   )}
                 </div>
                 <Button
