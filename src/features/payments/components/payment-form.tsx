@@ -10,7 +10,9 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
+import { Check, Search, X } from "lucide-react"
 import { useTranslation } from "@/i18n"
 
 export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () => void, initialInvoiceId?: string }) {
@@ -26,6 +28,9 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
     queryKey: ['pending-invoices-dropdown'],
     queryFn: () => getPendingInvoicesDropdown()
   })
+  const [invoiceSearch, setInvoiceSearch] = useState("")
+  const [isInvoicePickerOpen, setIsInvoicePickerOpen] = useState(false)
+  const [invoicePickerPosition, setInvoicePickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
@@ -73,6 +78,11 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
     mutation.mutate(data)
   }
 
+  const updateInvoicePickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    setInvoicePickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 320) })
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
@@ -80,28 +90,59 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
         <Controller
           control={control}
           name="invoiceId"
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value} disabled={!!initialInvoiceId}>
-              <SelectTrigger>
-                <SelectValue placeholder={t.payments.selectPendingInvoice}>
-                  {(val: string) => invoices?.find((i: any) => i.id === val)?.label || null}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {isLoading ? (
-                  <SelectItem value="loading" disabled>{t.common.loading}</SelectItem>
-                ) : invoices?.length === 0 ? (
-                  <SelectItem value="none" disabled>{t.payments.noPendingInvoices}</SelectItem>
-                ) : (
-                  invoices?.map((inv: any) => (
-                    <SelectItem key={inv.id} value={inv.id}>
-                      {inv.label}
-                    </SelectItem>
-                  ))
+          render={({ field }) => {
+            const selectedInvoice = invoices?.find((invoice: any) => invoice.id === field.value)
+            const filteredInvoices = invoices?.filter((invoice: any) => invoice.label.toLowerCase().includes(invoiceSearch.trim().toLowerCase())) || []
+            return (
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={isInvoicePickerOpen ? invoiceSearch : (selectedInvoice?.label || "")}
+                  placeholder={t.payments.selectPendingInvoice}
+                  className="pl-9 pr-9"
+                  autoComplete="off"
+                  disabled={!!initialInvoiceId || isLoading}
+                  onFocus={(event) => {
+                    setInvoiceSearch("")
+                    setIsInvoicePickerOpen(true)
+                    updateInvoicePickerPosition(event.currentTarget)
+                  }}
+                  onBlur={() => window.setTimeout(() => {
+                    setIsInvoicePickerOpen(false)
+                    setInvoicePickerPosition(null)
+                  }, 150)}
+                  onChange={(event) => {
+                    setInvoiceSearch(event.target.value)
+                    field.onChange("")
+                    setIsInvoicePickerOpen(true)
+                    updateInvoicePickerPosition(event.currentTarget)
+                  }}
+                />
+                {(selectedInvoice || invoiceSearch) && !initialInvoiceId && <button type="button" aria-label="Clear invoice" className="absolute right-2 top-1.5 z-10 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" onMouseDown={(event) => event.preventDefault()} onClick={(event) => {
+                  const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null
+                  field.onChange("")
+                  setInvoiceSearch("")
+                  setIsInvoicePickerOpen(true)
+                  if (input) updateInvoicePickerPosition(input)
+                }}><X className="h-4 w-4" /></button>}
+                {isInvoicePickerOpen && invoicePickerPosition && typeof document !== "undefined" && createPortal(
+                  <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={invoicePickerPosition}>
+                    {filteredInvoices.length > 0 ? filteredInvoices.map((invoice: any) => (
+                      <button key={invoice.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                        field.onChange(invoice.id)
+                        setInvoiceSearch(invoice.label)
+                        setIsInvoicePickerOpen(false)
+                        setInvoicePickerPosition(null)
+                      }}>
+                        <span>{invoice.label}</span>
+                        {field.value === invoice.id && <Check className="ml-3 h-4 w-4 text-primary" />}
+                      </button>
+                    )) : <p className="px-3 py-4 text-center text-sm text-muted-foreground">{t.payments.noPendingInvoices}</p>}
+                  </div>, document.body
                 )}
-              </SelectContent>
-            </Select>
-          )}
+              </div>
+            )
+          }}
         />
         {errors.invoiceId && <p className="text-sm text-destructive">{errors.invoiceId.message}</p>}
       </div>
