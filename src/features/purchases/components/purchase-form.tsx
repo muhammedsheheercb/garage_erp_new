@@ -13,7 +13,8 @@ import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEffect, useState } from "react"
-import { Plus, Trash2, Loader2, UserPlus } from "lucide-react"
+import { createPortal } from "react-dom"
+import { Check, Plus, Search, Trash2, Loader2, UserPlus, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { SupplierForm } from "../../suppliers/components/supplier-form"
 import { useTranslation } from "@/i18n"
@@ -77,6 +78,9 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const purchaseType = watch("purchaseType")
   const [vehicleSearch, setVehicleSearch] = useState("")
   const [isJobCardSelectOpen, setIsJobCardSelectOpen] = useState(false)
+  const [itemSearches, setItemSearches] = useState<Record<string, string>>({})
+  const [openItemPicker, setOpenItemPicker] = useState<string | null>(null)
+  const [itemPickerPosition, setItemPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
   const selectedJobCard = dropdownData?.jobCards?.find((jc: any) => jc.id === watch("jobCardId"))
 
   const { fields, append, remove } = useFieldArray({
@@ -122,6 +126,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const taxAmount = (subTotal - discountVal) * (activeTaxRate / 100)
   const grandTotal = Math.max(0, subTotal + taxAmount - discountVal)
   const pendingAmount = Math.max(0, grandTotal - paidVal)
+
+  const updateItemPickerPosition = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    setItemPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 260) })
+  }
 
   const onSubmit = (data: PurchaseFormValues) => {
     if (data.paidAmount > grandTotal) {
@@ -372,7 +381,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
           </Button>
         </div>
 
-        <div className="border rounded-md overflow-hidden bg-card">
+        <div className="border rounded-md overflow-visible bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -396,37 +405,111 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                       <Controller
                         control={control}
                         name={`items.${index}.inventoryId`}
-                        render={({ field: selectField }) => (
-                          <Select 
-                            value={selectField.value} 
-                            onValueChange={(val) => {
-                              selectField.onChange(val)
-                              // Auto pre-populate purchase price & selling price
-                              const selectedInv = dropdownData?.inventory.find((i: any) => i.id === val)
-                              if (selectedInv) {
-                                setValue(`items.${index}.purchasePrice`, selectedInv.purchasePrice)
-                                setValue(`items.${index}.sellingPrice`, selectedInv.sellingPrice)
-                              }
-                            }}
-                          >
-                          <SelectTrigger>
-                              <SelectValue placeholder={t.inventoryMod.selectItem}>
-                                {(val: string) => {
-                                  const inv = dropdownData?.inventory.find((i: any) => i.id === val)
-                                  return inv ? `${inv.itemName} (${inv.partNumber})` : null
+                        render={({ field: selectField }) => {
+                          const selectedInv = dropdownData?.inventory.find((i: any) => i.id === selectField.value)
+                          const search = itemSearches[field.id] ?? ""
+                          const filteredInventory = dropdownData?.inventory.filter((inv: any) => {
+                            const query = search.trim().toLowerCase()
+                            return !query || inv.itemName.toLowerCase().includes(query) || inv.partNumber.toLowerCase().includes(query)
+                          }) || []
+
+                          return (
+                            <div className="relative min-w-[190px]">
+                              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                value={openItemPicker === field.id ? search : (selectedInv?.itemName || "")}
+                                placeholder={t.inventoryMod.selectItem}
+                                autoComplete="off"
+                                className="h-9 pl-9 pr-9"
+                                onFocus={(event) => {
+                                  setItemSearches((current) => ({ ...current, [field.id]: "" }))
+                                  setOpenItemPicker(field.id)
+                                  updateItemPickerPosition(event.currentTarget)
                                 }}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {dropdownData?.inventory.map((inv: any) => (
-                                <SelectItem key={inv.id} value={inv.id}>
-                                  {inv.itemName} ({inv.partNumber})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                                onBlur={() => window.setTimeout(() => {
+                                  setOpenItemPicker((current) => current === field.id ? null : current)
+                                  setItemPickerPosition(null)
+                                }, 150)}
+                                onChange={(event) => {
+                                  const value = event.target.value
+                                  setItemSearches((current) => ({ ...current, [field.id]: value }))
+                                  updateItemPickerPosition(event.currentTarget)
+                                  const exactMatch = dropdownData?.inventory.find((inv: any) =>
+                                    inv.itemName.toLowerCase() === value.trim().toLowerCase() ||
+                                    inv.partNumber.toLowerCase() === value.trim().toLowerCase()
+                                  )
+                                  if (exactMatch) {
+                                    selectField.onChange(exactMatch.id)
+                                    setValue(`items.${index}.purchasePrice`, exactMatch.purchasePrice)
+                                    setValue(`items.${index}.sellingPrice`, exactMatch.sellingPrice)
+                                  } else {
+                                    selectField.onChange("")
+                                  }
+                                  setOpenItemPicker(field.id)
+                                }}
+                              />
+                              {(selectedInv || search) && (
+                                <button
+                                  type="button"
+                                  aria-label="Clear selected item"
+                                  className="absolute right-2 top-1.5 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={(event) => {
+                                    const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null
+                                    selectField.onChange("")
+                                    setValue(`items.${index}.purchasePrice`, 0)
+                                    setValue(`items.${index}.sellingPrice`, 0)
+                                    setItemSearches((current) => ({ ...current, [field.id]: "" }))
+                                    setOpenItemPicker(field.id)
+                                    if (input) updateItemPickerPosition(input)
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              )}
+                              {openItemPicker === field.id && itemPickerPosition && typeof document !== "undefined" ? createPortal(
+                                <div
+                                  className="fixed z-[100] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg"
+                                  style={itemPickerPosition ? {
+                                    top: itemPickerPosition.top,
+                                    left: itemPickerPosition.left,
+                                    width: itemPickerPosition.width,
+                                  } : undefined}
+                                >
+                                  <div className="max-h-56 overflow-y-auto p-1">
+                                    {filteredInventory.length > 0 ? filteredInventory.map((inv: any) => (
+                                      <button
+                                        key={inv.id}
+                                        type="button"
+                                        className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                                        onMouseDown={(event) => event.preventDefault()}
+                                        onClick={() => {
+                                          selectField.onChange(inv.id)
+                                          setValue(`items.${index}.purchasePrice`, inv.purchasePrice)
+                                          setValue(`items.${index}.sellingPrice`, inv.sellingPrice)
+                                          setItemSearches((current) => ({ ...current, [field.id]: inv.itemName }))
+                                          setOpenItemPicker(null)
+                                          setItemPickerPosition(null)
+                                        }}
+                                      >
+                                        <span className="min-w-0">
+                                          <span className="block truncate font-medium">{inv.itemName}</span>
+                                          <span className="block text-xs text-muted-foreground">{inv.partNumber}</span>
+                                        </span>
+                                        {selectedInv?.id === inv.id && <Check className="ml-3 h-4 w-4 shrink-0 text-primary" />}
+                                      </button>
+                                    )) : (
+                                      <p className="px-3 py-4 text-center text-sm text-muted-foreground">No matching items found.</p>
+                                    )}
+                                  </div>
+                                </div>,
+                                document.body
+                              ) : null}
+                            </div>
+                          )
+                        }}
                       />
+                      {errors.items?.[index]?.inventoryId && <p className="mt-1 text-xs text-destructive">{errors.items[index]?.inventoryId?.message}</p>}
                     </TableCell>
 
                     <TableCell>
