@@ -121,12 +121,25 @@ export function InventoryList() {
                         <span className="font-semibold">{item.quantity} {t.inventoryMod.total}</span>
                         {item.batches && item.batches.length > 0 && (
                           <div className="text-xs text-muted-foreground flex flex-col gap-0.5 mt-1 border-t pt-1 border-border/50 max-w-[120px]">
-                            {item.batches.map((b: any) => (
-                              <div key={b.id} className="flex justify-between w-full">
-                                <span>{b.batchNumber}:</span>
-                                <span>{b.quantity}</span>
-                              </div>
-                            ))}
+                            {item.batches.map((b: any) => {
+                              const isOpeningBatch = b.batchNumber?.toUpperCase().startsWith("OPENING-")
+                              const openingBatchLabel = b.batchNumber?.match(/^OPENING-(\d+)$/i)?.[1]
+                              const openingBatchNumber = isOpeningBatch
+                                ? openingBatchLabel ?? [...item.batches]
+                                    .filter((batch: any) => batch.batchNumber?.toUpperCase().startsWith("OPENING-"))
+                                    .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                                    .findIndex((batch: any) => batch.id === b.id) + 1
+                                : null
+
+                              return (
+                                <div key={b.id} className="flex w-full items-center justify-between gap-3">
+                                  <span className="min-w-0 truncate">
+                                    {isOpeningBatch ? `OPENING-${openingBatchNumber}` : b.batchNumber}:
+                                  </span>
+                                  <span className="shrink-0 tabular-nums">{b.quantity}</span>
+                                </div>
+                              )
+                            })}
                           </div>
                         )}
                       </div>

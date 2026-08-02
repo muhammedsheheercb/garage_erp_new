@@ -112,10 +112,16 @@ export async function addOpeningStockToItem(
 
   if (!item) throw new Error("Inventory item not found.")
 
+  const openingBatchCount = await prisma.inventoryBatch.count({
+    where: {
+      batchNumber: { startsWith: "OPENING-" },
+    },
+  })
+
   await prisma.inventoryBatch.create({
     data: {
       inventoryId: item.id,
-      batchNumber: `OPENING-${item.partNumber}-${Date.now()}`,
+      batchNumber: `OPENING-${openingBatchCount + 1}`,
       quantity: parsed.openingStock,
       purchasePrice: parsed.purchasePrice,
       sellingPrice: parsed.sellingPrice,
@@ -137,6 +143,12 @@ export async function createInventoryItem(data: InventoryFormValues, withOpening
     select: { id: true },
   })
   if (existing) return { success: false as const, message: "Inventory item name already exists." }
+
+  const openingBatchCount = withOpeningStock
+    ? await prisma.inventoryBatch.count({
+        where: { batchNumber: { startsWith: "OPENING-" } },
+      })
+    : 0
   
   const item = await prisma.inventory.create({
     data: {
@@ -145,7 +157,7 @@ export async function createInventoryItem(data: InventoryFormValues, withOpening
       ...(withOpeningStock ? {
         batches: {
           create: {
-            batchNumber: `OPENING-${parsed.partNumber}`,
+            batchNumber: `OPENING-${openingBatchCount + 1}`,
             quantity: parsed.openingStock,
             purchasePrice: parsed.purchasePrice,
             sellingPrice: parsed.sellingPrice,
