@@ -12,119 +12,226 @@ export default async function PrintInvoicePage({ params }: { params: { id: strin
   const paidAmount = invoice.payments.reduce((total, payment) => total + payment.amount, 0)
   const balance = Math.max(0, invoice.grandTotal - paidAmount)
 
+  let otherChargesList: Array<{ name: string; amount: number }> = []
+  if (invoice.otherCharges) {
+    try {
+      const parsed = JSON.parse(invoice.otherCharges)
+      if (Array.isArray(parsed)) {
+        otherChargesList = parsed
+      }
+    } catch (e) {}
+  }
+
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-white text-black min-h-screen font-sans">
-      <PrintActions />
-      
-      <div className="border border-gray-200 p-8 rounded-lg shadow-sm print:shadow-none print:border-none">
-        <div className="flex justify-between items-start border-b pb-6 mb-6">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900">INVOICE</h1>
-            <p className="text-gray-500 mt-1">ID: {invoice.id.split('-')[0].toUpperCase()}</p>
-          </div>
-          <div className="text-right">
-            <h2 className="text-xl font-semibold">Garage ERP</h2>
-            <p className="text-gray-600">123 Mechanic Street</p>
-            <p className="text-gray-600">City, Country</p>
-            <p className="text-gray-600">contact@garageerp.com</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-white text-black p-4 print:p-0 font-sans">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 8mm;
+          }
+          html, body {
+            height: 100%;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden;
+          }
+          .print-container {
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
+          }
+        }
+      `,
+        }}
+      />
 
-        <div className="grid grid-cols-2 gap-8 mb-8">
-          <div>
-            <h3 className="font-semibold text-gray-900 border-b pb-2 mb-2">Customer Details</h3>
-            <p className="font-medium text-lg">{invoice.customer.name}</p>
-            <p className="text-gray-600">{invoice.customer.phone || 'N/A'}</p>
-            <p className="text-gray-600">{invoice.customer.email || 'N/A'}</p>
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900 border-b pb-2 mb-2">Vehicle Details</h3>
-            <p className="font-medium">{invoice.jobCard.vehicle.brand} {invoice.jobCard.vehicle.model}</p>
-            <p className="text-gray-600">Plate: {invoice.jobCard.vehicle.plateNumber}</p>
-            <p className="text-gray-600">Job Card: {invoice.jobCard.id.split('-')[0].toUpperCase()}</p>
-          </div>
-        </div>
+      <div className="max-w-3xl mx-auto">
+        <PrintActions />
 
-        <div className="mb-8">
-          <h3 className="font-semibold text-gray-900 border-b pb-2 mb-2">Service Details</h3>
-          <div className="bg-gray-50 p-4 rounded text-gray-800 whitespace-pre-wrap min-h-[4rem]">
-            {invoice.servicesDetails || invoice.jobCard.workDone || invoice.jobCard.complaint || "No service details provided."}
+        <div className="print-container border border-gray-200 p-6 rounded-lg bg-white shadow-sm print:shadow-none print:border-none">
+          {/* Top Centered Logo */}
+          <div className="flex justify-center items-center mb-6">
+            <img
+              src="/images/logo.webp"
+              alt="Bin Matar Garage"
+              className="h-16 object-contain"
+            />
           </div>
-        </div>
-        
-        <div className="mb-8">
-          <h3 className="font-semibold text-gray-900 border-b pb-2 mb-2">Parts Details</h3>
-          <div className="bg-gray-50 p-4 rounded text-gray-800 whitespace-pre-wrap min-h-[4rem]">
-            {invoice.partsDetails || "No parts details provided."}
-          </div>
-        </div>
 
-        <div className="flex justify-end">
-          <div className="w-1/2 min-w-[300px]">
-            <table className="w-full text-right">
+          {/* Customer & Vehicle Info Header Table */}
+          <div className="mb-6 border border-gray-300 rounded-md overflow-hidden">
+            <div className="bg-gray-100 px-4 py-2 font-bold text-sm text-gray-800 border-b border-gray-300 uppercase tracking-wider text-center flex justify-between items-center">
+              <span>INVOICE</span>
+              <span className="text-xs text-gray-600 font-mono">
+                INV: #{invoice.id.split("-")[0].toUpperCase()}
+              </span>
+              <span>{formatDisplayDate(invoice.createdAt)}</span>
+            </div>
+            <table className="w-full text-xs text-left">
               <tbody>
-                <tr className="border-b">
-                  <td className="py-2 text-gray-600">Service Charge:</td>
-                  <td className="py-2 font-medium">{invoice.serviceCharge.toFixed(3)} OMR</td>
+                <tr className="border-b border-gray-200">
+                  <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200 w-1/4">
+                    Customer Name
+                  </td>
+                  <td className="p-2.5 w-1/4 border-r border-gray-200 font-semibold text-gray-900">
+                    {invoice.customer?.name}
+                  </td>
+                  <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200 w-1/4">
+                    Vehicle
+                  </td>
+                  <td className="p-2.5 w-1/4 font-semibold text-gray-900">
+                    {invoice.jobCard?.vehicle?.brand} {invoice.jobCard?.vehicle?.model}
+                  </td>
                 </tr>
-                <tr className="border-b">
-                  <td className="py-2 text-gray-600">Labour Charge:</td>
-                  <td className="py-2 font-medium">{invoice.labourCharge.toFixed(3)} OMR</td>
+                <tr className="border-b border-gray-200">
+                  <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200">
+                    Phone / Contact
+                  </td>
+                  <td className="p-2.5 border-r border-gray-200">
+                    {invoice.customer?.phone || "N/A"}
+                  </td>
+                  <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200">
+                    Plate Number
+                  </td>
+                  <td className="p-2.5 font-mono font-semibold text-gray-900">
+                    {invoice.jobCard?.vehicle?.plateNumber}
+                  </td>
                 </tr>
-                <tr className="border-b">
-                  <td className="py-2 text-gray-600">Parts Cost:</td>
-                  <td className="py-2 font-medium">{invoice.partsCost.toFixed(3)} OMR</td>
-                </tr>
-                {(() => {
-                  if (invoice.otherCharges) {
-                    try {
-                      const charges = JSON.parse(invoice.otherCharges)
-                      if (Array.isArray(charges)) {
-                        return charges.map((oc: any, index: number) => (
-                          <tr key={index} className="border-b">
-                            <td className="py-2 text-gray-600">{oc.name || 'Other Charge'}:</td>
-                            <td className="py-2 font-medium">+{oc.amount.toFixed(3)} OMR</td>
-                          </tr>
-                        ))
-                      }
-                    } catch(e) {}
-                  }
-                  return null
-                })()}
-                <tr className="border-b">
-                  <td className="py-2 text-gray-600">Subtotal:</td>
-                  <td className="py-2 font-medium">{invoice.subTotal.toFixed(3)} OMR</td>
-                </tr>
-                <tr className="border-b text-red-600">
-                  <td className="py-2">Discount:</td>
-                  <td className="py-2 font-medium">-{invoice.discount.toFixed(3)} OMR</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 text-gray-600">Tax:</td>
-                  <td className="py-2 font-medium">+{invoice.tax.toFixed(3)} OMR</td>
-                </tr>
-                <tr className="text-xl font-bold bg-gray-100">
-                  <td className="py-4 px-4 text-left">Grand Total:</td>
-                  <td className="py-4 px-4">{invoice.grandTotal.toFixed(3)} OMR</td>
-                </tr>
-                <tr className="border-b text-green-700">
-                  <td className="py-2 px-4 text-left">Paid:</td>
-                  <td className="py-2 px-4">-{paidAmount.toFixed(3)} OMR</td>
-                </tr>
-                <tr className="text-xl font-bold bg-red-50 text-red-700">
-                  <td className="py-4 px-4 text-left">Balance:</td>
-                  <td className="py-4 px-4">{balance.toFixed(3)} OMR</td>
-                </tr>
+                {invoice.jobCard?.complaint && (
+                  <tr>
+                    <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200">
+                      Complaint / Issue
+                    </td>
+                    <td colSpan={3} className="p-2.5 text-gray-800 font-medium whitespace-pre-wrap">
+                      {invoice.jobCard.complaint}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-        </div>
-        
-        <div className="mt-16 text-center text-gray-500 text-sm">
-          <p>Thank you for your business!</p>
-          <p>Generated on {formatDisplayDate(invoice.createdAt)}</p>
+
+          {/* Itemized Charges & Details Table */}
+          <div className="mb-6">
+            <table className="w-full border-collapse border border-gray-300 text-xs">
+              <thead>
+                <tr className="bg-gray-100 border-b border-gray-300 text-gray-800">
+                  <th className="p-2.5 border-r border-gray-300 w-12 text-center">#</th>
+                  <th className="p-2.5 border-r border-gray-300 text-left">Description / Details</th>
+                  <th className="p-2.5 text-right w-36">Amount (OMR)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Services details */}
+                <tr className="border-b border-gray-200 align-top">
+                  <td className="p-2.5 border-r border-gray-200 text-center font-medium">1</td>
+                  <td className="p-2.5 border-r border-gray-200">
+                    <span className="font-semibold text-gray-900">Service & Labour Charges</span>
+                    <p className="mt-1 text-gray-600 whitespace-pre-wrap">
+                      {invoice.servicesDetails || invoice.jobCard?.workDone || "Standard vehicle servicing & labor"}
+                    </p>
+                  </td>
+                  <td className="p-2.5 text-right font-medium">
+                    {(invoice.serviceCharge + invoice.labourCharge).toFixed(3)}
+                  </td>
+                </tr>
+
+                {/* Parts details */}
+                <tr className="border-b border-gray-200 align-top">
+                  <td className="p-2.5 border-r border-gray-200 text-center font-medium">2</td>
+                  <td className="p-2.5 border-r border-gray-200">
+                    <span className="font-semibold text-gray-900">Parts & Materials</span>
+                    <p className="mt-1 text-gray-600 whitespace-pre-wrap">
+                      {invoice.partsDetails || "Replacement parts used in job"}
+                    </p>
+                  </td>
+                  <td className="p-2.5 text-right font-medium">
+                    {invoice.partsCost.toFixed(3)}
+                  </td>
+                </tr>
+
+                {/* Other Charges */}
+                {otherChargesList.map((oc, index) => (
+                  <tr key={index} className="border-b border-gray-200 align-top">
+                    <td className="p-2.5 border-r border-gray-200 text-center font-medium">
+                      {3 + index}
+                    </td>
+                    <td className="p-2.5 border-r border-gray-200 font-medium text-gray-900">
+                      {oc.name || "Other Charge"}
+                    </td>
+                    <td className="p-2.5 text-right font-medium">
+                      {oc.amount.toFixed(3)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals Summary */}
+          <div className="flex justify-end mb-8">
+            <div className="w-72 border border-gray-300 rounded-md overflow-hidden text-xs">
+              <table className="w-full">
+                <tbody>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <td className="p-2 text-gray-700 font-medium">Subtotal:</td>
+                    <td className="p-2 text-right font-semibold">{invoice.subTotal.toFixed(3)} OMR</td>
+                  </tr>
+                  {invoice.discount > 0 && (
+                    <tr className="border-b border-gray-200 text-red-600">
+                      <td className="p-2 font-medium">Discount:</td>
+                      <td className="p-2 text-right font-semibold">-{invoice.discount.toFixed(3)} OMR</td>
+                    </tr>
+                  )}
+                  {invoice.tax > 0 && (
+                    <tr className="border-b border-gray-200">
+                      <td className="p-2 text-gray-700 font-medium">Tax (VAT):</td>
+                      <td className="p-2 text-right font-semibold">+{invoice.tax.toFixed(3)} OMR</td>
+                    </tr>
+                  )}
+                  <tr className="border-b border-gray-300 bg-gray-100 font-bold text-sm">
+                    <td className="p-2 text-gray-900">Grand Total:</td>
+                    <td className="p-2 text-right text-gray-900">{invoice.grandTotal.toFixed(3)} OMR</td>
+                  </tr>
+                  <tr className="border-b border-gray-200 text-green-700 font-medium">
+                    <td className="p-2">Paid Amount:</td>
+                    <td className="p-2 text-right">-{paidAmount.toFixed(3)} OMR</td>
+                  </tr>
+                  <tr className="bg-red-50 text-red-700 font-bold">
+                    <td className="p-2">Balance Due:</td>
+                    <td className="p-2 text-right">{balance.toFixed(3)} OMR</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Footer Signatures */}
+          <div className="grid grid-cols-2 gap-8 mt-12 pt-6 border-t border-gray-300">
+            <div className="text-center">
+              <div className="border-b border-gray-400 w-44 mx-auto mb-2"></div>
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Customer Signature
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="border-b border-gray-400 w-44 mx-auto mb-2"></div>
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Authorized Signature
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   )
 }
+
