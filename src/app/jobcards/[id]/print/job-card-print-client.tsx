@@ -89,7 +89,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
                   {job.vehicle?.brand} {job.vehicle?.model}
                 </td>
               </tr>
-              <tr>
+              <tr className="border-b border-gray-200">
                 <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200">
                   {isRTL ? "رقم الهاتف" : "Phone"}
                 </td>
@@ -103,6 +103,16 @@ export function JobCardPrintClient({ job }: { job: any }) {
                   {job.vehicle?.plateNumber}
                 </td>
               </tr>
+              {job.complaint && (
+                <tr>
+                  <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200">
+                    {t.jobcards.complaint || (isRTL ? "الشكوى / المشكلة" : "Complaint / Issue")}
+                  </td>
+                  <td colSpan={3} className="p-2.5 text-gray-800 font-medium whitespace-pre-wrap">
+                    {job.complaint}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
