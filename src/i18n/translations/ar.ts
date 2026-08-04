@@ -3,7 +3,7 @@ import type { TranslationKeys } from "./en";
 export const ar: TranslationKeys = {
   // Common / Shared
   common: {
-    appName: "نظام إدارة الكراج",
+    appName: "كراج بن مطر (Bin Matar Garage)",
     save: "حفظ",
     saving: "جارٍ الحفظ...",
     cancel: "إلغاء",

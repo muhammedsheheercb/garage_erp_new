@@ -4,8 +4,8 @@ import { Providers } from "@/components/providers";
 import { BackToTop } from "@/components/ui/back-to-top";
 
 export const metadata: Metadata = {
-  title: "Garage ERP",
-  description: "Simple Garage ERP System",
+  title: "Bin Matar Garage",
+  description: "Bin Matar Garage Management System",
 };
 
 export default function RootLayout({

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Wrench, Users, Car, CheckCircle2, FileText, Activity, Briefcase, CreditCard, Package, Truck, UserCog } from "lucide-react"
+import { Wrench, Users, Car, CheckCircle2, FileText, Activity, Briefcase, CreditCard, Package, Truck, UserCog, Settings } from "lucide-react"
 import { SignOutButton } from "@/components/sign-out-button"
 import { Currency, OmanIcon } from "@/components/currency"
 import Link from "next/link"
@@ -61,11 +61,9 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 max-w-screen-2xl items-center mx-auto px-4">
-          <div className="flex items-center gap-2 mr-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-              <Wrench className="h-5 w-5 text-primary" />
-            </div>
-            <span className="font-bold text-xl tracking-tight hidden sm:inline-block">{t.common.appName}</span>
+          <div className="flex items-center gap-3 mr-4">
+            <img src="/images/logo.webp" alt="Bin Matar Garage" className="h-9 object-contain" />
+            {/* <span className="font-bold text-xl tracking-tight hidden sm:inline-block">{t.common.appName}</span> */}
           </div>
           <div className="flex flex-1 items-center justify-end space-x-2">
             <nav className="flex items-center space-x-2">
@@ -76,10 +74,10 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
           </div>
         </div>
       </header>
-      
+
       {/* Main Dashboard Content */}
       <main className="flex-1 p-4 md:p-8 max-w-screen-2xl mx-auto w-full space-y-8">
-        
+
         {/* Welcome & Quick Actions */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -92,7 +90,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
             {actions.filter((action) => canAccess(action.page)).map((action) => { const Icon = action.icon; return <Link key={action.page} href={action.href} className="flex-1 md:flex-auto"><Button size="sm" variant={action.primary ? "default" : "outline"} className="gap-1.5 w-full border-dashed"><Icon className="h-4 w-4" /> {action.label}</Button></Link> })}
             {session?.role !== "EMPLOYEE" && <Link href="/settings" passHref className="flex-1 md:flex-auto">
               <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
-                <Wrench className="h-4 w-4" /> {t.nav.settings}
+                <Settings className="h-4 w-4" /> {t.nav.settings}
               </Button>
             </Link>}
             {session?.role === "ADMIN" && <Link href="/employees" className="flex-1 md:flex-auto"><Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed"><UserCog className="h-4 w-4" /> Users</Button></Link>}
@@ -104,8 +102,8 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
           {stats.map((stat, i) => {
             const Icon = stat.icon;
             return (
-              <Card 
-                key={i} 
+              <Card
+                key={i}
                 className="shadow-sm hover:shadow-md transition-all duration-500 animate-in fade-in slide-in-from-bottom-4"
                 style={{ animationFillMode: 'both', animationDelay: `${i * 100}ms` }}
               >
@@ -169,7 +167,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="lg:col-span-3 shadow-sm flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
             <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 transition-transform hover:scale-110 duration-300">
               <OmanIcon size={2.5} className="text-primary" />

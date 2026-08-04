@@ -1,7 +1,7 @@
 export const en = {
   // Common / Shared
   common: {
-    appName: "Garage ERP",
+    appName: "Bin Matar Garage",
     save: "Save",
     saving: "Saving...",
     cancel: "Cancel",
