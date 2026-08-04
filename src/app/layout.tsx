@@ -6,6 +6,11 @@ import { BackToTop } from "@/components/ui/back-to-top";
 export const metadata: Metadata = {
   title: "Bin Matar Garage",
   description: "Bin Matar Garage Management System",
+  icons: {
+    icon: "/images/logo.webp",
+    shortcut: "/images/logo.webp",
+    apple: "/images/logo.webp",
+  },
 };
 
 export default function RootLayout({
