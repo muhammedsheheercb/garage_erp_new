@@ -357,7 +357,6 @@ export async function getRecentActivities() {
 }
 
 export async function getReportsDashboardTotals(fromDate?: string, toDate?: string) {
-  const now = new Date()
   let dateFilter: any = {}
   
   if (fromDate || toDate) {
@@ -365,8 +364,6 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
     const end = toDate ? new Date(toDate) : new Date(fromDate!)
     dateFilter.gte = start
     dateFilter.lte = endOfDay(end)
-  } else {
-    dateFilter = { gte: startOfMonth(now), lte: endOfMonth(now) }
   }
 
   // 1. Total Income & breakdown
@@ -463,9 +460,6 @@ export async function getPaymeterReportTransactions(fromDate?: string, toDate?: 
   if (fromDate || toDate) {
     if (fromDate) dateFilter.gte = new Date(fromDate)
     if (toDate) dateFilter.lte = endOfDay(new Date(toDate))
-  } else {
-    dateFilter.gte = startOfMonth(new Date())
-    dateFilter.lte = endOfMonth(new Date())
   }
 
   const [expenses, payments] = await Promise.all([
@@ -506,9 +500,6 @@ export async function getExpenseReportDetails(fromDate?: string, toDate?: string
   if (fromDate || toDate) {
     if (fromDate) dateFilter.gte = new Date(fromDate)
     if (toDate) dateFilter.lte = endOfDay(new Date(toDate))
-  } else {
-    dateFilter.gte = startOfMonth(new Date())
-    dateFilter.lte = endOfMonth(new Date())
   }
 
   const expenses = await prisma.expense.findMany({
