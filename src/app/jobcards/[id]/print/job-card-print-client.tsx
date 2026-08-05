@@ -64,29 +64,37 @@ export function JobCardPrintClient({ job }: { job: any }) {
             box-sizing: border-box !important;
             display: flex !important;
             flex-direction: column !important;
-            font-size: 17px !important;
+            font-size: 18px !important;
             font-weight: 700 !important;
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
           }
           .print-container table {
-            font-size: 17px !important;
+            font-size: 18px !important;
+            border: 1.5px solid #9ca3af !important;
+            border-collapse: collapse !important;
           }
           .print-container td,
           .print-container th,
           .print-container p,
           .print-container span {
-            font-size: 17px !important;
+            font-size: 18px !important;
             font-weight: 800 !important;
           }
-          .print-container .bg-gray-100 {
-            background-color: #d1d5db !important;
+          .print-container th,
+          .print-container td {
+            border-width: 1.5px !important;
+            border-color: #9ca3af !important;
+          }
+          .print-container .print-header,
+          .print-container thead tr {
+            background-color: #cbd5e1 !important;
             color: #000 !important;
-            font-size: 17px !important;
+            font-size: 18px !important;
             font-weight: 800 !important;
           }
           .print-container .bg-gray-50 {
-            background-color: #f3f4f6 !important;
+            background-color: #e5e7eb !important;
           }
           .print-signatures {
             margin-top: auto !important;
@@ -94,21 +102,26 @@ export function JobCardPrintClient({ job }: { job: any }) {
             padding-bottom: 4px !important;
           }
           .print-signatures p {
-            font-size: 17px !important;
+            font-size: 18px !important;
           }
-          .print-container.font-cairo,
-          .print-container.font-cairo table,
-          .print-container.font-cairo td,
-          .print-container.font-cairo th,
-          .print-container.font-cairo p,
-          .print-container.font-cairo span {
-            font-size: 17px !important;
+          .print-container.arabic-print,
+          .print-container.arabic-print table,
+          .print-container.arabic-print td,
+          .print-container.arabic-print th,
+          .print-container.arabic-print p,
+          .print-container.arabic-print span {
+            font-family: Arial, "Noto Sans Arabic", sans-serif !important;
+            font-size: 20px !important;
+          }
+          .print-container.arabic-print .print-header,
+          .print-container.arabic-print thead tr {
+            font-size: 20px !important;
           }
         }
       `,
         }}
       />
-      <div className="print-container max-w-3xl mx-auto border border-gray-200 p-6 rounded-lg bg-white">
+      <div className={`print-container max-w-3xl mx-auto border border-gray-200 p-6 rounded-lg bg-white ${isRTL ? "arabic-print" : ""}`}>
         {/* Top Centered Logo */}
         <div className="flex justify-center items-center mb-6">
           <img
@@ -120,11 +133,11 @@ export function JobCardPrintClient({ job }: { job: any }) {
 
         {/* Customer & Vehicle Info Header Table */}
         <div className="mb-6 border border-gray-300 rounded-md overflow-hidden">
-          <div className="bg-gray-100 px-4 py-2 font-bold text-sm text-gray-800 border-b border-gray-300 uppercase tracking-wider text-center">
+          <div className="print-header bg-gray-100 px-4 py-2 font-bold text-sm text-gray-800 border-b border-gray-300 uppercase tracking-wider text-center">
             {t.jobcards.title || "Job Card"}
           </div>
           <table
-            className="w-full text-xs text-left"
+            className="print-info-table w-full text-xs text-left"
             dir={isRTL ? "rtl" : "ltr"}
           >
             <tbody>
@@ -177,7 +190,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
         {/* Combined Items Bill Table */}
         <div className="mb-6">
           <table
-            className="w-full border-collapse border border-gray-300 text-xs"
+            className="print-table w-full border-collapse border border-gray-300 text-xs"
             dir={isRTL ? "rtl" : "ltr"}
           >
             <thead>

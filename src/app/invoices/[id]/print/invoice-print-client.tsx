@@ -1,7 +1,6 @@
 "use client"
 
 import { ArrowLeft, Printer } from "lucide-react"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useEffect, useSyncExternalStore } from "react"
 import { useTranslation } from "@/i18n"
@@ -76,7 +75,15 @@ export function InvoicePrintClient({ invoice, otherChargesList }: { invoice: Inv
           <button type="button" className="bg-primary text-primary-foreground rounded-md px-4 py-2 flex items-center" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />{l.print}</button>
         </div>
         <div className="print-container border border-gray-200 p-6 rounded-lg bg-white shadow-sm print:shadow-none print:border-none">
-          <div className="flex justify-center items-center mb-6"><Image src="/images/logo.webp" alt="Bin Matar Garage" width={160} height={64} className="h-16 w-auto object-contain" /></div>
+          <div className="flex justify-center items-center mb-6">
+            <img
+              src="/images/logo.webp"
+              alt="Bin Matar Garage"
+              width="240"
+              height="96"
+              className="block h-16 w-auto object-contain"
+            />
+          </div>
           <div className="mb-6 border border-gray-300 rounded-md overflow-hidden">
             <div className="bg-gray-100 px-4 py-2 font-bold text-sm text-gray-800 border-b border-gray-300 uppercase tracking-wider text-center flex justify-between items-center"><span>{l.invoice}</span><span className="text-xs text-gray-600 font-mono">INV: #{invoice.id.split("-")[0].toUpperCase()}</span><span>{dateText(invoice.createdAt, locale)}</span></div>
             <table className="w-full text-xs"><tbody>
