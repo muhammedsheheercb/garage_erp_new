@@ -3,15 +3,25 @@
 import { useTranslation } from "@/i18n";
 import { Currency } from "@/components/currency";
 import { PrintButton } from "./print-button";
-import { useEffect } from "react";
-import Image from "next/image";
+import { useEffect, useSyncExternalStore } from "react";
 
 export function JobCardPrintClient({ job }: { job: any }) {
   const { t, isRTL } = useTranslation();
+  const isHydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   useEffect(() => {
     document.documentElement.dir = isRTL ? "rtl" : "ltr";
   }, [isRTL]);
+
+  // The selected language is restored from localStorage on the client.
+  // Wait for that value before rendering so the server and client markup match.
+  if (!isHydrated) {
+    return null;
+  }
 
   // Calculate totals
   const servicesTotal = job.services.reduce(
@@ -74,6 +84,14 @@ export function JobCardPrintClient({ job }: { job: any }) {
           }
           .print-signatures p {
             font-size: 15px !important;
+          }
+          .print-container.font-cairo,
+          .print-container.font-cairo table,
+          .print-container.font-cairo td,
+          .print-container.font-cairo th,
+          .print-container.font-cairo p,
+          .print-container.font-cairo span {
+            font-size: 17px !important;
           }
         }
       `,

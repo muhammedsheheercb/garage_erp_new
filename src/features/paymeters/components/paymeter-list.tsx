@@ -130,7 +130,10 @@ export function PaymeterList() {
         <div className="flex gap-2">
           <DatePickerWithRange
             date={dateRange}
-            setDate={setDateRange}
+            setDate={(newDate) => {
+              setDateRange(newDate)
+              setPaymeterPage(1)
+            }}
           />
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger render={

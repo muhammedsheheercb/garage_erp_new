@@ -9,21 +9,36 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
   const skip = (page - 1) * limit
   const purchaseWhere: any = {};
   const expenseWhere: any = {};
+  const purchasePaymentWhere: any = {};
   if (fromDateStr || toDateStr) {
     purchaseWhere.purchaseDate = {};
     expenseWhere.date = {};
+    purchasePaymentWhere.date = {};
     if (fromDateStr) {
       purchaseWhere.purchaseDate.gte = new Date(fromDateStr);
       expenseWhere.date.gte = new Date(fromDateStr);
+      purchasePaymentWhere.date.gte = new Date(fromDateStr);
     }
     if (toDateStr) {
       purchaseWhere.purchaseDate.lte = new Date(toDateStr);
       expenseWhere.date.lte = new Date(toDateStr);
+      purchasePaymentWhere.date.lte = new Date(toDateStr);
     }
   }
 
   const nameWhere = search.trim() ? { contains: search.trim(), mode: "insensitive" as const } : undefined
-  const where = nameWhere ? { name: nameWhere } : undefined
+  const where: any = nameWhere ? { name: nameWhere } : {}
+
+  // When a date range is selected, return only paymeters that had a
+  // transaction during that range. The nested relation filters below keep
+  // the displayed transaction details and totals in the same range.
+  if (fromDateStr || toDateStr) {
+    where.OR = [
+      { purchases: { some: purchaseWhere } },
+      { expenses: { some: expenseWhere } },
+      { purchasePayments: { some: purchasePaymentWhere } },
+    ]
+  }
   const [paymeters, total] = await Promise.all([
     prisma.paymeter.findMany({
     skip,
@@ -50,7 +65,7 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
         orderBy: { date: 'desc' }
       },
       purchasePayments: {
-        where: expenseWhere, // Reusing expenseWhere as it filters on 'date', same as purchasePayments
+        where: purchasePaymentWhere,
         include: {
           purchase: {
             include: {
