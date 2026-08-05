@@ -39,10 +39,8 @@ export function JobCardPrintClient({ job }: { job: any }) {
             margin: 8mm;
           }
           html, body {
-            height: 100%;
             margin: 0 !important;
             padding: 0 !important;
-            overflow: hidden;
           }
           .print-container {
             border: none !important;
@@ -51,8 +49,31 @@ export function JobCardPrintClient({ job }: { job: any }) {
             box-shadow: none !important;
             width: 100% !important;
             max-width: 100% !important;
+            min-height: calc(297mm - 16mm) !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            flex-direction: column !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
+          }
+          .print-container table {
+            font-size: 15px !important;
+          }
+          .print-container td,
+          .print-container th,
+          .print-container p,
+          .print-container span {
+            font-weight: 800 !important;
+          }
+          .print-signatures {
+            margin-top: auto !important;
+            padding-top: 24px !important;
+            padding-bottom: 4px !important;
+          }
+          .print-signatures p {
+            font-size: 15px !important;
           }
         }
       `,
@@ -257,7 +278,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
         </div>
 
         {/* Footer Signatures */}
-        <div className="grid grid-cols-2 gap-8 mt-12 pt-6 border-t border-gray-300">
+        <div className="print-signatures grid grid-cols-2 gap-8 mt-12 pt-6 border-t border-gray-300">
           <div className="text-center">
             <div className="border-b border-gray-400 w-44 mx-auto mb-2"></div>
             <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
