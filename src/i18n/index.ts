@@ -16,13 +16,9 @@ interface LanguageState {
   isRTL: boolean
 }
 
-// Safely read from localStorage (handles SSR)
+// Keep the initial state identical during SSR and the first client render.
+// The saved locale is restored by LanguageInitializer after hydration.
 function getStoredLocale(): Locale {
-  if (typeof window === "undefined") return "en"
-  try {
-    const stored = localStorage.getItem("garage-erp-locale")
-    if (stored === "ar" || stored === "en") return stored
-  } catch {}
   return "en"
 }
 

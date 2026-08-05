@@ -10,7 +10,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
   const isHydrated = useSyncExternalStore(
     () => () => {},
     () => true,
-    () => false
+    () => false,
   );
 
   useEffect(() => {
@@ -26,18 +26,19 @@ export function JobCardPrintClient({ job }: { job: any }) {
   // Calculate totals
   const servicesTotal = job.services.reduce(
     (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1),
-    0
+    0,
   );
   const partsTotal = job.parts.reduce(
     (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1),
-    0
+    0,
   );
   const grandTotal = servicesTotal + partsTotal + (job.estimatedCost || 0);
 
   return (
     <div
-      className={`min-h-screen bg-white text-black p-4 print:p-0 ${isRTL ? "font-cairo" : ""
-        }`}
+      className={`min-h-screen bg-white text-black p-4 print:p-0 ${
+        isRTL ? "font-cairo" : ""
+      }`}
       dir={isRTL ? "rtl" : "ltr"}
     >
       <style
@@ -63,19 +64,29 @@ export function JobCardPrintClient({ job }: { job: any }) {
             box-sizing: border-box !important;
             display: flex !important;
             flex-direction: column !important;
-            font-size: 15px !important;
+            font-size: 17px !important;
             font-weight: 700 !important;
             page-break-after: avoid !important;
             page-break-inside: avoid !important;
           }
           .print-container table {
-            font-size: 15px !important;
+            font-size: 17px !important;
           }
           .print-container td,
           .print-container th,
           .print-container p,
           .print-container span {
+            font-size: 17px !important;
             font-weight: 800 !important;
+          }
+          .print-container .bg-gray-100 {
+            background-color: #d1d5db !important;
+            color: #000 !important;
+            font-size: 17px !important;
+            font-weight: 800 !important;
+          }
+          .print-container .bg-gray-50 {
+            background-color: #f3f4f6 !important;
           }
           .print-signatures {
             margin-top: auto !important;
@@ -83,7 +94,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
             padding-bottom: 4px !important;
           }
           .print-signatures p {
-            font-size: 15px !important;
+            font-size: 17px !important;
           }
           .print-container.font-cairo,
           .print-container.font-cairo table,
@@ -112,7 +123,10 @@ export function JobCardPrintClient({ job }: { job: any }) {
           <div className="bg-gray-100 px-4 py-2 font-bold text-sm text-gray-800 border-b border-gray-300 uppercase tracking-wider text-center">
             {t.jobcards.title || "Job Card"}
           </div>
-          <table className="w-full text-xs text-left" dir={isRTL ? "rtl" : "ltr"}>
+          <table
+            className="w-full text-xs text-left"
+            dir={isRTL ? "rtl" : "ltr"}
+          >
             <tbody>
               <tr className="border-b border-gray-200">
                 <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200 w-1/4">
@@ -145,9 +159,13 @@ export function JobCardPrintClient({ job }: { job: any }) {
               {job.complaint && (
                 <tr>
                   <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200">
-                    {t.jobcards.complaint || (isRTL ? "الشكوى / المشكلة" : "Complaint / Issue")}
+                    {t.jobcards.complaint ||
+                      (isRTL ? "الشكوى / المشكلة" : "Complaint / Issue")}
                   </td>
-                  <td colSpan={3} className="p-2.5 text-gray-800 font-medium whitespace-pre-wrap">
+                  <td
+                    colSpan={3}
+                    className="p-2.5 text-gray-800 font-medium whitespace-pre-wrap"
+                  >
                     {job.complaint}
                   </td>
                 </tr>
@@ -168,23 +186,26 @@ export function JobCardPrintClient({ job }: { job: any }) {
                   #
                 </th>
                 <th
-                  className={`p-2.5 border-r border-gray-300 ${isRTL ? "text-right" : "text-left"
-                    }`}
+                  className={`p-2.5 border-r border-gray-300 ${
+                    isRTL ? "text-right" : "text-left"
+                  }`}
                 >
-                  {isRTL ? "الوصف / الخدمة / القطعة" : "Description / Service / Part"}
+                  {isRTL
+                    ? "الوصف / الخدمة / القطعة"
+                    : "Description / Service / Part"}
                 </th>
                 <th className="p-2.5 border-r border-gray-300 w-20 text-center">
                   {t.invoicesMod?.qty || "Qty"}
                 </th>
                 <th
-                  className={`p-2.5 border-r border-gray-300 w-28 ${isRTL ? "text-left" : "text-right"
-                    }`}
+                  className={`p-2.5 border-r border-gray-300 w-28 ${
+                    isRTL ? "text-left" : "text-right"
+                  }`}
                 >
                   {isRTL ? "سعر الوحدة" : "Unit Price"}
                 </th>
                 <th
-                  className={`p-2.5 ${isRTL ? "text-left" : "text-right"
-                    } w-28`}
+                  className={`p-2.5 ${isRTL ? "text-left" : "text-right"} w-28`}
                 >
                   {t.invoicesMod?.amount || "Total"}
                 </th>
@@ -198,18 +219,34 @@ export function JobCardPrintClient({ job }: { job: any }) {
                   </td>
                   <td className="p-2.5 border-r border-gray-200">
                     <span className="font-semibold text-gray-900">
-                      {isRTL ? "عمل منجز / تقييم الخدمة:" : "Work Done / Assessment:"}
+                      {isRTL
+                        ? "عمل منجز / تقييم الخدمة:"
+                        : "Work Done / Assessment:"}
                     </span>
                     <p className="mt-1 text-gray-700 whitespace-pre-wrap">
                       {job.workDone}
                     </p>
                   </td>
-                  <td className="p-2.5 border-r border-gray-200 text-center">1</td>
-                  <td className={`p-2.5 border-r border-gray-200 ${isRTL ? "text-left" : "text-right"}`}>
-                    {job.estimatedCost ? <Currency amount={job.estimatedCost} /> : "-"}
+                  <td className="p-2.5 border-r border-gray-200 text-center">
+                    1
                   </td>
-                  <td className={`p-2.5 font-medium ${isRTL ? "text-left" : "text-right"}`}>
-                    {job.estimatedCost ? <Currency amount={job.estimatedCost} /> : "-"}
+                  <td
+                    className={`p-2.5 border-r border-gray-200 ${isRTL ? "text-left" : "text-right"}`}
+                  >
+                    {job.estimatedCost ? (
+                      <Currency amount={job.estimatedCost} />
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                  <td
+                    className={`p-2.5 font-medium ${isRTL ? "text-left" : "text-right"}`}
+                  >
+                    {job.estimatedCost ? (
+                      <Currency amount={job.estimatedCost} />
+                    ) : (
+                      "-"
+                    )}
                   </td>
                 </tr>
               )}
@@ -218,7 +255,10 @@ export function JobCardPrintClient({ job }: { job: any }) {
               {job.services?.map((item: any, idx: number) => {
                 const rowNum = (job.workDone ? 1 : 0) + idx + 1;
                 return (
-                  <tr key={`srv-${item.id}`} className="border-b border-gray-200 align-top">
+                  <tr
+                    key={`srv-${item.id}`}
+                    className="border-b border-gray-200 align-top"
+                  >
                     <td className="p-2.5 border-r border-gray-200 text-center font-medium">
                       {rowNum}
                     </td>
@@ -230,11 +270,17 @@ export function JobCardPrintClient({ job }: { job: any }) {
                     <td className="p-2.5 border-r border-gray-200 text-center">
                       {item.quantity}
                     </td>
-                    <td className={`p-2.5 border-r border-gray-200 ${isRTL ? "text-left" : "text-right"}`}>
+                    <td
+                      className={`p-2.5 border-r border-gray-200 ${isRTL ? "text-left" : "text-right"}`}
+                    >
                       <Currency amount={item.price || 0} />
                     </td>
-                    <td className={`p-2.5 font-medium ${isRTL ? "text-left" : "text-right"}`}>
-                      <Currency amount={(item.price || 0) * (item.quantity || 1)} />
+                    <td
+                      className={`p-2.5 font-medium ${isRTL ? "text-left" : "text-right"}`}
+                    >
+                      <Currency
+                        amount={(item.price || 0) * (item.quantity || 1)}
+                      />
                     </td>
                   </tr>
                 );
@@ -242,9 +288,16 @@ export function JobCardPrintClient({ job }: { job: any }) {
 
               {/* Parts */}
               {job.parts?.map((item: any, idx: number) => {
-                const rowNum = (job.workDone ? 1 : 0) + (job.services?.length || 0) + idx + 1;
+                const rowNum =
+                  (job.workDone ? 1 : 0) +
+                  (job.services?.length || 0) +
+                  idx +
+                  1;
                 return (
-                  <tr key={`prt-${item.id}`} className="border-b border-gray-200 align-top">
+                  <tr
+                    key={`prt-${item.id}`}
+                    className="border-b border-gray-200 align-top"
+                  >
                     <td className="p-2.5 border-r border-gray-200 text-center font-medium">
                       {rowNum}
                     </td>
@@ -254,36 +307,48 @@ export function JobCardPrintClient({ job }: { job: any }) {
                       </span>
                       {item.batch?.inventory?.partNumber && (
                         <span className="text-gray-500 text-[11px] block">
-                          {isRTL ? "رقم القطعة:" : "PN:"} {item.batch.inventory.partNumber}
+                          {isRTL ? "رقم القطعة:" : "PN:"}{" "}
+                          {item.batch.inventory.partNumber}
                         </span>
                       )}
                     </td>
                     <td className="p-2.5 border-r border-gray-200 text-center">
                       {item.quantity}
                     </td>
-                    <td className={`p-2.5 border-r border-gray-200 ${isRTL ? "text-left" : "text-right"}`}>
+                    <td
+                      className={`p-2.5 border-r border-gray-200 ${isRTL ? "text-left" : "text-right"}`}
+                    >
                       <Currency amount={item.price || 0} />
                     </td>
-                    <td className={`p-2.5 font-medium ${isRTL ? "text-left" : "text-right"}`}>
-                      <Currency amount={(item.price || 0) * (item.quantity || 1)} />
+                    <td
+                      className={`p-2.5 font-medium ${isRTL ? "text-left" : "text-right"}`}
+                    >
+                      <Currency
+                        amount={(item.price || 0) * (item.quantity || 1)}
+                      />
                     </td>
                   </tr>
                 );
               })}
 
               {/* Empty state if nothing */}
-              {!job.workDone && (!job.services || job.services.length === 0) && (!job.parts || job.parts.length === 0) && (
-                <tr className="border-b border-gray-200">
-                  <td colSpan={5} className="p-4 text-center text-gray-500">
-                    {isRTL ? "لا توجد عناصر مضافة" : "No items listed."}
-                  </td>
-                </tr>
-              )}
+              {!job.workDone &&
+                (!job.services || job.services.length === 0) &&
+                (!job.parts || job.parts.length === 0) && (
+                  <tr className="border-b border-gray-200">
+                    <td colSpan={5} className="p-4 text-center text-gray-500">
+                      {isRTL ? "لا توجد عناصر مضافة" : "No items listed."}
+                    </td>
+                  </tr>
+                )}
             </tbody>
             {grandTotal > 0 && (
               <tfoot>
                 <tr className="bg-gray-50 font-bold border-t border-gray-300 text-xs">
-                  <td colSpan={4} className={`p-2.5 border-r border-gray-300 ${isRTL ? "text-left" : "text-right"}`}>
+                  <td
+                    colSpan={4}
+                    className={`p-2.5 border-r border-gray-300 ${isRTL ? "text-left" : "text-right"}`}
+                  >
                     {isRTL ? "الإجمالي:" : "Total Amount:"}
                   </td>
                   <td className={`p-2.5 ${isRTL ? "text-left" : "text-right"}`}>
