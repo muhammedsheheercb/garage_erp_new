@@ -23,3 +23,15 @@ export async function requirePagePermission(permission: PagePermission, action: 
   }
   return session
 }
+
+export async function getCreatorName(): Promise<string> {
+  const session = await getSession()
+  if (!session) return "Admin"
+  if (session.role === "ADMIN") {
+    const admin = await prisma.admin.findUnique({ where: { id: session.userId } })
+    return admin?.name || "Admin"
+  } else {
+    const [employee] = await prisma.$queryRaw<{ name: string }[]>(Prisma.sql`SELECT "name" FROM "Employee" WHERE "id" = ${session.userId} LIMIT 1`)
+    return employee?.name || "Employee"
+  }
+}

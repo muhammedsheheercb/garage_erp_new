@@ -90,6 +90,7 @@ export function PurchaseList() {
               <TableHead>Type</TableHead>
               <TableHead>{t.suppliers.supplierTitle}</TableHead>
               <TableHead>Job Card Details</TableHead>
+              <TableHead>Created By</TableHead>
               <TableHead>{t.payments.date}</TableHead>
               <TableHead>{t.invoicesMod.grandTotal}</TableHead>
               <TableHead>{t.purchases.paidAmount}</TableHead>
@@ -100,9 +101,9 @@ export function PurchaseList() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={10} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={11} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : !data || data.data.length === 0 ? (
-              <TableRow><TableCell colSpan={10} className="text-center h-24">{t.purchases.noPurchases}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={11} className="text-center h-24">{t.purchases.noPurchases}</TableCell></TableRow>
             ) : (
               data.data.map((p) => (
                 <TableRow key={p.id}>
@@ -121,6 +122,7 @@ export function PurchaseList() {
                       </div>
                     ) : '-'}
                   </TableCell>
+                  <TableCell className="text-sm font-medium text-muted-foreground">{p.createdBy || "Admin"}</TableCell>
                   <TableCell>{formatDisplayDate(p.purchaseDate)}</TableCell>
                   <TableCell>{p.grandTotal.toFixed(3)} OMR</TableCell>
                   <TableCell className="text-green-600 font-medium">{p.paidAmount.toFixed(3)} OMR</TableCell>

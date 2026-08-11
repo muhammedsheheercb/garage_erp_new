@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma"
 import { PaymentFormValues, paymentSchema } from "./schema"
 import { revalidatePath } from "next/cache"
+import { getCreatorName } from "@/lib/authorization"
 
 export async function getPayments(page = 1, search = "", fromDate?: string, toDate?: string) {
   const limit = 5;
@@ -125,8 +126,13 @@ export async function createPayment(data: PaymentFormValues) {
       throw new Error(`Payment amount cannot exceed the outstanding balance of ${dueAmount.toFixed(3)} OMR.`)
     }
 
+    const creatorName = await getCreatorName()
+
     const payment = await tx.payment.create({
-      data: parsed
+      data: {
+        ...parsed,
+        createdBy: creatorName,
+      }
     })
 
     const invoice = await tx.invoice.findUnique({

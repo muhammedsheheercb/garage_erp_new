@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma"
 import { JobCardFormValues, jobCardSchema } from "./schema"
 import { revalidatePath } from "next/cache"
-import { requirePagePermission } from "@/lib/authorization"
+import { requirePagePermission, getCreatorName } from "@/lib/authorization"
 
 export async function getJobCards(
   page = 1, 
@@ -169,6 +169,7 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
 export async function createJobCard(data: JobCardFormValues) {
   await requirePagePermission("jobcards")
   const parsed = jobCardSchema.parse(data)
+  const creatorName = await getCreatorName()
   
   const jobCard = await prisma.jobCard.create({
     data: {
@@ -179,6 +180,7 @@ export async function createJobCard(data: JobCardFormValues) {
       complaint: parsed.complaint,
       workDone: parsed.workDone || null,
       notes: parsed.notes || null,
+      createdBy: creatorName,
       expectedFinishDate: parsed.expectedFinishDate ? new Date(parsed.expectedFinishDate) : null,
       serviceTotal: parsed.serviceTotal,
       partsTotal: parsed.partsTotal,

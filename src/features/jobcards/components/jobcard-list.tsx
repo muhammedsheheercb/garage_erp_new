@@ -164,6 +164,7 @@ export function JobCardList() {
               <TableHead>{t.jobcards.vehicleCustomer}</TableHead>
               <TableHead>{t.jobcards.complaint}</TableHead>
               <TableHead>{t.jobcards.statusMechanic}</TableHead>
+              <TableHead>Created By</TableHead>
               <TableHead>Expected finish</TableHead>
               <TableHead>{t.jobcards.estCost}</TableHead>
               <TableHead className="text-right">{t.common.actions}</TableHead>
@@ -172,13 +173,13 @@ export function JobCardList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center h-24">
+                <TableCell colSpan={7} className="text-center h-24">
                   {t.common.loading}
                 </TableCell>
               </TableRow>
             ) : data?.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center h-24">
+                <TableCell colSpan={7} className="text-center h-24">
                   {t.jobcards.noJobCards}
                 </TableCell>
               </TableRow>
@@ -223,6 +224,9 @@ export function JobCardList() {
                         {job.mechanic?.name || t.jobcards.unassigned}
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm font-medium text-muted-foreground">
+                    {job.createdBy || "Admin"}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm">
                     {job.expectedFinishDate ? formatDisplayDate(job.expectedFinishDate) : "—"}

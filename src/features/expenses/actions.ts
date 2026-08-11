@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma"
 import { ExpenseFormValues, expenseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
+import { getCreatorName } from "@/lib/authorization"
 
 export async function getExpenses(page = 1, search = "", fromDate?: string, toDate?: string) {
   const limit = 5;
@@ -78,10 +79,13 @@ export async function createExpense(data: ExpenseFormValues) {
     dbData.paymeterId = null
   }
   
+  const creatorName = await getCreatorName()
+
   const expense = await prisma.$transaction(async (tx) => {
     const dataToSave = {
       ...dbData,
-      pendingAmount: paymentType === "PAYMETER" ? dbData.amount : 0
+      pendingAmount: paymentType === "PAYMETER" ? dbData.amount : 0,
+      createdBy: creatorName,
     }
     
     const newExpense = await tx.expense.create({

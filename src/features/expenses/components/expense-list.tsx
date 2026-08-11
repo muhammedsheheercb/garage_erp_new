@@ -193,6 +193,7 @@ export function ExpenseList() {
                   <TableHead>{t.payments.date}</TableHead>
                   <TableHead>{t.services.category}</TableHead>
                   <TableHead>{t.common.description}</TableHead>
+                  <TableHead>Created By</TableHead>
                   <TableHead className="text-right">
                     {t.payments.amount} (OMR)
                   </TableHead>
@@ -204,7 +205,7 @@ export function ExpenseList() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10">
+                    <TableCell colSpan={6} className="text-center py-10">
                       <div className="flex justify-center items-center">
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                       </div>
@@ -213,7 +214,7 @@ export function ExpenseList() {
                 ) : data?.data.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="text-center py-10 text-muted-foreground"
                     >
                       {t.settings.taxTab.noExpenses}
@@ -232,6 +233,9 @@ export function ExpenseList() {
                       </TableCell>
                       <TableCell className="max-w-[300px] truncate">
                         {expense.description || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium text-muted-foreground">
+                        {expense.createdBy || "Admin"}
                       </TableCell>
                       <TableCell className="text-right font-medium text-destructive">
                         -{expense.amount.toFixed(3)}

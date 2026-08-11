@@ -141,14 +141,15 @@ export function PaymentList() {
                   <TableHead>{t.jobcards.customer}</TableHead>
                   <TableHead>{t.payments.invoice}</TableHead>
                   <TableHead>{t.payments.method}</TableHead>
+                  <TableHead>Created By</TableHead>
                   <TableHead className="text-right">{t.payments.amount} (OMR)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historyLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
                 ) : historyData?.data.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center h-24">{t.payments.noPayments}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center h-24">{t.payments.noPayments}</TableCell></TableRow>
                 ) : (
                   historyData?.data.map((payment) => (
                     <TableRow key={payment.id}>
@@ -168,6 +169,9 @@ export function PaymentList() {
                           {getMethodIcon(payment.method)}
                           {paymentMethodLabels[payment.method] || payment.method}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-sm font-medium text-muted-foreground">
+                        {payment.createdBy || "Admin"}
                       </TableCell>
                       <TableCell className="text-right font-medium text-green-600">
                         +{payment.amount.toFixed(3)}

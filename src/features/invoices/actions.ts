@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma"
 import { InvoiceFormValues, invoiceSchema } from "./schema"
 import { revalidatePath } from "next/cache"
+import { getCreatorName } from "@/lib/authorization"
 
 export async function getInvoices(page = 1, search = "", fromDate?: string, toDate?: string) {
   const limit = 5;
@@ -126,6 +127,7 @@ export async function createInvoice(data: InvoiceFormValues) {
   const grandTotal = totalBeforeTax + parsed.tax;
 
   const initialStatus = advancePaid >= grandTotal ? "PAID" : advancePaid > 0 ? "PARTIAL" : "UNPAID";
+  const creatorName = await getCreatorName()
 
   const invoice = await prisma.invoice.create({
     data: {
@@ -143,14 +145,22 @@ export async function createInvoice(data: InvoiceFormValues) {
       partsDetails: parsed.partsDetails,
       otherCharges: parsed.otherCharges,
       status: initialStatus,
-      payments: advancePaid > 0 ? {
-        create: {
-          amount: Math.min(advancePaid, grandTotal),
-          method: "CASH",
-        }
-      } : undefined,
+      createdBy: creatorName,
     }
   })
+
+  // Auto-record initial payment if advancePaid is present
+  if (advancePaid > 0) {
+    const paymentAmount = Math.min(advancePaid, grandTotal);
+    await prisma.payment.create({
+      data: {
+        invoiceId: invoice.id,
+        amount: paymentAmount,
+        method: "ADVANCE",
+        createdBy: creatorName,
+      },
+    })
+  }
   
   revalidatePath('/invoices')
   return invoice

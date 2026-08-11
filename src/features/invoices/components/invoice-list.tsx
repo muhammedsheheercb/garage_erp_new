@@ -85,6 +85,7 @@ export function InvoiceList() {
               <TableHead>{t.invoicesMod.invoiceID}</TableHead>
               <TableHead>{t.jobcards.customer}</TableHead>
               <TableHead>{t.jobcards.vehicle}</TableHead>
+              <TableHead>Created By</TableHead>
               <TableHead>{t.invoicesMod.amount}</TableHead>
               <TableHead>{t.common.status}</TableHead>
               <TableHead className="text-right">{t.common.actions}</TableHead>
@@ -92,15 +93,16 @@ export function InvoiceList() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
             ) : data?.data.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center h-24">{t.invoicesMod.noInvoices}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center h-24">{t.invoicesMod.noInvoices}</TableCell></TableRow>
             ) : (
               data?.data.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell className="font-medium">{invoice.id.split('-')[0].toUpperCase()}</TableCell>
                   <TableCell>{invoice.customer?.name}</TableCell>
                   <TableCell>{invoice.jobCard?.vehicle?.plateNumber}</TableCell>
+                  <TableCell className="text-sm font-medium text-muted-foreground">{invoice.createdBy || "Admin"}</TableCell>
                   <TableCell>{invoice.grandTotal.toFixed(3)} OMR</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${

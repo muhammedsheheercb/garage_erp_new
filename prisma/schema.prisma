@@ -115,6 +115,7 @@ model JobCard {
   estimatedCost      Float?
   expectedFinishDate DateTime?
   notes              String?
+  createdBy          String?
   customerId         String
   customer           Customer         @relation(fields: [customerId], references: [id])
   vehicleId          String
@@ -187,6 +188,7 @@ model Invoice {
   servicesDetails String? // Text to store services details
   partsDetails    String? // Text or JSON string to store parts used
   status          String    @default("UNPAID") // UNPAID, PARTIAL, PAID
+  createdBy       String?
   customerId      String
   customer        Customer  @relation(fields: [customerId], references: [id])
   jobCardId       String    @unique
@@ -203,6 +205,7 @@ model Payment {
   id        String   @id @default(uuid())
   amount    Float
   method    String // CASH, CARD, TRANSFER
+  createdBy String?
   invoiceId String
   invoice   Invoice  @relation(fields: [invoiceId], references: [id])
   createdAt DateTime @default(now())
@@ -263,6 +266,7 @@ model Expense {
   paidAmount    Float     @default(0)
   pendingAmount Float     @default(0)
   paymentMethod String    @default("CASH") // CASH, CARD, TRANSFER, PAYMETER
+  createdBy     String?
   paymeterId    String?
   paymeter      Paymeter? @relation(fields: [paymeterId], references: [id])
   createdAt     DateTime  @default(now())
@@ -333,6 +337,7 @@ model Purchase {
   paidAmount       Float             @default(0)
   pendingAmount    Float             @default(0)
   paymeterReimbursed Float             @default(0)
+  createdBy        String?
   items            PurchaseItem[]
   batches          InventoryBatch[]
   purchasePayments PurchasePayment[]

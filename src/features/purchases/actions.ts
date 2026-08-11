@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 import { PurchaseFormValues, purchaseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
+import { getCreatorName } from "@/lib/authorization"
 
 const directPaymentNames = {
   CASH: "Direct Cash",
@@ -156,6 +157,7 @@ export async function createPurchase(data: PurchaseFormValues) {
   }
 
   const purchaseNumber = await getNextPurchaseNumber()
+  const creatorName = await getCreatorName()
 
   const result = await prisma.$transaction(async (tx) => {
     const selectedPaymentMethodId = paymentMethodId || await getDirectPaymeterId(tx, parsed.directPaymentMethod!)
@@ -175,6 +177,7 @@ export async function createPurchase(data: PurchaseFormValues) {
         grandTotal,
         paidAmount: parsed.paidAmount,
         pendingAmount,
+        createdBy: creatorName,
         items: {
           create: itemsData
         }
