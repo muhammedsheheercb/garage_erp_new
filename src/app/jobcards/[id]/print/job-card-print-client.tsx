@@ -207,18 +207,18 @@ export function JobCardPrintClient({ job }: { job: any }) {
                     ? "الوصف / الخدمة / القطعة"
                     : "Description / Service / Part"}
                 </th>
-                <th className="p-2.5 border-r border-gray-300 w-20 text-center">
+                <th className="p-2.5 border-r border-gray-300 w-16 text-center">
                   {t.invoicesMod?.qty || "Qty"}
                 </th>
                 <th
-                  className={`p-2.5 border-r border-gray-300 w-28 ${
+                  className={`p-2.5 border-r border-gray-300 w-36 ${
                     isRTL ? "text-left" : "text-right"
                   }`}
                 >
                   {isRTL ? "سعر الوحدة" : "Unit Price"}
                 </th>
                 <th
-                  className={`p-2.5 ${isRTL ? "text-left" : "text-right"} w-28`}
+                  className={`p-2.5 ${isRTL ? "text-left" : "text-right"} w-36`}
                 >
                   {t.invoicesMod?.amount || "Total"}
                 </th>
@@ -247,7 +247,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
                     className={`p-2.5 border-r border-gray-200 ${isRTL ? "text-left" : "text-right"}`}
                   >
                     {job.estimatedCost ? (
-                      <Currency amount={job.estimatedCost} />
+                      <Currency amount={job.estimatedCost} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
                     ) : (
                       "-"
                     )}
@@ -256,7 +256,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
                     className={`p-2.5 font-medium ${isRTL ? "text-left" : "text-right"}`}
                   >
                     {job.estimatedCost ? (
-                      <Currency amount={job.estimatedCost} />
+                      <Currency amount={job.estimatedCost} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
                     ) : (
                       "-"
                     )}
@@ -286,13 +286,14 @@ export function JobCardPrintClient({ job }: { job: any }) {
                     <td
                       className={`p-2.5 border-r border-gray-200 ${isRTL ? "text-left" : "text-right"}`}
                     >
-                      <Currency amount={item.price || 0} />
+                      <Currency amount={item.price || 0} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
                     </td>
                     <td
                       className={`p-2.5 font-medium ${isRTL ? "text-left" : "text-right"}`}
                     >
                       <Currency
                         amount={(item.price || 0) * (item.quantity || 1)}
+                        className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`}
                       />
                     </td>
                   </tr>
@@ -331,13 +332,14 @@ export function JobCardPrintClient({ job }: { job: any }) {
                     <td
                       className={`p-2.5 border-r border-gray-200 ${isRTL ? "text-left" : "text-right"}`}
                     >
-                      <Currency amount={item.price || 0} />
+                      <Currency amount={item.price || 0} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
                     </td>
                     <td
                       className={`p-2.5 font-medium ${isRTL ? "text-left" : "text-right"}`}
                     >
                       <Currency
                         amount={(item.price || 0) * (item.quantity || 1)}
+                        className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`}
                       />
                     </td>
                   </tr>
@@ -362,12 +364,38 @@ export function JobCardPrintClient({ job }: { job: any }) {
                     colSpan={4}
                     className={`p-2.5 border-r border-gray-300 ${isRTL ? "text-left" : "text-right"}`}
                   >
-                    {isRTL ? "الإجمالي:" : "Total Amount:"}
+                    {isRTL ? "الإجمالي الكلي:" : "Grand Total:"}
                   </td>
                   <td className={`p-2.5 ${isRTL ? "text-left" : "text-right"}`}>
-                    <Currency amount={grandTotal} />
+                    <Currency amount={grandTotal} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
                   </td>
                 </tr>
+                {job.advancePaid > 0 && (
+                  <>
+                    <tr className="bg-gray-50 font-bold border-t border-gray-200 text-xs text-green-700">
+                      <td
+                        colSpan={4}
+                        className={`p-2.5 border-r border-gray-300 ${isRTL ? "text-left" : "text-right"}`}
+                      >
+                        {isRTL ? "المبلغ الدفعة المقدمة:" : "Advance Amount Paid:"}
+                      </td>
+                      <td className={`p-2.5 ${isRTL ? "text-left" : "text-right"}`}>
+                        <Currency amount={job.advancePaid} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
+                      </td>
+                    </tr>
+                    <tr className="bg-gray-100 font-bold border-t border-gray-300 text-xs text-red-700">
+                      <td
+                        colSpan={4}
+                        className={`p-2.5 border-r border-gray-300 ${isRTL ? "text-left" : "text-right"}`}
+                      >
+                        {isRTL ? "المبلغ المتبقي:" : "Balance Amount:"}
+                      </td>
+                      <td className={`p-2.5 ${isRTL ? "text-left" : "text-right"}`}>
+                        <Currency amount={Math.max(0, grandTotal - job.advancePaid)} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
+                      </td>
+                    </tr>
+                  </>
+                )}
               </tfoot>
             )}
           </table>

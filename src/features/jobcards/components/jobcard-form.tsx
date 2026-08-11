@@ -114,6 +114,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
       discount: initialData?.discount || 0,
       tax: initialData?.tax || 0,
       grandTotal: initialData?.grandTotal || 0,
+      advancePaid: initialData?.advancePaid || 0,
     },
   });
 
@@ -268,6 +269,8 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const serviceTotal = watch("serviceTotal");
   const partsTotal = watch("partsTotal");
   const grandTotal = watch("grandTotal");
+  const advancePaid = watch("advancePaid") || 0;
+  const balanceAmount = Math.max(0, grandTotal - advancePaid);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -967,10 +970,44 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="advancePaid">{t.jobcards.advancePaid}</Label>
+                <Input
+                  id="advancePaid"
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  className="w-24 h-8 text-right"
+                  {...register("advancePaid", {
+                    valueAsNumber: true,
+                    onChange: (e) => {
+                      const val = parseFloat(e.target.value);
+                      if (isNaN(val) || val < 0) {
+                        setValue("advancePaid", 0);
+                      }
+                    },
+                  })}
+                />
+              </div>
+              {errors.advancePaid && (
+                <p className="text-xs text-destructive text-right">
+                  {errors.advancePaid.message}
+                </p>
+              )}
+            </div>
+
             <div className="flex justify-between items-center pt-4 border-t font-bold text-lg">
               <span>{t.invoicesMod.grandTotal}:</span>
               <span>{grandTotal.toFixed(3)} OMR</span>
             </div>
+
+            {advancePaid > 0 && (
+              <div className="flex justify-between items-center font-semibold text-base text-primary">
+                <span>{t.jobcards.balanceAmount}:</span>
+                <span>{balanceAmount.toFixed(3)} OMR</span>
+              </div>
+            )}
 
             <Button
               type="submit"

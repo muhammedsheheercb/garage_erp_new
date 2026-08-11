@@ -185,6 +185,7 @@ export async function createJobCard(data: JobCardFormValues) {
       discount: parsed.discount,
       tax: parsed.tax,
       grandTotal: parsed.grandTotal,
+      advancePaid: parsed.advancePaid,
       
       services: {
         create: parsed.services.map(s => ({
@@ -250,6 +251,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
         discount: parsed.discount,
         tax: parsed.tax,
         grandTotal: parsed.grandTotal,
+        advancePaid: parsed.advancePaid,
         
         services: {
           create: parsed.services.map(s => ({

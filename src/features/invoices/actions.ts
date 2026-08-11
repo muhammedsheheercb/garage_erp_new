@@ -97,6 +97,7 @@ export async function createInvoice(data: InvoiceFormValues) {
       customerId: true,
       serviceTotal: true,
       partsTotal: true,
+      advancePaid: true,
     },
   })
 
@@ -106,6 +107,7 @@ export async function createInvoice(data: InvoiceFormValues) {
 
   const serviceCharge = jobCard.serviceTotal ?? 0
   const partsCost = jobCard.partsTotal ?? 0
+  const advancePaid = jobCard.advancePaid ?? 0
   
   let otherAmountSum = 0
   if (parsed.otherCharges) {
@@ -123,6 +125,8 @@ export async function createInvoice(data: InvoiceFormValues) {
   const totalBeforeTax = subTotal - parsed.discount;
   const grandTotal = totalBeforeTax + parsed.tax;
 
+  const initialStatus = advancePaid >= grandTotal ? "PAID" : advancePaid > 0 ? "PARTIAL" : "UNPAID";
+
   const invoice = await prisma.invoice.create({
     data: {
       jobCardId: parsed.jobCardId,
@@ -138,7 +142,13 @@ export async function createInvoice(data: InvoiceFormValues) {
       servicesDetails: parsed.servicesDetails,
       partsDetails: parsed.partsDetails,
       otherCharges: parsed.otherCharges,
-      status: "UNPAID",
+      status: initialStatus,
+      payments: advancePaid > 0 ? {
+        create: {
+          amount: Math.min(advancePaid, grandTotal),
+          method: "CASH",
+        }
+      } : undefined,
     }
   })
   

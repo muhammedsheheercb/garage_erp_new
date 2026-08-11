@@ -500,6 +500,18 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
           <span>{t.invoicesMod.grandTotal}:</span>
           <span>{grandTotal.toFixed(3)} OMR</span>
         </div>
+        {(selectedJobCardDetails?.advancePaid ?? 0) > 0 && (
+          <>
+            <div className="flex justify-between text-green-700 font-medium text-sm">
+              <span>{t.jobcards.advancePaid}:</span>
+              <span>-{(selectedJobCardDetails?.advancePaid ?? 0).toFixed(3)} OMR</span>
+            </div>
+            <div className="flex justify-between font-bold text-base text-primary border-t pt-1 border-border">
+              <span>{t.jobcards.balanceAmount}:</span>
+              <span>{Math.max(0, grandTotal - (selectedJobCardDetails?.advancePaid ?? 0)).toFixed(3)} OMR</span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex justify-end gap-2 pt-4">

@@ -130,6 +130,7 @@ model JobCard {
   discount     Float @default(0)
   tax          Float @default(0)
   grandTotal   Float @default(0)
+  advancePaid  Float @default(0)
 
   invoice   Invoice?
   createdAt DateTime @default(now())
