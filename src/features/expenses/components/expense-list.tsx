@@ -61,6 +61,8 @@ import { usePermissions } from "@/lib/use-permissions";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 
+import { useSearchParams } from "next/navigation";
+
 const getCategoryTranslationKey = (category: string): string => {
   const keyMap: Record<string, string> = {
     Rent: "categoryRent",
@@ -79,12 +81,24 @@ const getTranslatedCategory = (t: any, category: string): string => {
 
 export function ExpenseList() {
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
+  const paramFrom = searchParams.get("from");
+  const paramTo = searchParams.get("to");
+
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
   const { can } = usePermissions();
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (paramFrom) {
+      return {
+        from: new Date(paramFrom),
+        to: paramTo ? new Date(paramTo) : new Date(paramFrom),
+      };
+    }
+    return undefined;
+  });
 
   const currentDate = new Date();
   const [reportYear, setReportYear] = useState(currentDate.getFullYear());

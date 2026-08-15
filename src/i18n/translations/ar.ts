@@ -280,7 +280,7 @@ export const ar: TranslationKeys = {
     createJobCard: "إنشاء بطاقة عمل",
     newJobCard: "بطاقة عمل جديدة",
     vehicleCustomer: "المركبة / العميل",
-    complaint: "الشكوى",
+    complaint: "الخدمة",
     statusMechanic: "الحالة / الفني",
     estCost: "التكلفة المتوقعة",
     unassigned: "غير معيّن",

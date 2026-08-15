@@ -19,6 +19,8 @@ import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
 import { formatDisplayDate } from "@/lib/date-format"
 
+import { useSearchParams } from "next/navigation"
+
 function Pagination({ page, setPage, total, limit }: { page: number, setPage: (p: number) => void, total: number, limit: number }) {
   const totalPages = Math.ceil(total / limit)
   if (totalPages <= 1) return null
@@ -36,6 +38,9 @@ function Pagination({ page, setPage, total, limit }: { page: number, setPage: (p
 }
 
 export function PaymeterList() {
+  const searchParams = useSearchParams()
+  const paramFrom = searchParams.get("from")
+  const paramTo = searchParams.get("to")
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -45,7 +50,15 @@ export function PaymeterList() {
   const [paymeterPage, setPaymeterPage] = useState(1)
   const [search, setSearch] = useState("")
 
-  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (paramFrom) {
+      return {
+        from: new Date(paramFrom),
+        to: paramTo ? new Date(paramTo) : new Date(paramFrom)
+      }
+    }
+    return undefined
+  })
 
   const [pursePurchasesPage, setPursePurchasesPage] = useState(1)
   const [purseExpensesPage, setPurseExpensesPage] = useState(1)

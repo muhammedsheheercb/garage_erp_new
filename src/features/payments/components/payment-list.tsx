@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Search, Plus, FileText, ChevronLeft, ChevronRight, CreditCard, Banknote, Building, Wallet } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { PaymentForm } from "./payment-form"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { useTranslation } from "@/i18n"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
@@ -19,6 +19,9 @@ import { formatDisplayDate } from "@/lib/date-format"
 
 export function PaymentList() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const paramFrom = searchParams.get("from")
+  const paramTo = searchParams.get("to")
   const { t } = useTranslation()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
@@ -27,7 +30,15 @@ export function PaymentList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"history" | "pending">("history")
-  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (paramFrom) {
+      return {
+        from: new Date(paramFrom),
+        to: paramTo ? new Date(paramTo) : new Date(paramFrom)
+      }
+    }
+    return undefined
+  })
   const paymentMethodLabels: Record<string, string> = {
     CASH: t.payments.cash,
     CARD: t.payments.card,

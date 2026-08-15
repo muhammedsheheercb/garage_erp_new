@@ -16,8 +16,12 @@ import { formatDisplayDate } from "@/lib/date-format"
 import { useTranslation } from "@/i18n"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
+import { useSearchParams } from "next/navigation"
 
 export function PurchaseList() {
+  const searchParams = useSearchParams()
+  const paramFrom = searchParams.get("from")
+  const paramTo = searchParams.get("to")
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const [page, setPage] = useState(1)
@@ -25,7 +29,15 @@ export function PurchaseList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [viewingPurchase, setViewingPurchase] = useState<any>(null)
   const [editingPurchase, setEditingPurchase] = useState<any>(null)
-  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (paramFrom) {
+      return {
+        from: new Date(paramFrom),
+        to: paramTo ? new Date(paramTo) : new Date(paramFrom)
+      }
+    }
+    return undefined
+  })
 
   const fromDateStr = dateRange?.from?.toISOString()
   const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined

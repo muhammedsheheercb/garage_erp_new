@@ -455,6 +455,111 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
   }
 }
 
+export async function getReportsDashboardDetails(fromDate?: string, toDate?: string) {
+  let dateFilter: any = {}
+  
+  if (fromDate || toDate) {
+    const start = fromDate ? new Date(fromDate) : new Date(toDate!)
+    const end = toDate ? new Date(toDate) : new Date(fromDate!)
+    dateFilter.gte = start
+    dateFilter.lte = endOfDay(end)
+  }
+
+  const [incomeList, expenseList, purchaseList, paymeterExpensesList, paymeterPaymentsList] = await Promise.all([
+    prisma.payment.findMany({
+      where: { createdAt: dateFilter },
+      include: {
+        invoice: {
+          include: { customer: true, jobCard: { include: { vehicle: true } } }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.expense.findMany({
+      where: { date: dateFilter },
+      include: { paymeter: true },
+      orderBy: { date: 'desc' }
+    }),
+    prisma.purchase.findMany({
+      where: { createdAt: dateFilter },
+      include: { supplier: true, paymentMethod: true },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.expense.findMany({
+      where: { date: dateFilter, paymeterId: { not: null } },
+      include: { paymeter: true },
+      orderBy: { date: 'desc' }
+    }),
+    prisma.purchasePayment.findMany({
+      where: { date: dateFilter },
+      include: { paymeter: true, purchase: { select: { purchaseNumber: true } } },
+      orderBy: { date: 'desc' }
+    })
+  ])
+
+  const incomeDetails = incomeList.map(p => ({
+    id: p.id,
+    date: formatDisplayDate(p.createdAt, true),
+    amount: p.amount,
+    method: p.method,
+    customer: p.invoice.customer.name,
+    vehicle: p.invoice.jobCard?.vehicle?.plateNumber || '-',
+    invoice: `INV-${p.invoice.id.split('-')[0].toUpperCase()}`,
+    createdBy: p.createdBy || 'Admin'
+  }))
+
+  const expenseDetails = expenseList.map(e => ({
+    id: e.id,
+    date: formatDisplayDate(e.date),
+    category: e.category,
+    description: e.description || '-',
+    source: e.paymeter?.name || e.paymentMethod,
+    amount: e.amount,
+    createdBy: e.createdBy || 'Admin'
+  }))
+
+  const purchaseDetails = purchaseList.map(p => ({
+    id: p.id,
+    purchaseNumber: p.purchaseNumber,
+    date: formatDisplayDate(p.createdAt),
+    supplier: p.supplier.name,
+    method: p.paymentMethod?.name || 'Unknown',
+    grandTotal: p.grandTotal,
+    paidAmount: p.paidAmount,
+    pendingAmount: p.pendingAmount,
+    status: p.pendingAmount === 0 ? 'PAID' : (p.paidAmount > 0 ? 'PARTIAL' : 'UNPAID'),
+    createdBy: p.createdBy || 'Admin'
+  }))
+
+  const paymeterDetails = [
+    ...paymeterExpensesList.map((e) => ({
+      id: `exp-${e.id}`,
+      date: formatDisplayDate(e.date),
+      paymeter: e.paymeter?.name || 'Unknown',
+      type: 'Expense',
+      reference: e.category,
+      amount: e.amount,
+      createdBy: e.createdBy || 'Admin'
+    })),
+    ...paymeterPaymentsList.map((pp) => ({
+      id: `pp-${pp.id}`,
+      date: formatDisplayDate(pp.date),
+      paymeter: pp.paymeter.name,
+      type: 'Purchase Payment',
+      reference: pp.purchase.purchaseNumber,
+      amount: pp.amount,
+      createdBy: 'Admin'
+    }))
+  ]
+
+  return {
+    incomeDetails,
+    expenseDetails,
+    purchaseDetails,
+    paymeterDetails
+  }
+}
+
 export async function getPaymeterReportTransactions(fromDate?: string, toDate?: string) {
   const dateFilter: any = {}
   if (fromDate || toDate) {
