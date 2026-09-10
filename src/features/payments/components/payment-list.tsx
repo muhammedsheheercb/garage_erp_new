@@ -185,7 +185,7 @@ export function PaymentList() {
                         {payment.createdBy || "Admin"}
                       </TableCell>
                       <TableCell className="text-right font-medium text-green-600">
-                        +{payment.amount.toFixed(3)}
+                        +{Math.round(payment.amount)}
                       </TableCell>
                     </TableRow>
                   ))
@@ -255,15 +255,15 @@ export function PaymentList() {
                     <div className="space-y-1 text-sm mb-6">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t.payments.total}:</span>
-                        <span>{inv.grandTotal.toFixed(3)} OMR</span>
+                        <span>{Math.round(inv.grandTotal)} OMR</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t.payments.paid}:</span>
-                        <span className="text-green-600">{paidAmount.toFixed(3)} OMR</span>
+                        <span className="text-green-600">{Math.round(paidAmount)} OMR</span>
                       </div>
                       <div className="flex justify-between font-bold border-t pt-1 mt-1">
                         <span>{t.payments.due}:</span>
-                        <span className="text-destructive">{due.toFixed(3)} OMR</span>
+                        <span className="text-destructive">{Math.round(due)} OMR</span>
                       </div>
                     </div>
                   </div>

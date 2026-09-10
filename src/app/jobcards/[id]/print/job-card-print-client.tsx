@@ -3,6 +3,7 @@
 import { useTranslation } from "@/i18n";
 import { Currency } from "@/components/currency";
 import { PrintButton } from "./print-button";
+import { formatDisplayDate } from "@/lib/date-format";
 import { useEffect, useSyncExternalStore } from "react";
 
 export function JobCardPrintClient({ job }: { job: any }) {
@@ -32,7 +33,13 @@ export function JobCardPrintClient({ job }: { job: any }) {
     (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1),
     0,
   );
-  const grandTotal = servicesTotal + partsTotal + (job.estimatedCost || 0);
+  const subTotal = servicesTotal + partsTotal + (job.estimatedCost || 0);
+  const discountAmount = Math.round(job.discount || 0);
+  const taxRate = job.tax || 0;
+  const taxableAmount = Math.max(0, subTotal - discountAmount);
+  const taxAmount = Math.round((taxableAmount * taxRate) / 100);
+  const grandTotal = Math.round(Math.max(0, subTotal + taxAmount - discountAmount));
+  const jobDate = formatDisplayDate(job.date || job.createdAt);
 
   return (
     <div
@@ -93,6 +100,11 @@ export function JobCardPrintClient({ job }: { job: any }) {
             font-size: 18px !important;
             font-weight: 800 !important;
           }
+          .print-container .print-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+          }
           .print-container .bg-gray-50 {
             background-color: #e5e7eb !important;
           }
@@ -133,8 +145,12 @@ export function JobCardPrintClient({ job }: { job: any }) {
 
         {/* Customer & Vehicle Info Header Table */}
         <div className="mb-6 border border-gray-300 rounded-md overflow-hidden">
-          <div className="print-header bg-gray-100 px-4 py-2 font-bold text-sm text-gray-800 border-b border-gray-300 uppercase tracking-wider text-center">
-            {t.jobcards.title || "Job Card"}
+          <div className="print-header bg-gray-100 px-4 py-2 font-bold text-sm text-gray-800 border-b border-gray-300 uppercase tracking-wider flex justify-between items-center">
+            <span>{t.jobcards.title || "Job Card"}</span>
+            <span className="text-xs font-semibold">
+              {isRTL ? "التاريخ: " : "Date: "}
+              {jobDate}
+            </span>
           </div>
           <table
             className="print-info-table w-full text-xs text-left"
@@ -155,7 +171,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
                   {job.vehicle?.brand} {job.vehicle?.model}
                 </td>
               </tr>
-              <tr className="border-b border-gray-200">
+              <tr className={job.complaint ? "border-b border-gray-200" : ""}>
                 <td className="p-2.5 font-bold bg-gray-50 border-r border-gray-200">
                   {isRTL ? "رقم الهاتف" : "Phone"}
                 </td>
@@ -359,7 +375,52 @@ export function JobCardPrintClient({ job }: { job: any }) {
             </tbody>
             {grandTotal > 0 && (
               <tfoot>
-                <tr className="bg-gray-50 font-bold border-t border-gray-300 text-xs">
+                {(taxRate > 0 || discountAmount > 0) && (
+                  <tr className="bg-gray-50 border-t border-gray-300 text-xs">
+                    <td
+                      colSpan={4}
+                      className={`p-2.5 border-r border-gray-300 font-semibold ${isRTL ? "text-left" : "text-right"}`}
+                    >
+                      {isRTL ? "المجموع الفرعي:" : "Subtotal:"}
+                    </td>
+                    <td className={`p-2.5 font-semibold ${isRTL ? "text-left" : "text-right"}`}>
+                      <Currency amount={subTotal} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
+                    </td>
+                  </tr>
+                )}
+                {discountAmount > 0 && (
+                  <tr className="bg-gray-50 border-t border-gray-200 text-xs text-red-600">
+                    <td
+                      colSpan={4}
+                      className={`p-2.5 border-r border-gray-300 font-semibold ${isRTL ? "text-left" : "text-right"}`}
+                    >
+                      {isRTL ? "الخصم:" : "Discount:"}
+                    </td>
+                    <td className={`p-2.5 font-semibold ${isRTL ? "text-left" : "text-right"}`}>
+                      <div className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`}>
+                        <span>-</span>
+                        <Currency amount={discountAmount} className="flex items-center gap-1" />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {taxRate > 0 && (
+                  <tr className="bg-gray-50 border-t border-gray-200 text-xs text-gray-800">
+                    <td
+                      colSpan={4}
+                      className={`p-2.5 border-r border-gray-300 font-semibold ${isRTL ? "text-left" : "text-right"}`}
+                    >
+                      {isRTL ? "الضريبة" : "Tax"} ({taxRate}%):
+                    </td>
+                    <td className={`p-2.5 font-semibold ${isRTL ? "text-left" : "text-right"}`}>
+                      <div className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`}>
+                        <span>+</span>
+                        <Currency amount={taxAmount} className="flex items-center gap-1" />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                <tr className="bg-gray-100 font-bold border-t border-gray-300 text-xs">
                   <td
                     colSpan={4}
                     className={`p-2.5 border-r border-gray-300 ${isRTL ? "text-left" : "text-right"}`}
@@ -380,7 +441,10 @@ export function JobCardPrintClient({ job }: { job: any }) {
                         {isRTL ? "المبلغ الدفعة المقدمة:" : "Advance Amount Paid:"}
                       </td>
                       <td className={`p-2.5 ${isRTL ? "text-left" : "text-right"}`}>
-                        <Currency amount={job.advancePaid} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
+                        <div className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`}>
+                          <span>-</span>
+                          <Currency amount={job.advancePaid} className="flex items-center gap-1" />
+                        </div>
                       </td>
                     </tr>
                     <tr className="bg-gray-100 font-bold border-t border-gray-300 text-xs text-red-700">

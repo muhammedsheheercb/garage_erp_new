@@ -5,6 +5,7 @@ export const purchaseItemSchema = z.object({
   quantity: z.number().finite("Quantity is required").int("Quantity must be a whole number").min(1, "Quantity must be at least 1"),
   purchasePrice: z.number().finite("Purchase price is required").min(0, "Purchase price cannot be negative"),
   sellingPrice: z.number().finite("Selling price is required").min(0, "Selling price cannot be negative"),
+  taxRate: z.number().finite("Tax rate must be a valid number").min(0, "Tax rate cannot be negative"),
 })
 
 export const purchaseSchema = z.object({
@@ -28,6 +29,21 @@ export const purchaseSchema = z.object({
   }
   if (data.purchaseType === "VEHICLE" && !data.jobCardId) {
     ctx.addIssue({ code: "custom", path: ["jobCardId"], message: "Select a Job Card for vehicle purchase" })
+  }
+
+  const subTotal = (data.items || []).reduce((acc, it) => acc + Math.round((it.quantity || 0) * (it.purchasePrice || 0)), 0)
+  const totalTax = (data.items || []).reduce((acc, it) => {
+    const itemAmount = Math.round((it.quantity || 0) * (it.purchasePrice || 0))
+    const taxRate = Number(it.taxRate) || 0
+    return acc + Math.round((itemAmount * taxRate) / 100)
+  }, 0)
+  const grandTotal = Math.round(Math.max(0, subTotal + totalTax - (data.discount || 0)))
+
+  if (data.discount > subTotal) {
+    ctx.addIssue({ code: "custom", path: ["discount"], message: "Discount cannot exceed the purchase subtotal" })
+  }
+  if (data.paidAmount > grandTotal) {
+    ctx.addIssue({ code: "custom", path: ["paidAmount"], message: "Paid amount cannot exceed Grand Total" })
   }
 })
 

@@ -59,7 +59,8 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
         inventoryId: item.inventoryId,
         quantity: item.quantity,
         purchasePrice: item.purchasePrice,
-        sellingPrice: item.sellingPrice
+        sellingPrice: item.sellingPrice,
+        taxRate: item.taxRate ?? (activeTaxRate || 0)
       }))
     } : {
       purchaseDate: new Date().toISOString().split('T')[0],
@@ -71,7 +72,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
       directPaymentMethod: undefined,
       discount: 0,
       paidAmount: 0,
-      items: [{ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0 }]
+      items: [{ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0, taxRate: activeTaxRate || 0 }]
     }
   })
 
@@ -126,15 +127,23 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const paidVal = watch("paidAmount") || 0
   const paymentSource = watch("paymentSource")
 
-  const subTotal = items.reduce((acc, item) => {
-    const qty = Number(item.quantity) || 0
-    const price = Number(item.purchasePrice) || 0
-    return acc + (qty * price)
-  }, 0)
+  const subTotal = Math.round(items.reduce((acc, item) => {
+    const qty = Number(item?.quantity) || 0
+    const price = Number(item?.purchasePrice) || 0
+    return acc + Math.round(qty * price)
+  }, 0))
 
-  const taxAmount = (subTotal - discountVal) * (activeTaxRate / 100)
-  const grandTotal = Math.max(0, subTotal + taxAmount - discountVal)
-  const pendingAmount = Math.max(0, grandTotal - paidVal)
+  const totalTax = Math.round(items.reduce((acc, item) => {
+    const qty = Number(item?.quantity) || 0
+    const price = Number(item?.purchasePrice) || 0
+    const prodAmt = Math.round(qty * price)
+    const rate = Math.max(0, Number(item?.taxRate) || 0)
+    return acc + Math.round((prodAmt * rate) / 100)
+  }, 0))
+
+  const grandTotal = Math.round(Math.max(0, subTotal + totalTax - discountVal))
+  const pendingAmount = Math.round(Math.max(0, grandTotal - paidVal))
+  const isPaidExceeded = paidVal > grandTotal
 
   const updateJobCardPickerPosition = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect()
@@ -443,29 +452,35 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
             type="button" 
             variant="outline" 
             size="sm"
-            onClick={() => append({ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0 })}
+            onClick={() => append({ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0, taxRate: activeTaxRate || 0 })}
           >
             <Plus className="mr-1 h-4 w-4" /> {t.purchases.addItem}
           </Button>
         </div>
 
-        <div className="border rounded-md overflow-visible bg-card">
-          <Table>
+        <div className="border rounded-md overflow-x-auto bg-card">
+          <Table className="min-w-[760px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[30%]">{t.purchases.itemPart}</TableHead>
-                <TableHead className="w-[15%]">{t.invoicesMod.qty}</TableHead>
-                <TableHead className="w-[20%]">{t.purchases.purchasePrice} (OMR)</TableHead>
-                <TableHead className="w-[20%]">{t.purchases.sellingPrice} (OMR)</TableHead>
-                <TableHead className="w-[10%]">{t.purchases.totalAmount}</TableHead>
-                <TableHead className="w-[5%] text-right"></TableHead>
+                <TableHead className="w-[22%]">{t.purchases.itemPart}</TableHead>
+                <TableHead className="w-[8%]">{t.invoicesMod.qty}</TableHead>
+                <TableHead className="w-[12%]">{t.purchases.purchasePrice} (OMR)</TableHead>
+                <TableHead className="w-[12%]">{t.purchases.sellingPrice} (OMR)</TableHead>
+                <TableHead className="w-[11%] text-right">{t.purchases.productAmount || "Amount"}</TableHead>
+                <TableHead className="w-[10%] text-center">{t.purchases.taxRate || "Tax %"}</TableHead>
+                <TableHead className="w-[11%] text-right">{t.purchases.taxAmount || "Tax Amount"}</TableHead>
+                <TableHead className="w-[10%] text-right">{t.purchases.totalAmount}</TableHead>
+                <TableHead className="w-[4%] text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {fields.map((field, index) => {
                 const itemQty = watch(`items.${index}.quantity`) || 0
                 const itemPrice = watch(`items.${index}.purchasePrice`) || 0
-                const rowTotal = itemQty * itemPrice
+                const itemTaxRate = watch(`items.${index}.taxRate`) ?? (activeTaxRate || 0)
+                const productAmount = Math.round(itemQty * itemPrice)
+                const itemTaxAmount = Math.round((productAmount * (Number(itemTaxRate) || 0)) / 100)
+                const rowTotal = productAmount + itemTaxAmount
 
                 return (
                   <TableRow key={field.id}>
@@ -482,7 +497,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                           }) || []
 
                           return (
-                            <div className="relative min-w-[190px]">
+                            <div className="relative min-w-[170px]">
                               <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                               <Input
                                 value={openItemPicker === field.id ? search : (selectedInv?.itemName || "")}
@@ -519,17 +534,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                               {(selectedInv || search) && (
                                 <button
                                   type="button"
-                                  aria-label="Clear selected item"
-                                  className="absolute right-2 top-1.5 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                  onMouseDown={(event) => event.preventDefault()}
-                                  onClick={(event) => {
-                                    const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null
+                                  className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                                  onClick={() => {
                                     selectField.onChange("")
-                                    setValue(`items.${index}.purchasePrice`, 0)
-                                    setValue(`items.${index}.sellingPrice`, 0)
                                     setItemSearches((current) => ({ ...current, [field.id]: "" }))
                                     setOpenItemPicker(field.id)
-                                    if (input) updateItemPickerPosition(input)
                                   }}
                                 >
                                   <X className="h-4 w-4" />
@@ -537,19 +546,15 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                               )}
                               {openItemPicker === field.id && itemPickerPosition && typeof document !== "undefined" ? createPortal(
                                 <div
-                                  className="fixed z-[100] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg"
-                                  style={itemPickerPosition ? {
-                                    top: itemPickerPosition.top,
-                                    left: itemPickerPosition.left,
-                                    width: itemPickerPosition.width,
-                                  } : undefined}
+                                  className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+                                  style={{ top: itemPickerPosition.top, left: itemPickerPosition.left, width: itemPickerPosition.width }}
                                 >
-                                  <div className="max-h-56 overflow-y-auto p-1">
+                                  <div className="space-y-1">
                                     {filteredInventory.length > 0 ? filteredInventory.map((inv: any) => (
                                       <button
                                         key={inv.id}
                                         type="button"
-                                        className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                                        className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent focus:bg-accent"
                                         onMouseDown={(event) => event.preventDefault()}
                                         onClick={() => {
                                           selectField.onChange(inv.id)
@@ -564,7 +569,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                                           <span className="block truncate font-medium">{inv.itemName}</span>
                                           <span className="block text-xs text-muted-foreground">{inv.partNumber}</span>
                                         </span>
-                                        {selectedInv?.id === inv.id && <Check className="ml-3 h-4 w-4 shrink-0 text-primary" />}
+                                        {selectField.value === inv.id && <Check className="ml-3 h-4 w-4 shrink-0 text-primary" />}
                                       </button>
                                     )) : (
                                       <p className="px-3 py-4 text-center text-sm text-muted-foreground">No matching items found.</p>
@@ -606,8 +611,26 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                       />
                     </TableCell>
 
-                    <TableCell className="font-semibold text-sm">
-                      {rowTotal.toFixed(3)}
+                    <TableCell className="font-medium text-sm text-right">
+                      {productAmount}
+                    </TableCell>
+
+                    <TableCell>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        min="0"
+                        className="w-20 text-right mx-auto"
+                        {...register(`items.${index}.taxRate` as const, { valueAsNumber: true })} 
+                      />
+                    </TableCell>
+
+                    <TableCell className="font-medium text-sm text-foreground text-right">
+                      +{itemTaxAmount}
+                    </TableCell>
+
+                    <TableCell className="font-semibold text-sm text-right">
+                      {rowTotal}
                     </TableCell>
 
                     <TableCell className="text-right">
@@ -651,12 +674,17 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
               <Input 
                 id="paidAmount" 
                 type="number" 
-                step="0.001"
-                min="0"
+                step="0.001" 
+                min="0" 
                 max={grandTotal}
+                className={isPaidExceeded || errors.paidAmount ? "border-destructive focus-visible:ring-destructive" : ""}
                 {...register("paidAmount", { valueAsNumber: true })} 
               />
-              {errors.paidAmount && <p className="text-sm text-destructive">{errors.paidAmount.message}</p>}
+              {(errors.paidAmount || isPaidExceeded) && (
+                <p className="text-sm text-destructive">
+                  {errors.paidAmount?.message || t.purchases?.paidExceedsGrand || "Paid amount cannot exceed Grand Total"}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -664,39 +692,41 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
         <div className="bg-muted/30 p-4 rounded-lg space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{t.invoicesMod.subTotal}:</span>
-            <span className="font-medium">{subTotal.toFixed(3)} OMR</span>
+            <span className="font-medium">{Math.round(subTotal)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{t.invoicesMod.discount}:</span>
-            <span className="font-medium">-{discountVal.toFixed(3)} OMR</span>
+            <span className="text-muted-foreground">{t.purchases?.totalTax || "Total Tax"}:</span>
+            <span className="font-medium">+{Math.round(totalTax)} OMR</span>
           </div>
 
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{t.invoicesMod.tax} ({activeTaxName} {activeTaxRate}%):</span>
-            <span className="font-medium">+{taxAmount.toFixed(3)} OMR</span>
-          </div>
+          {discountVal > 0 && (
+            <div className="flex justify-between text-sm text-red-600">
+              <span className="text-muted-foreground">{t.invoicesMod.discount}:</span>
+              <span className="font-medium">-{Math.round(discountVal)} OMR</span>
+            </div>
+          )}
 
           <div className="flex justify-between border-t pt-2 text-base font-bold">
             <span>{t.invoicesMod.grandTotal}:</span>
-            <span className="text-primary">{grandTotal.toFixed(3)} OMR</span>
+            <span className="text-primary">{Math.round(grandTotal)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm pt-1">
             <span className="text-muted-foreground font-semibold">{t.purchases.paidAmount}:</span>
-            <span className="text-green-600 font-semibold">{paidVal.toFixed(3)} OMR</span>
+            <span className="text-green-600 font-semibold">{Math.round(paidVal)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm border-t border-dashed pt-2 font-bold text-destructive">
             <span>{t.purchases.pendingAmount}:</span>
-            <span>{pendingAmount.toFixed(3)} OMR</span>
+            <span className="font-medium">{Math.round(pendingAmount)} OMR</span>
           </div>
         </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onSuccess}>{t.common.cancel}</Button>
-        <Button type="submit" disabled={mutation.isPending}>
+        <Button type="submit" disabled={mutation.isPending || isPaidExceeded}>
           {mutation.isPending ? t.common.saving : t.purchases.savePurchase}
         </Button>
       </div>

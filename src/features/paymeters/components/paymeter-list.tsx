@@ -181,9 +181,9 @@ export function PaymeterList() {
                 <TableRow key={pm.id}>
                   <TableCell className="font-medium">{pm.name}</TableCell>
                   <TableCell>
-                    {(fromDateStr || toDateStr)
-                      ? pm.filteredSpentAmount?.toFixed(3)
-                      : pm.spentAmount?.toFixed(3)} OMR
+                    {Math.round((fromDateStr || toDateStr)
+                      ? pm.filteredSpentAmount || 0
+                      : pm.spentAmount || 0)} OMR
                   </TableCell>
                   <TableCell className="text-right space-x-2">
 
@@ -231,9 +231,9 @@ export function PaymeterList() {
                                                 )}
                                               </div>
                                             </TableCell>
-                                            <TableCell className="text-right">{(purchase.paymeterAdvanceAmount || 0).toFixed(3)}</TableCell>
-                                            <TableCell className="text-right">{(purchase.paymeterReimbursed || 0).toFixed(3)}</TableCell>
-                                            <TableCell className="text-right text-red-500 font-medium">{((purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0)).toFixed(3)}</TableCell>
+                                            <TableCell className="text-right">{Math.round(purchase.paymeterAdvanceAmount || 0)}</TableCell>
+                                            <TableCell className="text-right">{Math.round(purchase.paymeterReimbursed || 0)}</TableCell>
+                                            <TableCell className="text-right text-red-500 font-medium">{Math.round((purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0))}</TableCell>
                                             <TableCell className="text-right">
                                               <form onSubmit={(e) => {
                                                 e.preventDefault()
@@ -245,12 +245,12 @@ export function PaymeterList() {
                                                 <Input
                                                   name="amount"
                                                   type="number"
-                                                  step="0.001"
+                                                  step="1"
                                                   required
-                                                  min="0.001"
-                                                  max={(purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0)}
+                                                  min="1"
+                                                  max={Math.round((purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0))}
                                                   className="w-24 h-8"
-                                                  placeholder="0.000"
+                                                  placeholder="0"
                                                   value={settlementAmounts[purchase.id] ?? ""}
                                                   onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [purchase.id]: event.target.value }))}
                                                 />
@@ -300,9 +300,9 @@ export function PaymeterList() {
                                             <TableRow key={expense.id}>
                                               <TableCell>{formatDisplayDate(expense.date)}</TableCell>
                                               <TableCell>{expense.category}</TableCell>
-                                              <TableCell className="text-right">{expense.amount.toFixed(3)}</TableCell>
-                                              <TableCell className="text-right">{(expense.paidAmount || 0).toFixed(3)}</TableCell>
-                                              <TableCell className="text-right text-red-500 font-medium">{(expense.pendingAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right">{Math.round(expense.amount)}</TableCell>
+                                              <TableCell className="text-right">{Math.round(expense.paidAmount || 0)}</TableCell>
+                                              <TableCell className="text-right text-red-500 font-medium">{Math.round(expense.pendingAmount || 0)}</TableCell>
                                               <TableCell className="text-right">
                                                 <form onSubmit={(e) => {
                                                   e.preventDefault()
@@ -314,12 +314,12 @@ export function PaymeterList() {
                                                   <Input
                                                     name="amount"
                                                     type="number"
-                                                    step="0.001"
+                                                    step="1"
                                                     required
-                                                    min="0.001"
-                                                    max={expense.pendingAmount}
+                                                    min="1"
+                                                    max={Math.round(expense.pendingAmount)}
                                                     className="w-24 h-8"
-                                                    placeholder="0.000"
+                                                    placeholder="0"
                                                     value={settlementAmounts[expense.id] ?? ""}
                                                     onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [expense.id]: event.target.value }))}
                                                   />
@@ -370,9 +370,9 @@ export function PaymeterList() {
                                             <TableRow key={payment.id}>
                                               <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                                               <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
-                                              <TableCell className="text-right">{payment.amount.toFixed(3)}</TableCell>
-                                              <TableCell className="text-right">{(payment.paidAmount || 0).toFixed(3)}</TableCell>
-                                              <TableCell className="text-right text-red-500 font-medium">{(payment.pendingAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right">{Math.round(payment.amount)}</TableCell>
+                                              <TableCell className="text-right">{Math.round(payment.paidAmount || 0)}</TableCell>
+                                              <TableCell className="text-right text-red-500 font-medium">{Math.round(payment.pendingAmount || 0)}</TableCell>
                                               <TableCell className="text-right">
                                                 <form onSubmit={(e) => {
                                                   e.preventDefault()
@@ -384,12 +384,12 @@ export function PaymeterList() {
                                                   <Input
                                                     name="amount"
                                                     type="number"
-                                                    step="0.001"
+                                                    step="1"
                                                     required
-                                                    min="0.001"
-                                                    max={payment.pendingAmount}
+                                                    min="1"
+                                                    max={Math.round(payment.pendingAmount)}
                                                     className="w-24 h-8"
-                                                    placeholder="0.000"
+                                                    placeholder="0"
                                                     value={settlementAmounts[payment.id] ?? ""}
                                                     onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [payment.id]: event.target.value }))}
                                                   />
@@ -456,9 +456,9 @@ export function PaymeterList() {
                                               <TableCell>{formatDisplayDate(purchase.purchaseDate)}</TableCell>
                                               <TableCell>{purchase.purchaseNumber}</TableCell>
                                               <TableCell>{purchase.supplier?.name || t.common.unknown}</TableCell>
-                                              <TableCell className="text-right font-medium">{(purchase.paymeterAdvanceAmount || 0).toFixed(3)}</TableCell>
-                                              <TableCell className="text-right text-green-600 font-medium">{(purchase.paymeterReimbursed || 0).toFixed(3)}</TableCell>
-                                              <TableCell className="text-right text-destructive font-medium">{((purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0)).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right font-medium">{Math.round(purchase.paymeterAdvanceAmount || 0)}</TableCell>
+                                              <TableCell className="text-right text-green-600 font-medium">{Math.round(purchase.paymeterReimbursed || 0)}</TableCell>
+                                              <TableCell className="text-right text-destructive font-medium">{Math.round((purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0))}</TableCell>
                                             </TableRow>
                                           ))}
                                           {items.length > 5 && (
@@ -505,9 +505,9 @@ export function PaymeterList() {
                                               <TableCell>{formatDisplayDate(expense.date)}</TableCell>
                                               <TableCell>{expense.category}</TableCell>
                                               <TableCell>{expense.description || '-'}</TableCell>
-                                              <TableCell className="text-right font-medium">{expense.amount.toFixed(3)}</TableCell>
-                                              <TableCell className="text-right text-green-600 font-medium">{(expense.paidAmount || 0).toFixed(3)}</TableCell>
-                                              <TableCell className="text-right text-destructive font-medium">{(expense.pendingAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right font-medium">{Math.round(expense.amount)}</TableCell>
+                                              <TableCell className="text-right text-green-600 font-medium">{Math.round(expense.paidAmount || 0)}</TableCell>
+                                              <TableCell className="text-right text-destructive font-medium">{Math.round(expense.pendingAmount || 0)}</TableCell>
                                             </TableRow>
                                           ))}
                                           {items.length > 5 && (
@@ -552,9 +552,9 @@ export function PaymeterList() {
                                             <TableRow key={payment.id}>
                                               <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                                               <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
-                                              <TableCell className="text-right font-medium">{payment.amount.toFixed(3)}</TableCell>
-                                              <TableCell className="text-right text-green-600 font-medium">{(payment.paidAmount || 0).toFixed(3)}</TableCell>
-                                              <TableCell className="text-right text-destructive font-medium">{(payment.pendingAmount || 0).toFixed(3)}</TableCell>
+                                              <TableCell className="text-right font-medium">{Math.round(payment.amount)}</TableCell>
+                                              <TableCell className="text-right text-green-600 font-medium">{Math.round(payment.paidAmount || 0)}</TableCell>
+                                              <TableCell className="text-right text-destructive font-medium">{Math.round(payment.pendingAmount || 0)}</TableCell>
                                             </TableRow>
                                           ))}
                                           {items.length > 5 && (

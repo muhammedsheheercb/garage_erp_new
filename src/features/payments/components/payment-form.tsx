@@ -71,7 +71,7 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
     if (watchInvoiceId && invoices) {
       const inv = invoices.find(i => i.id === watchInvoiceId)
       if (inv && data.amount > inv.dueAmount) {
-        toast.error(`${t.payments.amountExceedsDue} ${inv.dueAmount.toFixed(3)}`)
+        toast.error(`${t.payments.amountExceedsDue} ${Math.round(inv.dueAmount)}`)
         return
       }
     }

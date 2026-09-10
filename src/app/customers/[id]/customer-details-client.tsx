@@ -52,7 +52,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
   const formatCurrency = (amount: number) => {
     return (
       <span className="inline-flex items-center gap-1">
-        {amount.toFixed(3)}
+        {Math.round(amount)}
         <Image src="/Omr_symbol.svg" alt="OMR" width={14} height={14} className="opacity-70" />
       </span>
     )

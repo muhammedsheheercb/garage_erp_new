@@ -3,6 +3,8 @@
 import React from "react"
 import Image from "next/image"
 
+import { roundAmount } from "@/lib/amount"
+
 interface CurrencyProps {
   amount: number
   className?: string
@@ -10,10 +12,11 @@ interface CurrencyProps {
 }
 
 export function Currency({ amount, className = "flex items-center gap-1", size = 1.2 }: CurrencyProps) {
+  const rounded = roundAmount(amount)
   const formattedAmount = new Intl.NumberFormat('en-OM', {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  }).format(amount)
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(rounded)
   
   // Convert generic 'size' (e.g. 1.2) to pixel approximate size
   const pxSize = size * 20

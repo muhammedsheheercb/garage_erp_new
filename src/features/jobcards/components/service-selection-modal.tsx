@@ -68,7 +68,7 @@ export function ServiceSelectionModal({ onSelect }: ServiceSelectionModalProps) 
                     <TableCell className="font-medium">{service.name}</TableCell>
                     <TableCell>{service.category || '-'}</TableCell>
                     <TableCell>{service.estimatedTime || '-'}</TableCell>
-                    <TableCell className="text-right">{service.price.toFixed(3)} OMR</TableCell>
+                    <TableCell className="text-right">{Math.round(service.price)} OMR</TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" type="button" onClick={() => {
                         onSelect(service)

@@ -113,6 +113,7 @@ model JobCard {
   complaint          String
   workDone           String?
   estimatedCost      Float?
+  date               DateTime         @default(now())
   expectedFinishDate DateTime?
   notes              String?
   createdBy          String?
@@ -358,6 +359,8 @@ model PurchaseItem {
   quantity      Int
   purchasePrice Float
   sellingPrice  Float
+  taxRate       Float     @default(0)
+  taxAmount     Float     @default(0)
   itemTotal     Float
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

@@ -29,6 +29,7 @@ export const jobCardSchema = z.object({
   complaint: z.string().trim().min(3, "Complaint description is required"),
   workDone: z.string().trim().optional(),
   notes: z.string().trim().optional(),
+  date: z.string().trim().min(1, "Date is required"),
   expectedFinishDate: z.string().trim().min(1, "Expected finish date is required"),
   
   services: z.array(jobCardServiceSchema),
@@ -40,6 +41,9 @@ export const jobCardSchema = z.object({
   tax: z.number().finite("Tax is required").min(0, "Tax cannot be negative"),
   grandTotal: z.number().finite().min(0, "Grand total cannot be negative"),
   advancePaid: z.number().finite("Advance paid is required").min(0, "Advance paid cannot be negative"),
+}).refine((data) => data.advancePaid <= data.grandTotal, {
+  message: "Advance amount cannot exceed the total amount",
+  path: ["advancePaid"],
 })
 
 export type JobCardFormValues = z.infer<typeof jobCardSchema>

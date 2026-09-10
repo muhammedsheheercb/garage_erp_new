@@ -46,6 +46,7 @@ import { CustomerForm } from "@/features/customers/components/customer-form";
 import { VehicleForm } from "@/features/vehicles/components/vehicle-form";
 import { useTranslation } from "@/i18n";
 import { formatDisplayDate } from "@/lib/date-format";
+import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
 interface JobCardFormProps {
@@ -90,6 +91,9 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
       complaint: initialData?.complaint || "",
       workDone: initialData?.workDone || "",
       notes: initialData?.notes || "",
+      date: initialData?.date
+        ? format(new Date(initialData.date), "yyyy-MM-dd")
+        : format(initialData?.createdAt ? new Date(initialData.createdAt) : new Date(), "yyyy-MM-dd"),
       expectedFinishDate: initialData?.expectedFinishDate ? new Date(initialData.expectedFinishDate).toISOString().slice(0, 10) : "",
 
       services:
@@ -146,21 +150,26 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const partsJson = JSON.stringify(watchedParts);
 
   useEffect(() => {
-    const sTotal = (watchedServices || []).reduce(
-      (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
-      0,
+    const sTotal = Math.round(
+      (watchedServices || []).reduce(
+        (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
+        0,
+      )
     );
-    const pTotal = (watchedParts || []).reduce(
-      (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
-      0,
+    const pTotal = Math.round(
+      (watchedParts || []).reduce(
+        (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
+        0,
+      )
     );
 
     setValue("serviceTotal", sTotal);
     setValue("partsTotal", pTotal);
 
     const subTotal = sTotal + pTotal;
-    const taxAmt = (subTotal * watchedTax) / 100;
-    const gTotal = subTotal + taxAmt - watchedDiscount;
+    const taxable = Math.max(0, subTotal - (Number(watchedDiscount) || 0));
+    const taxAmt = Math.round((taxable * (Number(watchedTax) || 0)) / 100);
+    const gTotal = Math.round(subTotal + taxAmt - (Number(watchedDiscount) || 0));
 
     setValue("grandTotal", gTotal > 0 ? gTotal : 0);
   }, [servicesJson, partsJson, watchedDiscount, watchedTax, setValue]);
@@ -198,6 +207,10 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   });
 
   const onSubmit = (data: JobCardFormValues) => {
+    if (data.advancePaid > data.grandTotal) {
+      toast.error(t.jobcards.advanceExceedsTotal || "Advance amount cannot exceed total amount");
+      return;
+    }
     mutation.mutate(data);
   };
 
@@ -271,6 +284,9 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const grandTotal = watch("grandTotal");
   const advancePaid = watch("advancePaid") || 0;
   const balanceAmount = Math.max(0, grandTotal - advancePaid);
+  const taxableAmount = Math.max(0, (serviceTotal || 0) + (partsTotal || 0) - (Number(watchedDiscount) || 0));
+  const currentTaxAmt = Math.round((taxableAmount * (Number(watchedTax) || 0)) / 100);
+  const isAdvanceExceeded = (Number(advancePaid) || 0) > (Number(grandTotal) || 0);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -681,17 +697,31 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="expectedFinishDate">
-              Expected finish date <span className="text-destructive">*</span>
-            </Label>
-            <Input id="expectedFinishDate" type="date" {...register("expectedFinishDate")} />
-            <p className="text-xs text-muted-foreground">When the vehicle is expected to be ready.</p>
-            {errors.expectedFinishDate && (
-              <p className="text-sm text-destructive">
-                {errors.expectedFinishDate.message}
-              </p>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="date">
+                {t.jobcards.date || "Date"} <span className="text-destructive">*</span>
+              </Label>
+              <Input id="date" type="date" {...register("date")} />
+              {errors.date && (
+                <p className="text-sm text-destructive">
+                  {errors.date.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expectedFinishDate">
+                Expected finish date <span className="text-destructive">*</span>
+              </Label>
+              <Input id="expectedFinishDate" type="date" {...register("expectedFinishDate")} />
+              <p className="text-xs text-muted-foreground">When the vehicle is expected to be ready.</p>
+              {errors.expectedFinishDate && (
+                <p className="text-sm text-destructive">
+                  {errors.expectedFinishDate.message}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -784,7 +814,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {(qty * price).toFixed(3)}
+                          {Math.round(qty * price)}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -893,7 +923,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {(qty * price).toFixed(3)}
+                          {Math.round(qty * price)}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -934,14 +964,14 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
               <span className="text-muted-foreground">
                 {t.jobcards.serviceTotal}:
               </span>
-              <span>{serviceTotal.toFixed(3)} OMR</span>
+              <span>{Math.round(serviceTotal)} OMR</span>
             </div>
 
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">
                 {t.jobcards.partsTotal}:
               </span>
-              <span>{partsTotal.toFixed(3)} OMR</span>
+              <span>{Math.round(partsTotal)} OMR</span>
             </div>
 
             <div className="space-y-2 pt-2 border-t">
@@ -964,11 +994,21 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                   id="tax"
                   type="number"
                   step="0.1"
+                  min="0"
                   className="w-24 h-8 text-right"
                   {...register("tax", { valueAsNumber: true })}
                 />
               </div>
             </div>
+
+            {watchedTax > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">
+                  {t.jobcards.taxPercent} ({watchedTax}%):
+                </span>
+                <span className="font-medium text-foreground">+{currentTaxAmt} OMR</span>
+              </div>
+            )}
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -978,7 +1018,8 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                   type="number"
                   step="0.001"
                   min="0"
-                  className="w-24 h-8 text-right"
+                  max={grandTotal}
+                  className={`w-24 h-8 text-right ${isAdvanceExceeded || errors.advancePaid ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   {...register("advancePaid", {
                     valueAsNumber: true,
                     onChange: (e) => {
@@ -990,29 +1031,29 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                   })}
                 />
               </div>
-              {errors.advancePaid && (
+              {(errors.advancePaid || isAdvanceExceeded) && (
                 <p className="text-xs text-destructive text-right">
-                  {errors.advancePaid.message}
+                  {errors.advancePaid?.message || t.jobcards.advanceExceedsTotal}
                 </p>
               )}
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t font-bold text-lg">
               <span>{t.invoicesMod.grandTotal}:</span>
-              <span>{grandTotal.toFixed(3)} OMR</span>
+              <span>{Math.round(grandTotal)} OMR</span>
             </div>
 
             {advancePaid > 0 && (
               <div className="flex justify-between items-center font-semibold text-base text-primary">
                 <span>{t.jobcards.balanceAmount}:</span>
-                <span>{balanceAmount.toFixed(3)} OMR</span>
+                <span>{Math.round(balanceAmount)} OMR</span>
               </div>
             )}
 
             <Button
               type="submit"
               className="w-full mt-4 font-bold text-base"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || isAdvanceExceeded}
             >
               {mutation.isPending ? t.common.saving : t.jobcards.saveJobCard}
             </Button>

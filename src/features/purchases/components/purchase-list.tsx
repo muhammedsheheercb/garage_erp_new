@@ -6,7 +6,7 @@ import { getPurchases, deletePurchase } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Trash, Eye, Edit, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Plus, Trash, Eye, Edit, ChevronLeft, ChevronRight, Printer, Download } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { PurchaseForm } from "./purchase-form"
@@ -136,13 +136,16 @@ export function PurchaseList() {
                   </TableCell>
                   <TableCell className="text-sm font-medium text-muted-foreground">{p.createdBy || "Admin"}</TableCell>
                   <TableCell>{formatDisplayDate(p.purchaseDate)}</TableCell>
-                  <TableCell>{p.grandTotal.toFixed(3)} OMR</TableCell>
-                  <TableCell className="text-green-600 font-medium">{p.paidAmount.toFixed(3)} OMR</TableCell>
+                  <TableCell>{Math.round(p.grandTotal)} OMR</TableCell>
+                  <TableCell className="text-green-600 font-medium">{Math.round(p.paidAmount)} OMR</TableCell>
                   <TableCell className={p.pendingAmount > 0 ? "text-destructive font-medium" : "text-muted-foreground"}>
-                    {p.pendingAmount.toFixed(3)} OMR
+                    {Math.round(p.pendingAmount)} OMR
                   </TableCell>
                   <TableCell>{p.paymentMethod?.name || '-'}</TableCell>
                   <TableCell className="text-right space-x-1">
+                    <Button variant="ghost" size="icon" onClick={() => window.open(`/purchases/${p.id}/print`, "_blank")} title={t.purchases.downloadInvoice || "Download Purchase Invoice"}>
+                      <Printer className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => setViewingPurchase(p)} title={t.purchases.viewDetails}>
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -247,53 +250,77 @@ export function PurchaseList() {
                       <TableRow>
                         <TableHead>{t.purchases.partName}</TableHead>
                         <TableHead>{t.inventoryMod.partNo}</TableHead>
-                        <TableHead>{t.invoicesMod.qty}</TableHead>
-                        <TableHead>{t.purchases.purchasePrice}</TableHead>
-                        <TableHead>{t.purchases.sellingPrice}</TableHead>
+                        <TableHead className="text-center">{t.invoicesMod.qty}</TableHead>
+                        <TableHead className="text-right">{t.purchases.purchasePrice}</TableHead>
+                        <TableHead className="text-right">{t.purchases.sellingPrice}</TableHead>
+                        <TableHead className="text-right">{t.purchases.productAmount || "Amount"}</TableHead>
+                        <TableHead className="text-center">{t.purchases.taxRate || "Tax %"}</TableHead>
+                        <TableHead className="text-right">{t.purchases.taxAmount || "Tax Amount"}</TableHead>
                         <TableHead className="text-right">{t.invoicesMod.grandTotal}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {viewingPurchase.items?.map((item: any) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.inventory?.itemName}</TableCell>
-                          <TableCell>{item.inventory?.partNumber}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{item.purchasePrice.toFixed(3)} OMR</TableCell>
-                          <TableCell>{item.sellingPrice.toFixed(3)} OMR</TableCell>
-                          <TableCell className="text-right font-medium">{item.itemTotal.toFixed(3)} OMR</TableCell>
-                        </TableRow>
-                      ))}
+                      {viewingPurchase.items?.map((item: any) => {
+                        const prodAmt = Math.round(item.quantity * item.purchasePrice)
+                        const rate = Number(item.taxRate) || 0
+                        const taxAmt = item.taxAmount ? Math.round(item.taxAmount) : Math.round((prodAmt * rate) / 100)
+                        const total = prodAmt + taxAmt
+
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.inventory?.itemName}</TableCell>
+                            <TableCell>{item.inventory?.partNumber}</TableCell>
+                            <TableCell className="text-center">{item.quantity}</TableCell>
+                            <TableCell className="text-right">{Math.round(item.purchasePrice)} OMR</TableCell>
+                            <TableCell className="text-right">{Math.round(item.sellingPrice)} OMR</TableCell>
+                            <TableCell className="text-right font-medium">{prodAmt} OMR</TableCell>
+                            <TableCell className="text-center">{rate}%</TableCell>
+                            <TableCell className="text-right font-medium">+{taxAmt} OMR</TableCell>
+                            <TableCell className="text-right font-semibold">{total} OMR</TableCell>
+                          </TableRow>
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.open(`/purchases/${viewingPurchase.id}/print`, "_blank")}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {t.purchases.downloadInvoice || "Download Purchase Invoice"}
+                </Button>
+
                 <div className="w-full sm:w-80 bg-muted/40 p-4 rounded-lg space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t.invoicesMod.subTotal}:</span>
-                    <span>{viewingPurchase.subTotal.toFixed(3)} OMR</span>
+                    <span>{Math.round(viewingPurchase.subTotal)} OMR</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t.invoicesMod.discount}:</span>
-                    <span>-{viewingPurchase.discount.toFixed(3)} OMR</span>
+                    <span className="text-muted-foreground">{t.purchases.totalTax || "Total Tax"}:</span>
+                    <span>+{Math.round(viewingPurchase.taxAmount)} OMR</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{t.invoicesMod.tax} ({t.settings.taxTab.taxName} {viewingPurchase.taxRate}%):</span>
-                    <span>+{viewingPurchase.taxAmount.toFixed(3)} OMR</span>
-                  </div>
+                  {viewingPurchase.discount > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span className="text-muted-foreground">{t.invoicesMod.discount}:</span>
+                      <span>-{Math.round(viewingPurchase.discount)} OMR</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t pt-2 font-bold text-base">
                     <span>{t.invoicesMod.grandTotal}:</span>
-                    <span className="text-primary">{viewingPurchase.grandTotal.toFixed(3)} OMR</span>
+                    <span className="text-primary">{Math.round(viewingPurchase.grandTotal)} OMR</span>
                   </div>
                   <div className="flex justify-between text-green-600 font-semibold border-t border-dashed pt-2">
                     <span>{t.purchases.paidAmount}:</span>
-                    <span>{viewingPurchase.paidAmount.toFixed(3)} OMR</span>
+                    <span>{Math.round(viewingPurchase.paidAmount)} OMR</span>
                   </div>
                   <div className="flex justify-between text-destructive font-bold">
                     <span>{t.purchases.pendingAmount}:</span>
-                    <span>{viewingPurchase.pendingAmount.toFixed(3)} OMR</span>
+                    <span>{Math.round(viewingPurchase.pendingAmount)} OMR</span>
                   </div>
                 </div>
               </div>

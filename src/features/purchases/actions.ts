@@ -76,6 +76,33 @@ export async function getPurchases(page = 1, search = "", fromDate?: string, toD
   }
 }
 
+export async function getPurchaseById(id: string) {
+  return prisma.purchase.findUnique({
+    where: { id },
+    include: {
+      supplier: true,
+      jobCard: {
+        include: {
+          customer: true,
+          vehicle: true,
+        },
+      },
+      paymentMethod: true,
+      items: {
+        include: {
+          inventory: true,
+        },
+      },
+      purchasePayments: {
+        include: {
+          paymeter: true,
+        },
+        orderBy: { date: "asc" },
+      },
+    },
+  })
+}
+
 export async function getPurchaseDropdownData() {
   const [suppliers, paymeters, inventoryRaw, jobCards] = await Promise.all([
     prisma.supplier.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
@@ -125,28 +152,32 @@ export async function createPurchase(data: PurchaseFormValues) {
   const parsed = purchaseSchema.parse(data)
   const paymentMethodId = parsed.paymentSource === "PAYMETER" ? parsed.paymentMethodId! : null
   
-  // Calculate calculations
+  // Product-wise calculations
   let subTotal = 0
+  let totalTax = 0
   const itemsData = parsed.items.map(item => {
-    const total = item.quantity * item.purchasePrice
-    subTotal += total
+    const productAmount = Math.round(item.quantity * item.purchasePrice)
+    const taxRate = Math.max(0, Number(item.taxRate) || 0)
+    const taxAmount = Math.round((productAmount * taxRate) / 100)
+    const itemTotal = productAmount + taxAmount
+    subTotal += productAmount
+    totalTax += taxAmount
     return {
       inventoryId: item.inventoryId,
       quantity: item.quantity,
       purchasePrice: item.purchasePrice,
       sellingPrice: item.sellingPrice,
-      itemTotal: total
+      taxRate,
+      taxAmount,
+      itemTotal
     }
   })
 
-  // Read active tax setting
-  const activeTax = await prisma.taxSetting.findFirst({
-    where: { isActive: true }
-  })
-  const taxRate = activeTax ? activeTax.percentage : 0
-  const taxAmount = (subTotal - parsed.discount) * (taxRate / 100)
-  const grandTotal = subTotal + taxAmount - parsed.discount
-  const pendingAmount = grandTotal - parsed.paidAmount
+  subTotal = Math.round(subTotal)
+  const taxAmount = Math.round(totalTax)
+  const overallTaxRate = subTotal > 0 ? (taxAmount / subTotal) * 100 : 0
+  const grandTotal = Math.round(Math.max(0, subTotal + taxAmount - parsed.discount))
+  const pendingAmount = Math.round(Math.max(0, grandTotal - parsed.paidAmount))
 
   if (parsed.discount > subTotal) {
     throw new Error("Discount cannot exceed the purchase subtotal.")
@@ -171,7 +202,7 @@ export async function createPurchase(data: PurchaseFormValues) {
         supplierId: parsed.supplierId,
         paymentMethodId: selectedPaymentMethodId,
         subTotal,
-        taxRate,
+        taxRate: overallTaxRate,
         taxAmount,
         discount: parsed.discount,
         grandTotal,
@@ -361,28 +392,32 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
   })
   if (!existingPurchase) throw new Error("Purchase not found")
 
-  // Calculate calculations
+  // Product-wise calculations
   let subTotal = 0
+  let totalTax = 0
   const itemsData = parsed.items.map(item => {
-    const total = item.quantity * item.purchasePrice
-    subTotal += total
+    const productAmount = Math.round(item.quantity * item.purchasePrice)
+    const taxRate = Math.max(0, Number(item.taxRate) || 0)
+    const taxAmount = Math.round((productAmount * taxRate) / 100)
+    const itemTotal = productAmount + taxAmount
+    subTotal += productAmount
+    totalTax += taxAmount
     return {
       inventoryId: item.inventoryId,
       quantity: item.quantity,
       purchasePrice: item.purchasePrice,
       sellingPrice: item.sellingPrice,
-      itemTotal: total
+      taxRate,
+      taxAmount,
+      itemTotal
     }
   })
 
-  // Read active tax setting
-  const activeTax = await prisma.taxSetting.findFirst({
-    where: { isActive: true }
-  })
-  const taxRate = activeTax ? activeTax.percentage : 0
-  const taxAmount = (subTotal - parsed.discount) * (taxRate / 100)
-  const grandTotal = subTotal + taxAmount - parsed.discount
-  const pendingAmount = grandTotal - parsed.paidAmount
+  subTotal = Math.round(subTotal)
+  const taxAmount = Math.round(totalTax)
+  const overallTaxRate = subTotal > 0 ? (taxAmount / subTotal) * 100 : 0
+  const grandTotal = Math.round(Math.max(0, subTotal + taxAmount - parsed.discount))
+  const pendingAmount = Math.round(Math.max(0, grandTotal - parsed.paidAmount))
 
   if (parsed.discount > subTotal) {
     throw new Error("Discount cannot exceed the purchase subtotal.")
@@ -448,7 +483,7 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
         supplierId: parsed.supplierId,
         paymentMethodId: selectedPaymentMethodId,
         subTotal,
-        taxRate,
+        taxRate: overallTaxRate,
         taxAmount,
         discount: parsed.discount,
         grandTotal,
