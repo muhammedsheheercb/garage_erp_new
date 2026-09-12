@@ -7,9 +7,16 @@ async function main() {
   const email = 'admin@garage.com'
   const password = await bcrypt.hash('admin123', 10)
 
+  await prisma.admin.deleteMany({
+    where: { email: { not: email } },
+  })
+
   const admin = await prisma.admin.upsert({
     where: { email },
-    update: {},
+    update: {
+      name: 'System Admin',
+      password,
+    },
     create: {
       email,
       name: 'System Admin',
