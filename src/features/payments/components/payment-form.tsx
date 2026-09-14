@@ -37,20 +37,33 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
     defaultValues: {
       invoiceId: initialInvoiceId || "",
       amount: 0,
+      discountAmount: 0,
       method: "CASH"
     }
   })
 
   // Watch invoiceId to auto-fill amount with due amount
   const watchInvoiceId = watch("invoiceId")
+  const watchedDiscountAmount = watch("discountAmount") || 0
+  const selectedInvoice = invoices?.find(i => i.id === watchInvoiceId)
+  const currentBalance = selectedInvoice?.dueAmount || 0
+  const paymentAmountAfterDiscount = Math.max(0, currentBalance - (Number(watchedDiscountAmount) || 0))
+
   useEffect(() => {
     if (watchInvoiceId && invoices) {
       const inv = invoices.find(i => i.id === watchInvoiceId)
       if (inv) {
         setValue("amount", inv.dueAmount)
+        setValue("discountAmount", 0)
       }
     }
   }, [watchInvoiceId, invoices, setValue])
+
+  useEffect(() => {
+    if (selectedInvoice) {
+      setValue("amount", paymentAmountAfterDiscount, { shouldValidate: true, shouldDirty: true })
+    }
+  }, [paymentAmountAfterDiscount, selectedInvoice, setValue])
 
   const mutation = useMutation({
     mutationFn: (data: PaymentFormValues) => createPayment(data),
@@ -72,6 +85,10 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
       const inv = invoices.find(i => i.id === watchInvoiceId)
       if (inv && data.amount > inv.dueAmount) {
         toast.error(`${t.payments.amountExceedsDue} ${Math.round(inv.dueAmount)}`)
+        return
+      }
+      if (inv && (data.discountAmount || 0) > inv.dueAmount) {
+        toast.error(`Discount amount cannot exceed available amount of ${Math.round(inv.dueAmount)} OMR`)
         return
       }
     }
@@ -149,12 +166,30 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
+          <Label htmlFor="discountAmount">Discount Amount (OMR)</Label>
+          <Input
+            id="discountAmount"
+            type="number"
+            step="1"
+            min="0"
+            max={currentBalance}
+            {...register("discountAmount", { valueAsNumber: true })}
+          />
+          {errors.discountAmount && <p className="text-sm text-destructive">{errors.discountAmount.message}</p>}
+          {watchedDiscountAmount > currentBalance && (
+            <p className="text-sm text-destructive">
+              Discount amount cannot exceed available amount of {Math.round(currentBalance)} OMR
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="amount">{t.payments.amount} (OMR) <span className="text-destructive">*</span></Label>
           <Input 
             id="amount" 
             type="number" 
             step="0.001" 
-            max={invoices?.find(i => i.id === watchInvoiceId)?.dueAmount}
+            max={currentBalance}
             {...register("amount", { valueAsNumber: true })} 
           />
           {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
@@ -184,9 +219,22 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
         </div>
       </div>
 
+      {selectedInvoice && (
+        <div className="rounded-md border bg-muted/40 p-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Current Balance</span>
+            <span className="font-medium">{Math.round(currentBalance)} OMR</span>
+          </div>
+          <div className="mt-1 flex justify-between">
+            <span className="text-muted-foreground">Updated Amount</span>
+            <span className="font-semibold">{Math.round(paymentAmountAfterDiscount)} OMR</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={() => onSuccess?.()}>{t.common.cancel}</Button>
-        <Button type="submit" disabled={mutation.isPending || invoices?.length === 0}>
+        <Button type="submit" disabled={mutation.isPending || invoices?.length === 0 || watchedDiscountAmount > currentBalance}>
           {mutation.isPending ? t.common.saving : t.payments.recordPayment}
         </Button>
       </div>

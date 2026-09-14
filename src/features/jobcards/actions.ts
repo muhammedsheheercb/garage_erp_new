@@ -26,9 +26,9 @@ export async function getJobCards(
   };
 
   if (fromDate || toDate) {
-    where.createdAt = {};
-    if (fromDate) where.createdAt.gte = new Date(fromDate);
-    if (toDate) where.createdAt.lte = new Date(toDate);
+    where.date = {};
+    if (fromDate) where.date.gte = new Date(fromDate);
+    if (toDate) where.date.lte = new Date(toDate);
   }
 
   if (expectedFromDate || expectedToDate) {

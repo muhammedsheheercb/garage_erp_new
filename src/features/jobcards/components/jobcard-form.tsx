@@ -152,7 +152,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   useEffect(() => {
     const sTotal = Math.round(
       (watchedServices || []).reduce(
-        (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
+        (acc, curr) => acc + (Number(curr?.price) || 0),
         0,
       )
     );
@@ -207,11 +207,10 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   });
 
   const onSubmit = (data: JobCardFormValues) => {
-    if (data.advancePaid > data.grandTotal) {
-      toast.error(t.jobcards.advanceExceedsTotal || "Advance amount cannot exceed total amount");
-      return;
-    }
-    mutation.mutate(data);
+    mutation.mutate({
+      ...data,
+      services: data.services.map((service) => ({ ...service, quantity: service.quantity || 1 })),
+    });
   };
 
   const selectedCustomerId = watch("customerId");
@@ -286,7 +285,6 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const balanceAmount = Math.max(0, grandTotal - advancePaid);
   const taxableAmount = Math.max(0, (serviceTotal || 0) + (partsTotal || 0) - (Number(watchedDiscount) || 0));
   const currentTaxAmt = Math.round((taxableAmount * (Number(watchedTax) || 0)) / 100);
-  const isAdvanceExceeded = (Number(advancePaid) || 0) > (Number(grandTotal) || 0);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -767,7 +765,6 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t.services.serviceName}</TableHead>
-                  <TableHead className="w-24">{t.invoicesMod.qty}</TableHead>
                   <TableHead className="w-32">{t.invoicesMod.price}</TableHead>
                   <TableHead className="w-32 text-right">
                     {t.invoicesMod.amount}
@@ -779,7 +776,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                 {serviceFields.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={4}
                       className="text-center text-muted-foreground"
                     >
                       {t.jobcards.noServicesAdded}
@@ -787,7 +784,6 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                   </TableRow>
                 ) : (
                   serviceFields.map((field, index) => {
-                    const qty = watchedServices[index]?.quantity || 0;
                     const price = watchedServices[index]?.price || 0;
                     return (
                       <TableRow key={field.id}>
@@ -795,26 +791,15 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                         <TableCell>
                           <Input
                             type="number"
-                            min="1"
-                            {...register(`services.${index}.quantity`, {
-                              valueAsNumber: true,
-                            })}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            step="0.001"
+                            step="1"
                             min="0"
-                            readOnly
-                            className="bg-muted cursor-not-allowed"
                             {...register(`services.${index}.price`, {
                               valueAsNumber: true,
                             })}
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {Math.round(qty * price)}
+                          {Math.round(price)}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -1018,8 +1003,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                   type="number"
                   step="0.001"
                   min="0"
-                  max={grandTotal}
-                  className={`w-24 h-8 text-right ${isAdvanceExceeded || errors.advancePaid ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                  className={`w-24 h-8 text-right ${errors.advancePaid ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   {...register("advancePaid", {
                     valueAsNumber: true,
                     onChange: (e) => {
@@ -1031,9 +1015,9 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                   })}
                 />
               </div>
-              {(errors.advancePaid || isAdvanceExceeded) && (
+              {errors.advancePaid && (
                 <p className="text-xs text-destructive text-right">
-                  {errors.advancePaid?.message || t.jobcards.advanceExceedsTotal}
+                  {errors.advancePaid.message}
                 </p>
               )}
             </div>
@@ -1053,7 +1037,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
             <Button
               type="submit"
               className="w-full mt-4 font-bold text-base"
-              disabled={mutation.isPending || isAdvanceExceeded}
+              disabled={mutation.isPending}
             >
               {mutation.isPending ? t.common.saving : t.jobcards.saveJobCard}
             </Button>

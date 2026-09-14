@@ -106,6 +106,7 @@ export async function getPendingInvoicesDropdown() {
 
 export async function createPayment(data: PaymentFormValues) {
   const parsed = paymentSchema.parse(data)
+  const discountAmount = parsed.discountAmount || 0
   
   const result = await prisma.$transaction(async (tx) => {
     const invoiceBeforePayment = await tx.invoice.findUnique({
@@ -125,15 +126,33 @@ export async function createPayment(data: PaymentFormValues) {
     if (parsed.amount > dueAmount) {
       throw new Error(`Payment amount cannot exceed the outstanding balance of ${Math.round(dueAmount)} OMR.`)
     }
+    if (discountAmount > dueAmount) {
+      throw new Error(`Discount amount cannot exceed the available amount of ${Math.round(dueAmount)} OMR.`)
+    }
+    if (parsed.amount > Math.max(0, dueAmount - discountAmount)) {
+      throw new Error(`Payment amount cannot exceed the discounted balance of ${Math.round(Math.max(0, dueAmount - discountAmount))} OMR.`)
+    }
 
     const creatorName = await getCreatorName()
+    const { discountAmount: _discountAmount, ...paymentData } = parsed
 
     const payment = await tx.payment.create({
       data: {
-        ...parsed,
+        ...paymentData,
         createdBy: creatorName,
       }
     })
+
+    if (discountAmount > 0) {
+      await tx.invoice.update({
+        where: { id: parsed.invoiceId },
+        data: {
+          discount: { increment: discountAmount },
+          grandTotal: { decrement: discountAmount },
+          amount: { decrement: discountAmount },
+        },
+      })
+    }
 
     const invoice = await tx.invoice.findUnique({
       where: { id: parsed.invoiceId },

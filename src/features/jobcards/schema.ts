@@ -41,9 +41,6 @@ export const jobCardSchema = z.object({
   tax: z.number().finite("Tax is required").min(0, "Tax cannot be negative"),
   grandTotal: z.number().finite().min(0, "Grand total cannot be negative"),
   advancePaid: z.number().finite("Advance paid is required").min(0, "Advance paid cannot be negative"),
-}).refine((data) => data.advancePaid <= data.grandTotal, {
-  message: "Advance amount cannot exceed the total amount",
-  path: ["advancePaid"],
 })
 
 export type JobCardFormValues = z.infer<typeof jobCardSchema>
