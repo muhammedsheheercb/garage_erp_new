@@ -43,7 +43,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const activeTaxRate = activeTax ? activeTax.percentage : 0
   const activeTaxName = activeTax ? activeTax.name : t.settings.taxTab.taxName
 
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<PurchaseFormValues>({
+  const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = useForm<PurchaseFormValues>({
     resolver: zodResolver(purchaseSchema),
     defaultValues: initialData ? {
       purchaseDate: new Date(initialData.purchaseDate).toISOString().split('T')[0],
@@ -97,6 +97,19 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
     control,
     name: "items"
   })
+
+  useEffect(() => {
+    if (initialData || !activeTax || activeTaxRate <= 0) return
+
+    getValues("items").forEach((item, index) => {
+      if ((Number(item.taxRate) || 0) === 0) {
+        setValue(`items.${index}.taxRate`, activeTaxRate, {
+          shouldDirty: false,
+          shouldValidate: true,
+        })
+      }
+    })
+  }, [activeTax, activeTaxRate, fields.length, getValues, initialData, setValue])
 
   useEffect(() => {
     if (!initialData) {
