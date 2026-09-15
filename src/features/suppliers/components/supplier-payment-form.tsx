@@ -67,7 +67,7 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
 
   const onSubmit = (data: SupplierPaymentFormValues) => {
     if (data.amount > currentMaxAmount) {
-      toast.error(`${t.payments.amountExceedsDue} ${Math.round(currentMaxAmount)}`)
+      toast.error(`${t.payments.amountExceedsDue} ${(currentMaxAmount)}`)
       return
     }
     const submitData = { ...data }
@@ -79,15 +79,15 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
       <div className="bg-muted p-4 rounded-lg">
         <div className="flex justify-between text-sm mb-1">
           <span className="text-muted-foreground">{t.invoicesMod.grandTotal}:</span>
-          <span>{Math.round(selectedPurchase?.grandTotal ?? 0)} OMR</span>
+          <span>{(selectedPurchase?.grandTotal ?? 0)} OMR</span>
         </div>
         <div className="flex justify-between text-sm mb-1">
           <span className="text-muted-foreground">{t.purchases.paidAmount}:</span>
-          <span className="text-green-600">{Math.round(selectedPurchase?.paidAmount ?? 0)} OMR</span>
+          <span className="text-green-600">{(selectedPurchase?.paidAmount ?? 0)} OMR</span>
         </div>
         <div className="flex justify-between font-bold border-t pt-2 mt-2">
           <span>{t.purchases.pendingAmount}:</span>
-          <span className="text-destructive">{Math.round(currentMaxAmount)} OMR</span>
+          <span className="text-destructive">{(currentMaxAmount)} OMR</span>
         </div>
       </div>
 
@@ -107,7 +107,7 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
                 <SelectContent>
                   {purchases.filter((purchase) => purchase.pendingAmount > 0).map((purchase) => (
                     <SelectItem key={purchase.id} value={purchase.id}>
-                      {purchase.purchaseNumber} — {Math.round(purchase.pendingAmount)} OMR {t.purchases.pending}
+                      {purchase.purchaseNumber} — {(purchase.pendingAmount)} OMR {t.purchases.pending}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -119,7 +119,7 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
 
         <div className="space-y-2">
           <Label htmlFor="amount">{t.payments.amount} (OMR) <span className="text-destructive">*</span></Label>
-          <Input id="amount" type="number" step="0.001" min="0.001" max={currentMaxAmount} disabled={!selectedPurchase} {...register("amount", { valueAsNumber: true })} />
+          <Input id="amount" type="number" step="any" min="0" max={currentMaxAmount} disabled={!selectedPurchase} {...register("amount", { valueAsNumber: true })} />
           {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
         </div>
 

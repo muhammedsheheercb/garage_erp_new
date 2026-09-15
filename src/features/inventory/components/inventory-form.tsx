@@ -215,13 +215,13 @@ export function InventoryForm({ initialData, onSuccess, openingStockMode = false
 
           <div className="space-y-2">
             <Label htmlFor="purchasePrice">{t.inventoryMod.pur}</Label>
-            <Input id="purchasePrice" type="number" min="0" step="0.001" {...register("purchasePrice", { valueAsNumber: true })} />
+            <Input id="purchasePrice" type="number" min="0" step="any" {...register("purchasePrice", { valueAsNumber: true })} />
             {errors.purchasePrice && <p className="text-sm text-destructive">{String(errors.purchasePrice.message)}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="sellingPrice">{t.inventoryMod.sel} <span className="text-destructive">*</span></Label>
-            <Input id="sellingPrice" type="number" min="0" step="0.001" required {...register("sellingPrice", { valueAsNumber: true })} />
+            <Input id="sellingPrice" type="number" min="0" step="any" required {...register("sellingPrice", { valueAsNumber: true })} />
             {errors.sellingPrice && <p className="text-sm text-destructive">{String(errors.sellingPrice.message)}</p>}
           </div>
         </div>

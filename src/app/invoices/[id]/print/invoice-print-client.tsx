@@ -9,13 +9,10 @@ function dateText(value: Date | string, locale: "en" | "ar") {
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-OM" : "en-GB").format(new Date(value))
 }
 
-import { roundAmount } from "@/lib/amount"
+import { formatAmount } from "@/lib/amount"
 
 function amountText(value: number, locale: "en" | "ar") {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-OM" : "en-OM", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(roundAmount(value))
+  return formatAmount(value)
 }
 
 interface InvoicePrintData {

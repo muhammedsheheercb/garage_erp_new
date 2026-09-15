@@ -34,11 +34,11 @@ export function JobCardPrintClient({ job }: { job: any }) {
     0,
   );
   const subTotal = servicesTotal + partsTotal + (job.estimatedCost || 0);
-  const discountAmount = Math.round(job.discount || 0);
+  const discountAmount = job.discount || 0;
   const taxRate = job.tax || 0;
   const taxableAmount = Math.max(0, subTotal - discountAmount);
-  const taxAmount = Math.round((taxableAmount * taxRate) / 100);
-  const grandTotal = Math.round(Math.max(0, subTotal + taxAmount - discountAmount));
+  const taxAmount = (taxableAmount * taxRate) / 100;
+  const grandTotal = Math.max(0, subTotal + taxAmount - discountAmount);
   const jobDate = formatDisplayDate(job.date || job.createdAt);
 
   return (

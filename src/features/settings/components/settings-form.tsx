@@ -451,7 +451,7 @@ export function SettingsForm() {
                     <Input 
                       id="taxPercentage" 
                       type="number"
-                      step="0.01"
+                      step="any"
                       placeholder="e.g. 5" 
                       value={taxPercentage}
                       onChange={(e) => setTaxPercentage(e.target.value)}

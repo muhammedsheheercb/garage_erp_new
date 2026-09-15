@@ -4,17 +4,14 @@ import { ArrowLeft, Printer, Download } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useSyncExternalStore } from "react"
 import { useTranslation } from "@/i18n"
-import { roundAmount } from "@/lib/amount"
+import { formatAmount } from "@/lib/amount"
 
 function dateText(value: Date | string, locale: "en" | "ar") {
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-OM" : "en-GB").format(new Date(value))
 }
 
 function amountText(value: number, locale: "en" | "ar") {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-OM" : "en-OM", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(roundAmount(value))
+  return formatAmount(value)
 }
 
 export interface PurchasePrintData {
@@ -74,11 +71,11 @@ export function PurchasePrintClient({ purchase }: { purchase: PurchasePrintData 
 
   // Product-wise item calculations for complete consistency
   const calculatedItems = purchase.items.map((item) => {
-    const prodAmt = Math.round((item.quantity || 0) * (item.purchasePrice || 0))
+    const prodAmt = (item.quantity || 0) * (item.purchasePrice || 0)
     const rate = Math.max(0, Number(item.taxRate) || 0)
-    const taxAmt = item.taxAmount != null && item.taxAmount > 0 
-      ? Math.round(item.taxAmount) 
-      : Math.round((prodAmt * rate) / 100)
+    const taxAmt = item.taxAmount != null && item.taxAmount > 0
+      ? item.taxAmount
+      : (prodAmt * rate) / 100
     const total = prodAmt + taxAmt
     return {
       ...item,
@@ -89,16 +86,16 @@ export function PurchasePrintClient({ purchase }: { purchase: PurchasePrintData 
     }
   })
 
-  const subTotal = Math.round(
+  const subTotal = (
     calculatedItems.reduce((acc, item) => acc + item.productAmount, 0) || purchase.subTotal || 0
   )
-  const totalTax = Math.round(
+  const totalTax = (
     calculatedItems.reduce((acc, item) => acc + item.effectiveTaxAmount, 0) || purchase.taxAmount || 0
   )
-  const discountAmount = Math.round(purchase.discount || 0)
-  const grandTotal = Math.round(Math.max(0, subTotal + totalTax - discountAmount))
-  const paidAmount = Math.round(purchase.paidAmount || 0)
-  const balanceDue = Math.round(Math.max(0, grandTotal - paidAmount))
+  const discountAmount = purchase.discount || 0
+  const grandTotal = Math.max(0, subTotal + totalTax - discountAmount)
+  const paidAmount = purchase.paidAmount || 0
+  const balanceDue = Math.max(0, grandTotal - paidAmount)
 
   const l = isRTL ? {
     invoiceTitle: "فاتورة الشراء",
@@ -199,17 +196,17 @@ export function PurchasePrintClient({ purchase }: { purchase: PurchasePrintData 
       <div className="max-w-4xl mx-auto">
         {/* Top Control Bar (Hidden on Print) */}
         <div className="flex justify-between print:hidden mb-6 gap-4">
-          <button 
-            type="button" 
-            className="border border-gray-300 rounded-md px-4 py-2 flex items-center hover:bg-gray-50 transition-colors text-sm font-medium" 
+          <button
+            type="button"
+            className="border border-gray-300 rounded-md px-4 py-2 flex items-center hover:bg-gray-50 transition-colors text-sm font-medium"
             onClick={handleBack}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             {l.back}
           </button>
-          <button 
-            type="button" 
-            className="bg-primary text-primary-foreground rounded-md px-4 py-2 flex items-center hover:bg-primary/90 transition-colors text-sm font-medium shadow-sm" 
+          <button
+            type="button"
+            className="bg-primary text-primary-foreground rounded-md px-4 py-2 flex items-center hover:bg-primary/90 transition-colors text-sm font-medium shadow-sm"
             onClick={() => window.print()}
           >
             <Printer className="mr-2 h-4 w-4" />

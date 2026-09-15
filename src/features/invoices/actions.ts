@@ -122,8 +122,8 @@ export async function createInvoice(data: InvoiceFormValues) {
     }
   }
   
-  const subTotal = Math.round(serviceCharge + parsed.labourCharge + partsCost + otherAmountSum);
-  const grandTotal = Math.round(Math.max(0, subTotal + parsed.tax - parsed.discount));
+  const subTotal = serviceCharge + parsed.labourCharge + partsCost + otherAmountSum;
+  const grandTotal = Math.max(0, subTotal + parsed.tax - parsed.discount);
 
   const initialStatus = advancePaid >= grandTotal ? "PAID" : advancePaid > 0 ? "PARTIAL" : "UNPAID";
   const creatorName = await getCreatorName()
@@ -193,8 +193,8 @@ export async function updateInvoice(id: string, data: InvoiceFormValues) {
     }
   }
 
-  const subTotal = Math.round(existingInvoice.serviceCharge + parsed.labourCharge + existingInvoice.partsCost + otherAmountSum);
-  const grandTotal = Math.round(Math.max(0, subTotal + parsed.tax - parsed.discount));
+  const subTotal = existingInvoice.serviceCharge + parsed.labourCharge + existingInvoice.partsCost + otherAmountSum;
+  const grandTotal = Math.max(0, subTotal + parsed.tax - parsed.discount);
 
   let newStatus = existingInvoice.status;
   const totalPaid = existingInvoice.payments.reduce((acc, p) => acc + p.amount, 0);

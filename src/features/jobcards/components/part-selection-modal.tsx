@@ -78,7 +78,7 @@ export function PartSelectionModal({ onSelect, jobCardId }: PartSelectionModalPr
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">{Math.round(part.sellingPrice)} OMR</TableCell>
+                    <TableCell className="text-right">{(part.sellingPrice)} OMR</TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" type="button" disabled={part.availableQuantity <= 0} onClick={() => {
                         onSelect(part)

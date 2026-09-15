@@ -252,7 +252,7 @@ export function ExpenseList() {
                         {expense.createdBy || "Admin"}
                       </TableCell>
                       <TableCell className="text-right font-medium text-destructive">
-                        -{Math.round(expense.amount)}
+                        -{(expense.amount)}
                       </TableCell>
                       <TableCell className="text-right">
                         {can("expenses", "edit") && (
@@ -404,7 +404,7 @@ export function ExpenseList() {
                         {t.nav.expenses}
                       </h3>
                       <div className="text-4xl font-bold text-destructive">
-                        {reportData?.total != null ? Math.round(reportData.total) : "0"}{" "}
+                        {reportData?.total != null ? (reportData.total) : "0"}{" "}
                         <span className="text-lg font-medium text-muted-foreground">
                           OMR
                         </span>
@@ -437,7 +437,7 @@ export function ExpenseList() {
                                       {getTranslatedCategory(t, category)}
                                     </span>
                                     <span className="font-semibold">
-                                      {Math.round(amount as number)} OMR
+                                      {(amount as number)} OMR
                                     </span>
                                   </div>
                                   <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
@@ -480,7 +480,7 @@ export function ExpenseList() {
                               </div>
                             </div>
                             <div className="font-semibold text-sm text-destructive">
-                              -{Math.round(expense.amount)}
+                              -{(expense.amount)}
                             </div>
                           </div>
                         ))

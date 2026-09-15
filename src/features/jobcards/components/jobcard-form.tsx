@@ -48,6 +48,7 @@ import { useTranslation } from "@/i18n";
 import { formatDisplayDate } from "@/lib/date-format";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { formatAmount } from "@/lib/amount";
 
 interface JobCardFormProps {
   initialData?: any; // JobCard with relations
@@ -150,26 +151,22 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const partsJson = JSON.stringify(watchedParts);
 
   useEffect(() => {
-    const sTotal = Math.round(
-      (watchedServices || []).reduce(
+    const sTotal = (watchedServices || []).reduce(
         (acc, curr) => acc + (Number(curr?.price) || 0),
         0,
-      )
-    );
-    const pTotal = Math.round(
-      (watchedParts || []).reduce(
+      );
+    const pTotal = (watchedParts || []).reduce(
         (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
         0,
-      )
-    );
+      );
 
     setValue("serviceTotal", sTotal);
     setValue("partsTotal", pTotal);
 
     const subTotal = sTotal + pTotal;
     const taxable = Math.max(0, subTotal - (Number(watchedDiscount) || 0));
-    const taxAmt = Math.round((taxable * (Number(watchedTax) || 0)) / 100);
-    const gTotal = Math.round(subTotal + taxAmt - (Number(watchedDiscount) || 0));
+    const taxAmt = (taxable * (Number(watchedTax) || 0)) / 100;
+    const gTotal = subTotal + taxAmt - (Number(watchedDiscount) || 0);
 
     setValue("grandTotal", gTotal > 0 ? gTotal : 0);
   }, [servicesJson, partsJson, watchedDiscount, watchedTax, setValue]);
@@ -284,7 +281,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const advancePaid = watch("advancePaid") || 0;
   const balanceAmount = Math.max(0, grandTotal - advancePaid);
   const taxableAmount = Math.max(0, (serviceTotal || 0) + (partsTotal || 0) - (Number(watchedDiscount) || 0));
-  const currentTaxAmt = Math.round((taxableAmount * (Number(watchedTax) || 0)) / 100);
+  const currentTaxAmt = (taxableAmount * (Number(watchedTax) || 0)) / 100;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -712,7 +709,12 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
               <Label htmlFor="expectedFinishDate">
                 Expected finish date <span className="text-destructive">*</span>
               </Label>
-              <Input id="expectedFinishDate" type="date" {...register("expectedFinishDate")} />
+              <Input
+                id="expectedFinishDate"
+                type="date"
+                min={watch("date")}
+                {...register("expectedFinishDate")}
+              />
               <p className="text-xs text-muted-foreground">When the vehicle is expected to be ready.</p>
               {errors.expectedFinishDate && (
                 <p className="text-sm text-destructive">
@@ -791,7 +793,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                         <TableCell>
                           <Input
                             type="number"
-                            step="1"
+                            step="any"
                             min="0"
                             {...register(`services.${index}.price`, {
                               valueAsNumber: true,
@@ -799,7 +801,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {Math.round(price)}
+                          {formatAmount(price)}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -898,7 +900,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                         <TableCell>
                           <Input
                             type="number"
-                            step="0.001"
+                            step="any"
                             min="0"
                             readOnly
                             className="bg-muted cursor-not-allowed"
@@ -908,7 +910,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {Math.round(qty * price)}
+                          {formatAmount(qty * price)}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -949,14 +951,14 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
               <span className="text-muted-foreground">
                 {t.jobcards.serviceTotal}:
               </span>
-              <span>{Math.round(serviceTotal)} OMR</span>
+              <span>{formatAmount(serviceTotal)} OMR</span>
             </div>
 
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">
                 {t.jobcards.partsTotal}:
               </span>
-              <span>{Math.round(partsTotal)} OMR</span>
+              <span>{formatAmount(partsTotal)} OMR</span>
             </div>
 
             <div className="space-y-2 pt-2 border-t">
@@ -965,7 +967,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                 <Input
                   id="discount"
                   type="number"
-                  step="0.001"
+                  step="any"
                   className="w-24 h-8 text-right"
                   {...register("discount", { valueAsNumber: true })}
                 />
@@ -991,7 +993,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                 <span className="text-muted-foreground">
                   {t.jobcards.taxPercent} ({watchedTax}%):
                 </span>
-                <span className="font-medium text-foreground">+{currentTaxAmt} OMR</span>
+                <span className="font-medium text-foreground">+{formatAmount(currentTaxAmt)} OMR</span>
               </div>
             )}
 
@@ -1001,7 +1003,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
                 <Input
                   id="advancePaid"
                   type="number"
-                  step="0.001"
+                  step="any"
                   min="0"
                   className={`w-24 h-8 text-right ${errors.advancePaid ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   {...register("advancePaid", {
@@ -1024,13 +1026,13 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
 
             <div className="flex justify-between items-center pt-4 border-t font-bold text-lg">
               <span>{t.invoicesMod.grandTotal}:</span>
-              <span>{Math.round(grandTotal)} OMR</span>
+              <span>{formatAmount(grandTotal)} OMR</span>
             </div>
 
             {advancePaid > 0 && (
               <div className="flex justify-between items-center font-semibold text-base text-primary">
                 <span>{t.jobcards.balanceAmount}:</span>
-                <span>{Math.round(balanceAmount)} OMR</span>
+                <span>{formatAmount(balanceAmount)} OMR</span>
               </div>
             )}
 

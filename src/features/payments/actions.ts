@@ -98,7 +98,7 @@ export async function getPendingInvoicesDropdown() {
     const due = inv.grandTotal - paidAmount
     return {
       id: inv.id,
-      label: `INV-${inv.id.split('-')[0].toUpperCase()} - ${inv.customer.name} - ${inv.jobCard.vehicle.plateNumber} - Due: ${Math.round(due)} OMR`,
+      label: `INV-${inv.id.split('-')[0].toUpperCase()} - ${inv.customer.name} - ${inv.jobCard.vehicle.plateNumber} - Due: ${(due)} OMR`,
       dueAmount: due
     }
   })
@@ -124,13 +124,13 @@ export async function createPayment(data: PaymentFormValues) {
     )
     const dueAmount = Math.max(0, invoiceBeforePayment.grandTotal - alreadyPaid)
     if (parsed.amount > dueAmount) {
-      throw new Error(`Payment amount cannot exceed the outstanding balance of ${Math.round(dueAmount)} OMR.`)
+      throw new Error(`Payment amount cannot exceed the outstanding balance of ${(dueAmount)} OMR.`)
     }
     if (discountAmount > dueAmount) {
-      throw new Error(`Discount amount cannot exceed the available amount of ${Math.round(dueAmount)} OMR.`)
+      throw new Error(`Discount amount cannot exceed the available amount of ${(dueAmount)} OMR.`)
     }
     if (parsed.amount > Math.max(0, dueAmount - discountAmount)) {
-      throw new Error(`Payment amount cannot exceed the discounted balance of ${Math.round(Math.max(0, dueAmount - discountAmount))} OMR.`)
+      throw new Error(`Payment amount cannot exceed the discounted balance of ${(Math.max(0, dueAmount - discountAmount))} OMR.`)
     }
 
     const creatorName = await getCreatorName()

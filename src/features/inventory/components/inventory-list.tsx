@@ -146,8 +146,8 @@ export function InventoryList() {
                     </TableCell>
                     <TableCell>
                       <div className="text-xs">
-                        <span className="text-muted-foreground">{t.inventoryMod.pur}: </span>{Math.round(item.purchasePrice)}<br/>
-                        <span className="text-muted-foreground">{t.inventoryMod.sel}: </span>{Math.round(item.sellingPrice)}
+                        <span className="text-muted-foreground">{t.inventoryMod.pur}: </span>{(item.purchasePrice)}<br/>
+                        <span className="text-muted-foreground">{t.inventoryMod.sel}: </span>{(item.sellingPrice)}
                       </div>
                     </TableCell>
 

@@ -23,7 +23,7 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
     CARD: t.payments.card,
     TRANSFER: t.payments.bankTransfer,
   }
-  
+
   const { data: invoices, isLoading } = useQuery({
     queryKey: ['pending-invoices-dropdown'],
     queryFn: () => getPendingInvoicesDropdown()
@@ -84,11 +84,11 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
     if (watchInvoiceId && invoices) {
       const inv = invoices.find(i => i.id === watchInvoiceId)
       if (inv && data.amount > inv.dueAmount) {
-        toast.error(`${t.payments.amountExceedsDue} ${Math.round(inv.dueAmount)}`)
+        toast.error(`${t.payments.amountExceedsDue} ${(inv.dueAmount)}`)
         return
       }
       if (inv && (data.discountAmount || 0) > inv.dueAmount) {
-        toast.error(`Discount amount cannot exceed available amount of ${Math.round(inv.dueAmount)} OMR`)
+        toast.error(`Discount amount cannot exceed available amount of ${(inv.dueAmount)} OMR`)
         return
       }
     }
@@ -170,7 +170,7 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
           <Input
             id="discountAmount"
             type="number"
-            step="1"
+            step="any"
             min="0"
             max={currentBalance}
             {...register("discountAmount", { valueAsNumber: true })}
@@ -178,19 +178,19 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
           {errors.discountAmount && <p className="text-sm text-destructive">{errors.discountAmount.message}</p>}
           {watchedDiscountAmount > currentBalance && (
             <p className="text-sm text-destructive">
-              Discount amount cannot exceed available amount of {Math.round(currentBalance)} OMR
+              Discount amount cannot exceed available amount of {(currentBalance)} OMR
             </p>
           )}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="amount">{t.payments.amount} (OMR) <span className="text-destructive">*</span></Label>
-          <Input 
-            id="amount" 
-            type="number" 
-            step="0.001" 
+          <Input
+            id="amount"
+            type="number"
+            step="any"
             max={currentBalance}
-            {...register("amount", { valueAsNumber: true })} 
+            {...register("amount", { valueAsNumber: true })}
           />
           {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
         </div>
@@ -223,11 +223,11 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
         <div className="rounded-md border bg-muted/40 p-3 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Current Balance</span>
-            <span className="font-medium">{Math.round(currentBalance)} OMR</span>
+            <span className="font-medium">{(currentBalance)} OMR</span>
           </div>
           <div className="mt-1 flex justify-between">
             <span className="text-muted-foreground">Updated Amount</span>
-            <span className="font-semibold">{Math.round(paymentAmountAfterDiscount)} OMR</span>
+            <span className="font-semibold">{(paymentAmountAfterDiscount)} OMR</span>
           </div>
         </div>
       )}

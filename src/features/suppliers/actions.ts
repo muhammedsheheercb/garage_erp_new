@@ -202,7 +202,7 @@ export async function createSupplierPayment(supplierId: string, data: SupplierPa
   }
 
   if (parsed.amount > purchase.pendingAmount) {
-    throw new Error(`Payment amount cannot exceed the outstanding balance of ${Math.round(purchase.pendingAmount)} OMR.`)
+    throw new Error(`Payment amount cannot exceed the outstanding balance of ${(purchase.pendingAmount)} OMR.`)
   }
 
   const payment = await prisma.$transaction(async (tx) => {

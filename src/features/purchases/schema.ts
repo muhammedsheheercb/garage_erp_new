@@ -31,13 +31,13 @@ export const purchaseSchema = z.object({
     ctx.addIssue({ code: "custom", path: ["jobCardId"], message: "Select a Job Card for vehicle purchase" })
   }
 
-  const subTotal = (data.items || []).reduce((acc, it) => acc + Math.round((it.quantity || 0) * (it.purchasePrice || 0)), 0)
+  const subTotal = (data.items || []).reduce((acc, it) => acc + (it.quantity || 0) * (it.purchasePrice || 0), 0)
   const totalTax = (data.items || []).reduce((acc, it) => {
-    const itemAmount = Math.round((it.quantity || 0) * (it.purchasePrice || 0))
+    const itemAmount = (it.quantity || 0) * (it.purchasePrice || 0)
     const taxRate = Number(it.taxRate) || 0
-    return acc + Math.round((itemAmount * taxRate) / 100)
+    return acc + (itemAmount * taxRate) / 100
   }, 0)
-  const grandTotal = Math.round(Math.max(0, subTotal + totalTax - (data.discount || 0)))
+  const grandTotal = Math.max(0, subTotal + totalTax - (data.discount || 0))
 
   if (data.discount > subTotal) {
     ctx.addIssue({ code: "custom", path: ["discount"], message: "Discount cannot exceed the purchase subtotal" })

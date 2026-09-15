@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash, Trash2, Loader2, ClipboardList, AlertTriangle, Search, Check, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useTranslation } from "@/i18n"
+import { formatAmount } from "@/lib/amount"
 
 export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onSuccess?: () => void }) {
   const queryClient = useQueryClient()
@@ -32,7 +33,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
     }
     return []
   })
-  
+
   const { data: dropdownData, isLoading: dropdownLoading } = useQuery({
     queryKey: ['invoice-dropdowns'],
     queryFn: () => getDropdownData()
@@ -45,7 +46,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
 
   const [discountType, setDiscountType] = useState<"amount" | "percentage">("amount")
   const [discountInput, setDiscountInput] = useState<number>(() => Number(initialData?.discount) || 0)
-  
+
   const [taxType, setTaxType] = useState<"percentage" | "amount">(() => {
     return initialData?.jobCard?.tax ? "percentage" : (initialData?.tax > 0 ? "amount" : "percentage")
   })
@@ -82,7 +83,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
   const otherChargesSum = otherChargesList.reduce((acc, c) => acc + (parseFloat(c.amount as string) || 0), 0)
 
   // 1. Subtotal = total of all invoice item amounts before tax and discount
-  const subTotal = Math.round(
+  const subTotal = (
     (parseFloat(watchService.toString()) || 0) +
     (parseFloat(watchLabour.toString()) || 0) +
     (parseFloat(watchParts.toString()) || 0) +
@@ -94,9 +95,9 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
   let discountPercent = 0
   if (discountType === "percentage") {
     discountPercent = Math.max(0, Number(discountInput) || 0)
-    calculatedDiscount = Math.round((subTotal * discountPercent) / 100)
+    calculatedDiscount = (subTotal * discountPercent) / 100
   } else {
-    calculatedDiscount = Math.round(Math.max(0, Number(discountInput) || 0))
+    calculatedDiscount = Math.max(0, Number(discountInput) || 0)
     discountPercent = subTotal > 0 ? (calculatedDiscount / subTotal) * 100 : 0
   }
 
@@ -106,14 +107,14 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
   let taxPercent = 0
   if (taxType === "percentage") {
     taxPercent = Math.max(0, Number(taxInput) || 0)
-    calculatedTax = Math.round((taxableAmount * taxPercent) / 100)
+    calculatedTax = (taxableAmount * taxPercent) / 100
   } else {
-    calculatedTax = Math.round(Math.max(0, Number(taxInput) || 0))
+    calculatedTax = Math.max(0, Number(taxInput) || 0)
     taxPercent = taxableAmount > 0 ? (calculatedTax / taxableAmount) * 100 : 0
   }
 
   // 4. Grand Total = Subtotal + Tax Amount - Discount Amount
-  const grandTotal = Math.round(Math.max(0, subTotal + calculatedTax - calculatedDiscount))
+  const grandTotal = Math.max(0, subTotal + calculatedTax - calculatedDiscount)
 
   useEffect(() => {
     setValue("discount", calculatedDiscount)
@@ -133,7 +134,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         setValue("serviceCharge", jc.serviceTotal || 0)
         setValue("labourCharge", 0) // Leave labour blank for manual entry
         setValue("partsCost", jc.partsTotal || 0)
-        
+
         if (jc.discount > 0) {
           setDiscountType("amount")
           setDiscountInput(jc.discount)
@@ -147,7 +148,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         } else {
           setTaxInput(0)
         }
-        
+
         // Auto-generate details text
         if (jc.services && jc.services.length > 0) {
           const servicesText = jc.services.map((s: any) => `${s.service.name} (${t.invoicesMod.qty}: ${s.quantity})`).join(", ")
@@ -162,7 +163,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
   }, [watchJobCardId, dropdownData, setValue, getValues, t, initialData])
 
   const mutation = useMutation({
-    mutationFn: (data: InvoiceFormValues) => 
+    mutationFn: (data: InvoiceFormValues) =>
       initialData ? updateInvoice(initialData.id, data) : createInvoice(data),
     onSuccess: () => {
       toast.success(initialData ? t.invoicesMod.invoiceUpdated : t.invoicesMod.invoiceCreated)
@@ -215,7 +216,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
+
         <div className="space-y-2 col-span-1">
           <Label htmlFor="jobCardId">{t.invoicesMod.jobCardVehicle} <span className="text-destructive">*</span></Label>
           <div className="flex items-center gap-2">
@@ -278,10 +279,10 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
             {watchJobCardId && selectedJobCardDetails && (
               <Dialog open={isJobCardModalOpen} onOpenChange={setIsJobCardModalOpen}>
                 <DialogTrigger render={
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     className="shrink-0"
                     title={t.invoicesMod.viewJobCardDetails}
                   >
@@ -319,7 +320,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                         </div>
                       )}
                     </div>
-                    
+
                     {selectedJobCardDetails.services && selectedJobCardDetails.services.length > 0 && (
                       <div>
                         <h4 className="font-semibold mb-2">{t.jobcards.services}</h4>
@@ -336,7 +337,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                               <TableRow key={s.id}>
                                 <TableCell>{s.service?.name}</TableCell>
                                 <TableCell>{s.quantity}</TableCell>
-                                <TableCell className="text-right">{Math.round(s.price)}</TableCell>
+                                <TableCell className="text-right">{(s.price)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -360,7 +361,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                               <TableRow key={p.id}>
                                 <TableCell>{p.batch?.inventory?.itemName}</TableCell>
                                 <TableCell>{p.quantity}</TableCell>
-                                <TableCell className="text-right">{Math.round(p.price)}</TableCell>
+                                <TableCell className="text-right">{(p.price)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -400,44 +401,44 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
 
         <div className="space-y-2">
           <Label htmlFor="serviceCharge">{t.invoicesMod.serviceCharge} (OMR)</Label>
-          <Input 
-            id="serviceCharge" 
-            type="number" 
-            step="0.001" 
+          <Input
+            id="serviceCharge"
+            type="number"
+            step="any"
             readOnly
             aria-readonly="true"
             className="bg-muted cursor-not-allowed"
-            {...register("serviceCharge", { valueAsNumber: true })} 
+            {...register("serviceCharge", { valueAsNumber: true })}
           />
           {errors.serviceCharge && <p className="text-sm text-destructive">{errors.serviceCharge.message}</p>}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="labourCharge">{t.invoicesMod.labourCharge} (OMR)</Label>
-          <Input 
-            id="labourCharge" 
-            type="number" 
-            step="0.001" 
+          <Input
+            id="labourCharge"
+            type="number"
+            step="any"
             disabled={isPaidLock}
-            {...register("labourCharge", { valueAsNumber: true })} 
+            {...register("labourCharge", { valueAsNumber: true })}
           />
           {errors.labourCharge && <p className="text-sm text-destructive">{errors.labourCharge.message}</p>}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="partsCost">{t.invoicesMod.partsCost} (OMR)</Label>
-          <Input 
-            id="partsCost" 
-            type="number" 
-            step="0.001" 
+          <Input
+            id="partsCost"
+            type="number"
+            step="any"
             readOnly
             aria-readonly="true"
             className="bg-muted cursor-not-allowed"
-            {...register("partsCost", { valueAsNumber: true })} 
+            {...register("partsCost", { valueAsNumber: true })}
           />
           {errors.partsCost && <p className="text-sm text-destructive">{errors.partsCost.message}</p>}
         </div>
-        
+
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <Label htmlFor="discount">{t.invoicesMod.discount}</Label>
@@ -468,9 +469,9 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               </button>
             </div>
           </div>
-          <Input 
-            id="discount" 
-            type="number" 
+          <Input
+            id="discount"
+            type="number"
             step={discountType === "percentage" ? "0.1" : "0.001"}
             min="0"
             disabled={isPaidLock}
@@ -485,7 +486,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               <span>
                 {discountType === "percentage"
                   ? `${discountInput}%`
-                  : `${discountPercent > 0 ? discountPercent.toFixed(1) : "0"}%`}
+                  : `${formatAmount(discountPercent)}%`}
               </span>
               <span className="font-semibold text-foreground">
                 -{calculatedDiscount} OMR
@@ -494,7 +495,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
           )}
           {errors.discount && <p className="text-sm text-destructive">{errors.discount.message}</p>}
         </div>
-        
+
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <Label htmlFor="tax">{t.invoicesMod.tax}</Label>
@@ -525,9 +526,9 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               </button>
             </div>
           </div>
-          <Input 
-            id="tax" 
-            type="number" 
+          <Input
+            id="tax"
+            type="number"
             step={taxType === "percentage" ? "0.1" : "0.001"}
             min="0"
             disabled={isPaidLock}
@@ -542,7 +543,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               <span>
                 {taxType === "percentage"
                   ? `${taxInput}%`
-                  : `${taxPercent > 0 ? taxPercent.toFixed(1) : "0"}%`}
+                  : `${formatAmount(taxPercent)}%`}
               </span>
               <span className="font-semibold text-foreground">
                 +{calculatedTax} OMR
@@ -588,7 +589,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                 />
                 <Input
                   type="number"
-                  step="0.001"
+                  step="any"
                   min="0"
                   placeholder={t.invoicesMod.amount}
                   value={charge.amount}
@@ -619,25 +620,25 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
           </div>
         )}
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="servicesDetails">{t.invoicesMod.servicesDetails}</Label>
-        <Textarea 
-          id="servicesDetails" 
+        <Textarea
+          id="servicesDetails"
           placeholder={t.invoicesMod.servicesDetailsDesc}
           readOnly
-          {...register("servicesDetails")} 
+          {...register("servicesDetails")}
         />
         {errors.servicesDetails && <p className="text-sm text-destructive">{errors.servicesDetails.message}</p>}
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="partsDetails">{t.invoicesMod.partsDetails}</Label>
-        <Textarea 
-          id="partsDetails" 
+        <Textarea
+          id="partsDetails"
           placeholder={t.invoicesMod.partsDetailsDesc}
           readOnly
-          {...register("partsDetails")} 
+          {...register("partsDetails")}
         />
         {errors.partsDetails && <p className="text-sm text-destructive">{errors.partsDetails.message}</p>}
       </div>
@@ -654,7 +655,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               {discountType === "percentage"
                 ? `(${discountInput}%)`
                 : discountPercent > 0
-                ? `(${discountPercent.toFixed(1)}%)`
+                ? `(${formatAmount(discountPercent)}%)`
                 : ""}
               :
             </span>
@@ -668,7 +669,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               {taxType === "percentage"
                 ? `(${taxInput}%)`
                 : taxPercent > 0
-                ? `(${taxPercent.toFixed(1)}%)`
+                ? `(${formatAmount(taxPercent)}%)`
                 : ""}
               :
             </span>
@@ -683,11 +684,11 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
           <>
             <div className="flex justify-between text-green-700 font-medium text-sm">
               <span>{t.jobcards.advancePaid}:</span>
-              <span>-{Math.round(selectedJobCardDetails?.advancePaid ?? 0)} OMR</span>
+              <span>-{(selectedJobCardDetails?.advancePaid ?? 0)} OMR</span>
             </div>
             <div className="flex justify-between font-bold text-base text-primary border-t pt-1 border-border">
               <span>{t.jobcards.balanceAmount}:</span>
-              <span>{Math.round(Math.max(0, grandTotal - (selectedJobCardDetails?.advancePaid ?? 0)))} OMR</span>
+              <span>{(Math.max(0, grandTotal - (selectedJobCardDetails?.advancePaid ?? 0)))} OMR</span>
             </div>
           </>
         )}

@@ -118,7 +118,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   }, [initialData])
 
   const mutation = useMutation({
-    mutationFn: (data: PurchaseFormValues) => 
+    mutationFn: (data: PurchaseFormValues) =>
       initialData ? updatePurchase(initialData.id, data) : createPurchase(data),
     onSuccess: () => {
       toast.success(initialData ? t.common.save : t.purchases.purchaseRegisteredSuccess)
@@ -140,22 +140,22 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const paidVal = watch("paidAmount") || 0
   const paymentSource = watch("paymentSource")
 
-  const subTotal = Math.round(items.reduce((acc, item) => {
+  const subTotal = items.reduce((acc, item) => {
     const qty = Number(item?.quantity) || 0
     const price = Number(item?.purchasePrice) || 0
-    return acc + Math.round(qty * price)
-  }, 0))
+    return acc + qty * price
+  }, 0)
 
-  const totalTax = Math.round(items.reduce((acc, item) => {
+  const totalTax = items.reduce((acc, item) => {
     const qty = Number(item?.quantity) || 0
     const price = Number(item?.purchasePrice) || 0
-    const prodAmt = Math.round(qty * price)
+    const prodAmt = qty * price
     const rate = Math.max(0, Number(item?.taxRate) || 0)
-    return acc + Math.round((prodAmt * rate) / 100)
-  }, 0))
+    return acc + (prodAmt * rate) / 100
+  }, 0)
 
-  const grandTotal = Math.round(Math.max(0, subTotal + totalTax - discountVal))
-  const pendingAmount = Math.round(Math.max(0, grandTotal - paidVal))
+  const grandTotal = Math.max(0, subTotal + totalTax - discountVal)
+  const pendingAmount = Math.max(0, grandTotal - paidVal)
   const isPaidExceeded = paidVal > grandTotal
 
   const updateJobCardPickerPosition = (element: HTMLElement) => {
@@ -225,7 +225,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
           {errors.purchaseDate && <p className="text-sm text-destructive">{errors.purchaseDate.message}</p>}
         </div>
       </div>
-      
+
       {purchaseType === "VEHICLE" && (
         <div className="bg-muted/30 p-4 rounded-lg border space-y-4">
           <h3 className="font-semibold">Vehicle & Job Card Selection</h3>
@@ -286,7 +286,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
             />
             {errors.jobCardId && <p className="text-sm text-destructive">{errors.jobCardId.message}</p>}
           </div>
-          
+
           {selectedJobCard && (
             <div className="grid grid-cols-3 gap-2 text-sm bg-background p-3 rounded border">
               <div>
@@ -461,9 +461,9 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <Label className="text-base font-semibold">{t.purchases.purchaseItems}</Label>
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             size="sm"
             onClick={() => append({ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0, taxRate: activeTaxRate || 0 })}
           >
@@ -491,8 +491,8 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                 const itemQty = watch(`items.${index}.quantity`) || 0
                 const itemPrice = watch(`items.${index}.purchasePrice`) || 0
                 const itemTaxRate = watch(`items.${index}.taxRate`) ?? (activeTaxRate || 0)
-                const productAmount = Math.round(itemQty * itemPrice)
-                const itemTaxAmount = Math.round((productAmount * (Number(itemTaxRate) || 0)) / 100)
+                const productAmount = itemQty * itemPrice
+                const itemTaxAmount = (productAmount * (Number(itemTaxRate) || 0)) / 100
                 const rowTotal = productAmount + itemTaxAmount
 
                 return (
@@ -599,28 +599,28 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                     </TableCell>
 
                     <TableCell>
-                      <Input 
-                        type="number" 
+                      <Input
+                        type="number"
                         min="1"
-                        {...register(`items.${index}.quantity` as const, { valueAsNumber: true })} 
+                        {...register(`items.${index}.quantity` as const, { valueAsNumber: true })}
                       />
                     </TableCell>
 
                     <TableCell>
-                      <Input 
-                        type="number" 
-                        step="0.001"
+                      <Input
+                        type="number"
+                        step="any"
                         min="0"
-                        {...register(`items.${index}.purchasePrice` as const, { valueAsNumber: true })} 
+                        {...register(`items.${index}.purchasePrice` as const, { valueAsNumber: true })}
                       />
                     </TableCell>
 
                     <TableCell>
-                      <Input 
-                        type="number" 
-                        step="0.001"
+                      <Input
+                        type="number"
+                        step="any"
                         min="0"
-                        {...register(`items.${index}.sellingPrice` as const, { valueAsNumber: true })} 
+                        {...register(`items.${index}.sellingPrice` as const, { valueAsNumber: true })}
                       />
                     </TableCell>
 
@@ -629,12 +629,12 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                     </TableCell>
 
                     <TableCell>
-                      <Input 
-                        type="number" 
+                      <Input
+                        type="number"
                         step="0.1"
                         min="0"
                         className="w-20 text-right mx-auto"
-                        {...register(`items.${index}.taxRate` as const, { valueAsNumber: true })} 
+                        {...register(`items.${index}.taxRate` as const, { valueAsNumber: true })}
                       />
                     </TableCell>
 
@@ -648,10 +648,10 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
 
                     <TableCell className="text-right">
                       {fields.length > 1 && (
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => remove(index)}
                         >
@@ -673,25 +673,25 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="discount">{t.jobcards.discountAmount}</Label>
-              <Input 
-                id="discount" 
-                type="number" 
-                step="0.001"
+              <Input
+                id="discount"
+                type="number"
+                step="any"
                 min="0"
-                {...register("discount", { valueAsNumber: true })} 
+                {...register("discount", { valueAsNumber: true })}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="paidAmount">{t.purchases.paidAmount} (OMR) <span className="text-destructive">*</span></Label>
-              <Input 
-                id="paidAmount" 
-                type="number" 
-                step="0.001" 
-                min="0" 
+              <Input
+                id="paidAmount"
+                type="number"
+                step="any"
+                min="0"
                 max={grandTotal}
                 className={isPaidExceeded || errors.paidAmount ? "border-destructive focus-visible:ring-destructive" : ""}
-                {...register("paidAmount", { valueAsNumber: true })} 
+                {...register("paidAmount", { valueAsNumber: true })}
               />
               {(errors.paidAmount || isPaidExceeded) && (
                 <p className="text-sm text-destructive">
@@ -705,34 +705,34 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
         <div className="bg-muted/30 p-4 rounded-lg space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{t.invoicesMod.subTotal}:</span>
-            <span className="font-medium">{Math.round(subTotal)} OMR</span>
+            <span className="font-medium">{(subTotal)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{t.purchases?.totalTax || "Total Tax"}:</span>
-            <span className="font-medium">+{Math.round(totalTax)} OMR</span>
+            <span className="font-medium">+{(totalTax)} OMR</span>
           </div>
 
           {discountVal > 0 && (
             <div className="flex justify-between text-sm text-red-600">
               <span className="text-muted-foreground">{t.invoicesMod.discount}:</span>
-              <span className="font-medium">-{Math.round(discountVal)} OMR</span>
+              <span className="font-medium">-{(discountVal)} OMR</span>
             </div>
           )}
 
           <div className="flex justify-between border-t pt-2 text-base font-bold">
             <span>{t.invoicesMod.grandTotal}:</span>
-            <span className="text-primary">{Math.round(grandTotal)} OMR</span>
+            <span className="text-primary">{(grandTotal)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm pt-1">
             <span className="text-muted-foreground font-semibold">{t.purchases.paidAmount}:</span>
-            <span className="text-green-600 font-semibold">{Math.round(paidVal)} OMR</span>
+            <span className="text-green-600 font-semibold">{(paidVal)} OMR</span>
           </div>
 
           <div className="flex justify-between text-sm border-t border-dashed pt-2 font-bold text-destructive">
             <span>{t.purchases.pendingAmount}:</span>
-            <span className="font-medium">{Math.round(pendingAmount)} OMR</span>
+            <span className="font-medium">{(pendingAmount)} OMR</span>
           </div>
         </div>
       </div>

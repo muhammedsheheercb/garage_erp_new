@@ -41,6 +41,15 @@ export const jobCardSchema = z.object({
   tax: z.number().finite("Tax is required").min(0, "Tax cannot be negative"),
   grandTotal: z.number().finite().min(0, "Grand total cannot be negative"),
   advancePaid: z.number().finite("Advance paid is required").min(0, "Advance paid cannot be negative"),
+}).superRefine((data, ctx) => {
+  // Date-only values sort lexicographically in ISO (yyyy-MM-dd) form.
+  if (data.expectedFinishDate < data.date) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["expectedFinishDate"],
+      message: "Expected finish date cannot be earlier than the start date",
+    })
+  }
 })
 
 export type JobCardFormValues = z.infer<typeof jobCardSchema>

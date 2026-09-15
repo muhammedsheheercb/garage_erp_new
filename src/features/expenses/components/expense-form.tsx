@@ -142,7 +142,7 @@ export function ExpenseForm({
           <Input
             id="amount"
             type="number"
-            step="0.001"
+            step="any"
             {...register("amount", { valueAsNumber: true })}
           />
           {errors.amount && (

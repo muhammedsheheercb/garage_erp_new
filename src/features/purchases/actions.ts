@@ -156,9 +156,9 @@ export async function createPurchase(data: PurchaseFormValues) {
   let subTotal = 0
   let totalTax = 0
   const itemsData = parsed.items.map(item => {
-    const productAmount = Math.round(item.quantity * item.purchasePrice)
+    const productAmount = item.quantity * item.purchasePrice
     const taxRate = Math.max(0, Number(item.taxRate) || 0)
-    const taxAmount = Math.round((productAmount * taxRate) / 100)
+    const taxAmount = (productAmount * taxRate) / 100
     const itemTotal = productAmount + taxAmount
     subTotal += productAmount
     totalTax += taxAmount
@@ -173,11 +173,10 @@ export async function createPurchase(data: PurchaseFormValues) {
     }
   })
 
-  subTotal = Math.round(subTotal)
-  const taxAmount = Math.round(totalTax)
+  const taxAmount = totalTax
   const overallTaxRate = subTotal > 0 ? (taxAmount / subTotal) * 100 : 0
-  const grandTotal = Math.round(Math.max(0, subTotal + taxAmount - parsed.discount))
-  const pendingAmount = Math.round(Math.max(0, grandTotal - parsed.paidAmount))
+  const grandTotal = Math.max(0, subTotal + taxAmount - parsed.discount)
+  const pendingAmount = Math.max(0, grandTotal - parsed.paidAmount)
 
   if (parsed.discount > subTotal) {
     throw new Error("Discount cannot exceed the purchase subtotal.")
@@ -396,9 +395,9 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
   let subTotal = 0
   let totalTax = 0
   const itemsData = parsed.items.map(item => {
-    const productAmount = Math.round(item.quantity * item.purchasePrice)
+    const productAmount = item.quantity * item.purchasePrice
     const taxRate = Math.max(0, Number(item.taxRate) || 0)
-    const taxAmount = Math.round((productAmount * taxRate) / 100)
+    const taxAmount = (productAmount * taxRate) / 100
     const itemTotal = productAmount + taxAmount
     subTotal += productAmount
     totalTax += taxAmount
@@ -413,11 +412,10 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
     }
   })
 
-  subTotal = Math.round(subTotal)
-  const taxAmount = Math.round(totalTax)
+  const taxAmount = totalTax
   const overallTaxRate = subTotal > 0 ? (taxAmount / subTotal) * 100 : 0
-  const grandTotal = Math.round(Math.max(0, subTotal + taxAmount - parsed.discount))
-  const pendingAmount = Math.round(Math.max(0, grandTotal - parsed.paidAmount))
+  const grandTotal = Math.max(0, subTotal + taxAmount - parsed.discount)
+  const pendingAmount = Math.max(0, grandTotal - parsed.paidAmount)
 
   if (parsed.discount > subTotal) {
     throw new Error("Discount cannot exceed the purchase subtotal.")

@@ -103,7 +103,7 @@ export function InvoiceList() {
                   <TableCell>{invoice.customer?.name}</TableCell>
                   <TableCell>{invoice.jobCard?.vehicle?.plateNumber}</TableCell>
                   <TableCell className="text-sm font-medium text-muted-foreground">{invoice.createdBy || "Admin"}</TableCell>
-                  <TableCell>{Math.round(invoice.grandTotal)} OMR</TableCell>
+                  <TableCell>{(invoice.grandTotal)} OMR</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${
                       invoice.status === 'PAID' ? 'bg-green-100 text-green-800' :
@@ -174,7 +174,7 @@ export function InvoiceList() {
                                         <TableRow key={s.id}>
                                           <TableCell>{s.service?.name}</TableCell>
                                           <TableCell>{s.quantity}</TableCell>
-                                          <TableCell className="text-right">{Math.round(s.price)}</TableCell>
+                                          <TableCell className="text-right">{(s.price)}</TableCell>
                                         </TableRow>
                                       ))}
                                     </TableBody>
@@ -198,7 +198,7 @@ export function InvoiceList() {
                                         <TableRow key={p.id}>
                                           <TableCell>{p.batch?.inventory?.itemName}</TableCell>
                                           <TableCell>{p.quantity}</TableCell>
-                                          <TableCell className="text-right">{Math.round(p.price)}</TableCell>
+                                          <TableCell className="text-right">{(p.price)}</TableCell>
                                         </TableRow>
                                       ))}
                                     </TableBody>

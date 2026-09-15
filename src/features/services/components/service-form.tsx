@@ -81,7 +81,7 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
       
       <div className="space-y-2">
         <Label htmlFor="price">{t.services.price} <span className="text-destructive">*</span></Label>
-        <Input id="price" type="number" step="0.01" {...register("price", { valueAsNumber: true })} />
+        <Input id="price" type="number" step="any" {...register("price", { valueAsNumber: true })} />
         {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
       </div>
 

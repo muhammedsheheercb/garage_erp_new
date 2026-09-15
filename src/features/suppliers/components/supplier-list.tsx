@@ -104,11 +104,11 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
         </div>
         <div className="bg-muted/50 p-4 rounded-lg">
           <div className="text-sm text-muted-foreground mb-1 flex items-center"><img src="/Omr_symbol.svg" alt="OMR" className="h-4 w-4 mr-1 object-contain" /> {t.suppliers.totalPaid}</div>
-          <div className="text-xl font-bold text-green-600">{Math.round(totalPaid)} OMR</div>
+          <div className="text-xl font-bold text-green-600">{(totalPaid)} OMR</div>
         </div>
         <div className="bg-muted/50 p-4 rounded-lg">
           <div className="text-sm text-muted-foreground mb-1 flex items-center"><img src="/Omr_symbol.svg" alt="OMR" className="h-4 w-4 mr-1 object-contain" /> {t.suppliers.pendingAmount}</div>
-          <div className="text-xl font-bold text-destructive">{Math.round(pendingAmount)} OMR</div>
+          <div className="text-xl font-bold text-destructive">{(pendingAmount)} OMR</div>
         </div>
       </div>
 
@@ -138,7 +138,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
                     <TableCell>{formatDisplayDate(purchase.purchaseDate)}</TableCell>
                     <TableCell className="font-medium">{purchase.purchaseNumber}</TableCell>
                     <TableCell>{purchase.items.length} {t.suppliers.items}</TableCell>
-                    <TableCell className="text-right font-medium">{Math.round(purchase.grandTotal)} OMR</TableCell>
+                    <TableCell className="text-right font-medium">{(purchase.grandTotal)} OMR</TableCell>
                   </TableRow>
                 ))
               )}
@@ -182,7 +182,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
                       <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                       <TableCell className="font-medium">{payment.purchase.purchaseNumber}</TableCell>
                       <TableCell>{payment.paymeter ? getPaymentMethodLabel(payment.paymeter.name) : '-'}</TableCell>
-                      <TableCell className="text-right font-medium text-green-600">{Math.round(payment.amount)}</TableCell>
+                      <TableCell className="text-right font-medium text-green-600">{(payment.amount)}</TableCell>
                     </TableRow>
                   ))
               )}

@@ -136,10 +136,10 @@ export function PurchaseList() {
                   </TableCell>
                   <TableCell className="text-sm font-medium text-muted-foreground">{p.createdBy || "Admin"}</TableCell>
                   <TableCell>{formatDisplayDate(p.purchaseDate)}</TableCell>
-                  <TableCell>{Math.round(p.grandTotal)} OMR</TableCell>
-                  <TableCell className="text-green-600 font-medium">{Math.round(p.paidAmount)} OMR</TableCell>
+                  <TableCell>{(p.grandTotal)} OMR</TableCell>
+                  <TableCell className="text-green-600 font-medium">{(p.paidAmount)} OMR</TableCell>
                   <TableCell className={p.pendingAmount > 0 ? "text-destructive font-medium" : "text-muted-foreground"}>
-                    {Math.round(p.pendingAmount)} OMR
+                    {(p.pendingAmount)} OMR
                   </TableCell>
                   <TableCell>{p.paymentMethod?.name || '-'}</TableCell>
                   <TableCell className="text-right space-x-1">
@@ -261,9 +261,9 @@ export function PurchaseList() {
                     </TableHeader>
                     <TableBody>
                       {viewingPurchase.items?.map((item: any) => {
-                        const prodAmt = Math.round(item.quantity * item.purchasePrice)
+                        const prodAmt = (item.quantity * item.purchasePrice)
                         const rate = Number(item.taxRate) || 0
-                        const taxAmt = item.taxAmount ? Math.round(item.taxAmount) : Math.round((prodAmt * rate) / 100)
+                        const taxAmt = item.taxAmount ? (item.taxAmount) : ((prodAmt * rate) / 100)
                         const total = prodAmt + taxAmt
 
                         return (
@@ -271,8 +271,8 @@ export function PurchaseList() {
                             <TableCell className="font-medium">{item.inventory?.itemName}</TableCell>
                             <TableCell>{item.inventory?.partNumber}</TableCell>
                             <TableCell className="text-center">{item.quantity}</TableCell>
-                            <TableCell className="text-right">{Math.round(item.purchasePrice)} OMR</TableCell>
-                            <TableCell className="text-right">{Math.round(item.sellingPrice)} OMR</TableCell>
+                            <TableCell className="text-right">{(item.purchasePrice)} OMR</TableCell>
+                            <TableCell className="text-right">{(item.sellingPrice)} OMR</TableCell>
                             <TableCell className="text-right font-medium">{prodAmt} OMR</TableCell>
                             <TableCell className="text-center">{rate}%</TableCell>
                             <TableCell className="text-right font-medium">+{taxAmt} OMR</TableCell>
@@ -298,29 +298,29 @@ export function PurchaseList() {
                 <div className="w-full sm:w-80 bg-muted/40 p-4 rounded-lg space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t.invoicesMod.subTotal}:</span>
-                    <span>{Math.round(viewingPurchase.subTotal)} OMR</span>
+                    <span>{(viewingPurchase.subTotal)} OMR</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t.purchases.totalTax || "Total Tax"}:</span>
-                    <span>+{Math.round(viewingPurchase.taxAmount)} OMR</span>
+                    <span>+{(viewingPurchase.taxAmount)} OMR</span>
                   </div>
                   {viewingPurchase.discount > 0 && (
                     <div className="flex justify-between text-red-600">
                       <span className="text-muted-foreground">{t.invoicesMod.discount}:</span>
-                      <span>-{Math.round(viewingPurchase.discount)} OMR</span>
+                      <span>-{(viewingPurchase.discount)} OMR</span>
                     </div>
                   )}
                   <div className="flex justify-between border-t pt-2 font-bold text-base">
                     <span>{t.invoicesMod.grandTotal}:</span>
-                    <span className="text-primary">{Math.round(viewingPurchase.grandTotal)} OMR</span>
+                    <span className="text-primary">{(viewingPurchase.grandTotal)} OMR</span>
                   </div>
                   <div className="flex justify-between text-green-600 font-semibold border-t border-dashed pt-2">
                     <span>{t.purchases.paidAmount}:</span>
-                    <span>{Math.round(viewingPurchase.paidAmount)} OMR</span>
+                    <span>{(viewingPurchase.paidAmount)} OMR</span>
                   </div>
                   <div className="flex justify-between text-destructive font-bold">
                     <span>{t.purchases.pendingAmount}:</span>
-                    <span>{Math.round(viewingPurchase.pendingAmount)} OMR</span>
+                    <span>{(viewingPurchase.pendingAmount)} OMR</span>
                   </div>
                 </div>
               </div>
