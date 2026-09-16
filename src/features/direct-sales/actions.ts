@@ -20,6 +20,11 @@ const saleSchema = z.object({
 })
 
 type SaleInput = z.input<typeof saleSchema>
+const dateBoundary = (value: string, end = false) => {
+  const date = new Date(value)
+  date.setHours(end ? 23 : 0, end ? 59 : 0, end ? 59 : 0, end ? 999 : 0)
+  return date
+}
 
 function calculate(items: z.infer<typeof saleSchema>["items"], saleDiscount: number) {
   const rows = items.map(item => {
@@ -73,7 +78,7 @@ export async function getDirectSales(page = 1, search = "", fromDate?: string, t
   await requirePagePermission("inventory")
   const where = search ? { OR: [{ customerName: { contains: search, mode: "insensitive" as const } }, { vehicleNumber: { contains: search, mode: "insensitive" as const } }, { customerMobile: { contains: search, mode: "insensitive" as const } }] } : {}
   if (fromDate || toDate) {
-    Object.assign(where, { saleDate: { ...(fromDate ? { gte: new Date(`${fromDate}T00:00:00`) } : {}), ...(toDate ? { lte: new Date(`${toDate}T23:59:59.999`) } : {}) } })
+    Object.assign(where, { saleDate: { ...(fromDate ? { gte: dateBoundary(fromDate) } : {}), ...(toDate ? { lte: dateBoundary(toDate, true) } : {}) } })
   }
   const [data, total] = await Promise.all([prisma.directSale.findMany({ where, include: { items: { include: { batch: { include: { inventory: true } } } } }, orderBy: { createdAt: "desc" } }), prisma.directSale.count({ where })])
   return { data, meta: { total, page: 1, limit: total, totalPages: 1 } }
