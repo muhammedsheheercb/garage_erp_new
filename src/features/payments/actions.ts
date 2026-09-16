@@ -123,14 +123,8 @@ export async function createPayment(data: PaymentFormValues) {
       0,
     )
     const dueAmount = Math.max(0, invoiceBeforePayment.grandTotal - alreadyPaid)
-    if (parsed.amount > dueAmount) {
-      throw new Error(`Payment amount cannot exceed the outstanding balance of ${(dueAmount)} OMR.`)
-    }
-    if (discountAmount > dueAmount) {
-      throw new Error(`Discount amount cannot exceed the available amount of ${(dueAmount)} OMR.`)
-    }
-    if (parsed.amount > Math.max(0, dueAmount - discountAmount)) {
-      throw new Error(`Payment amount cannot exceed the discounted balance of ${(Math.max(0, dueAmount - discountAmount))} OMR.`)
+    if (parsed.amount + discountAmount > dueAmount) {
+      throw new Error(`Payment amount and discount cannot exceed the outstanding balance of ${(dueAmount)} OMR.`)
     }
 
     const creatorName = await getCreatorName()

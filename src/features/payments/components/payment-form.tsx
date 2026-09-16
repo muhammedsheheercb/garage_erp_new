@@ -44,26 +44,24 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
 
   // Watch invoiceId to auto-fill amount with due amount
   const watchInvoiceId = watch("invoiceId")
+  const watchedPaymentAmount = watch("amount") || 0
   const watchedDiscountAmount = watch("discountAmount") || 0
   const selectedInvoice = invoices?.find(i => i.id === watchInvoiceId)
   const currentBalance = selectedInvoice?.dueAmount || 0
-  const paymentAmountAfterDiscount = Math.max(0, currentBalance - (Number(watchedDiscountAmount) || 0))
+  const combinedAmount = Math.max(0, Number(watchedPaymentAmount) || 0) + Math.max(0, Number(watchedDiscountAmount) || 0)
+  const remainingBalance = Math.max(0, currentBalance - combinedAmount)
+  const exceedsBalance = combinedAmount > currentBalance
+  const hasNegativeAmount = Number(watchedPaymentAmount) < 0 || Number(watchedDiscountAmount) < 0
 
   useEffect(() => {
     if (watchInvoiceId && invoices) {
       const inv = invoices.find(i => i.id === watchInvoiceId)
       if (inv) {
-        setValue("amount", inv.dueAmount)
+        setValue("amount", 0)
         setValue("discountAmount", 0)
       }
     }
   }, [watchInvoiceId, invoices, setValue])
-
-  useEffect(() => {
-    if (selectedInvoice) {
-      setValue("amount", paymentAmountAfterDiscount, { shouldValidate: true, shouldDirty: true })
-    }
-  }, [paymentAmountAfterDiscount, selectedInvoice, setValue])
 
   const mutation = useMutation({
     mutationFn: (data: PaymentFormValues) => createPayment(data),
@@ -83,12 +81,8 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
   const onSubmit = (data: PaymentFormValues) => {
     if (watchInvoiceId && invoices) {
       const inv = invoices.find(i => i.id === watchInvoiceId)
-      if (inv && data.amount > inv.dueAmount) {
-        toast.error(`${t.payments.amountExceedsDue} ${(inv.dueAmount)}`)
-        return
-      }
-      if (inv && (data.discountAmount || 0) > inv.dueAmount) {
-        toast.error(`Discount amount cannot exceed available amount of ${(inv.dueAmount)} OMR`)
+      if (inv && data.amount + (data.discountAmount || 0) > inv.dueAmount) {
+        toast.error(`Payment amount and discount cannot exceed the available balance of ${(inv.dueAmount)} OMR`)
         return
       }
     }
@@ -164,38 +158,50 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
         {errors.invoiceId && <p className="text-sm text-destructive">{errors.invoiceId.message}</p>}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="discountAmount">Discount Amount (OMR)</Label>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <div className="order-1 min-h-[108px] space-y-2">
+          <Label className="whitespace-nowrap text-xs" htmlFor="currentBalance">Balance Amount (OMR)</Label>
+          <Input id="currentBalance" readOnly value={selectedInvoice ? currentBalance : ""} className="bg-muted font-medium tabular-nums" placeholder="Select an invoice" />
+        </div>
+        <div className="order-3 min-h-[108px] space-y-2">
+          <Label className="whitespace-nowrap text-xs" htmlFor="discountAmount">Discount (OMR)</Label>
           <Input
             id="discountAmount"
             type="number"
             step="any"
             min="0"
-            max={currentBalance}
+            max={currentBalance || undefined}
             {...register("discountAmount", { valueAsNumber: true })}
           />
           {errors.discountAmount && <p className="text-sm text-destructive">{errors.discountAmount.message}</p>}
-          {watchedDiscountAmount > currentBalance && (
+          {watchedDiscountAmount < 0 && (
             <p className="text-sm text-destructive">
-              Discount amount cannot exceed available amount of {(currentBalance)} OMR
+              Discount amount cannot be negative.
             </p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="amount">{t.payments.amount} (OMR) <span className="text-destructive">*</span></Label>
+        <div className="order-2 min-h-[108px] space-y-2">
+          <Label className="whitespace-nowrap text-xs" htmlFor="amount">Paid Amount (OMR) <span className="text-destructive">*</span></Label>
           <Input
             id="amount"
             type="number"
             step="any"
-            max={currentBalance}
+            min="0"
+            max={currentBalance || undefined}
             {...register("amount", { valueAsNumber: true })}
           />
           {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
+          {Number(watchedPaymentAmount) < 0 && <p className="text-sm text-destructive">Payment amount cannot be negative.</p>}
         </div>
 
-        <div className="space-y-2">
+        <div className="order-4 min-h-[108px] space-y-2">
+          <Label className="whitespace-nowrap text-xs" htmlFor="remainingBalance">Remaining Balance (OMR)</Label>
+          <Input id="remainingBalance" readOnly value={selectedInvoice ? remainingBalance : ""} className="bg-muted font-semibold tabular-nums" placeholder="Select an invoice" />
+        </div>
+      </div>
+
+      <div className="max-w-sm space-y-2 pt-1">
           <Label htmlFor="method">{t.payments.paymentMethod} <span className="text-destructive">*</span></Label>
           <Controller
             control={control}
@@ -217,24 +223,18 @@ export function PaymentForm({ onSuccess, initialInvoiceId }: { onSuccess?: () =>
           />
           {errors.method && <p className="text-sm text-destructive">{errors.method.message}</p>}
         </div>
-      </div>
 
       {selectedInvoice && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Current Balance</span>
-            <span className="font-medium">{(currentBalance)} OMR</span>
-          </div>
-          <div className="mt-1 flex justify-between">
-            <span className="text-muted-foreground">Updated Amount</span>
-            <span className="font-semibold">{(paymentAmountAfterDiscount)} OMR</span>
-          </div>
+          <p className="font-medium">Balance calculation</p>
+          <div className="mt-1 flex justify-between"><span className="text-muted-foreground">{currentBalance} − {watchedPaymentAmount} − {watchedDiscountAmount}</span><span className="font-semibold">{remainingBalance} OMR</span></div>
+          {(exceedsBalance || hasNegativeAmount) && <p className="mt-2 text-sm text-destructive">{hasNegativeAmount ? "Payment and discount amounts cannot be negative." : "Payment Amount + Discount Amount cannot exceed the current balance."}</p>}
         </div>
       )}
 
-      <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={() => onSuccess?.()}>{t.common.cancel}</Button>
-        <Button type="submit" disabled={mutation.isPending || invoices?.length === 0 || watchedDiscountAmount > currentBalance}>
+      <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:justify-end">
+        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onSuccess?.()}>{t.common.cancel}</Button>
+        <Button type="submit" className="w-full sm:w-auto" disabled={mutation.isPending || invoices?.length === 0 || exceedsBalance || hasNegativeAmount}>
           {mutation.isPending ? t.common.saving : t.payments.recordPayment}
         </Button>
       </div>

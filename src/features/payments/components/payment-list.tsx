@@ -132,7 +132,7 @@ export function PaymentList() {
             <DialogTrigger render={
               <Button className="w-full sm:w-auto whitespace-nowrap"><Plus className="mr-2 h-4 w-4" /> {t.payments.recordPayment}</Button>
             } />
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto sm:w-[min(94vw,720px)] sm:max-w-[min(94vw,720px)] sm:p-6">
               <DialogHeader>
                 <DialogTitle>{t.payments.recordPayment}</DialogTitle>
               </DialogHeader>
@@ -281,7 +281,7 @@ export function PaymentList() {
                         <Button className="flex-1"><Plus className="h-4 w-4 mr-2" /> {t.payments.pay}</Button>
                       } />
                       {payingInvoiceId === inv.id && (
-                        <DialogContent className="sm:max-w-xl">
+                        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto sm:w-[min(94vw,720px)] sm:max-w-[min(94vw,720px)] sm:p-6">
                           <DialogHeader>
                             <DialogTitle>{t.payments.recordPaymentFor} {inv.customer.name}</DialogTitle>
                           </DialogHeader>
