@@ -99,6 +99,7 @@ export const ar: TranslationKeys = {
     addVehicle: "إضافة مركبة",
     mechanics: "الفنيين",
     invoices: "الفواتير",
+    directSales: "المبيعات المباشرة",
     serviceCatalog: "كتالوج الخدمات",
     payments: "المدفوعات",
     inventory: "المخزون",
@@ -111,6 +112,10 @@ export const ar: TranslationKeys = {
     customers: "العملاء",
     vehicles: "المركبات",
     vehicleCompanies: "شركات المركبات",
+  },
+
+  directSales: {
+    description: "إنشاء وإدارة مبيعات قطع الغيار المباشرة.",
   },
 
   // Customers Module

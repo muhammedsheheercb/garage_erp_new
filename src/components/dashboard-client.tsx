@@ -38,7 +38,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
   const canAccess = (page: string) => session?.role !== "EMPLOYEE" || session.permissions?.includes(page)
   const actions = [
     { page: "jobcards", href: "/jobcards", label: t.nav.createJobCard, icon: Wrench, primary: true },
-    { page: "invoices", href: "/invoices", label: t.nav.invoices, icon: FileText }, { page: "payments", href: "/payments", label: t.nav.payments, icon: CreditCard },
+    { page: "invoices", href: "/invoices", label: t.nav.invoices, icon: FileText }, { page: "payments", href: "/payments", label: t.nav.payments, icon: CreditCard }, { page: "direct-sales", permission: "inventory", href: "/direct-sales", label: "Direct Sales", icon: FileText },
     { page: "inventory", href: "/inventory", label: t.nav.inventory, icon: Package }, { page: "purchases", href: "/purchases", label: t.nav.purchases, icon: Package },
     { page: "suppliers", href: "/suppliers", label: t.nav.suppliers, icon: Truck }, { page: "paymeters", href: "/paymeters", label: t.nav.paymeters, icon: CreditCard },
     { page: "customers", href: "/customers", label: t.nav.addCustomer, icon: Users }, { page: "vehicles", href: "/vehicles", label: t.nav.addVehicle, icon: Car },
@@ -48,11 +48,11 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
   ]
 
   const stats = [
-    { title: t.dashboard.todaysIncome, value: <Currency amount={realStats.dailyRevenue} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.paymentsReceivedToday },
-    { title: "Today's Purchase", value: <Currency amount={realStats.dailyPurchase} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total purchases today" },
-    { title: t.dashboard.todaysExpense, value: <Currency amount={realStats.dailyExpense} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total expenses today" },
-    { title: "Today's Paymeter Paid", value: <Currency amount={realStats.dailyPaymeterPaid} size={1.2} />, icon: CreditCard, description: "Money taken from paymeters today" },
-    { title: t.dashboard.todaysRevenue, value: <Currency amount={realStats.dailyProfit} size={1.2} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.incomeMinusExpense },
+    { title: t.dashboard.todaysIncome, value: <Currency amount={realStats.dailyRevenue} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.paymentsReceivedToday },
+    { title: "Today's Purchase", value: <Currency amount={realStats.dailyPurchase} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total purchases today" },
+    { title: t.dashboard.todaysExpense, value: <Currency amount={realStats.dailyExpense} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total expenses today" },
+    { title: "Today's Paymeter Paid", value: <Currency amount={realStats.dailyPaymeterPaid} size={1.2} maximumFractionDigits={3} />, icon: CreditCard, description: "Money taken from paymeters today" },
+    { title: t.dashboard.todaysRevenue, value: <Currency amount={realStats.dailyProfit} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.incomeMinusExpense },
     { title: t.dashboard.completedJobsMonth, value: realStats.completedJobs.toString(), icon: CheckCircle2, description: t.dashboard.thisMonth },
   ]
 
@@ -87,7 +87,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
             </p>
           </div>
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            {actions.filter((action) => canAccess(action.page)).map((action) => { const Icon = action.icon; return <Link key={action.page} href={action.href} className="flex-1 md:flex-auto"><Button size="sm" variant={action.primary ? "default" : "outline"} className="gap-1.5 w-full border-dashed"><Icon className="h-4 w-4" /> {action.label}</Button></Link> })}
+            {actions.filter((action) => canAccess(action.permission || action.page)).map((action) => { const Icon = action.icon; return <Link key={action.page} href={action.href} className="flex-1 md:flex-auto"><Button size="sm" variant={action.primary ? "default" : "outline"} className="gap-1.5 w-full border-dashed"><Icon className="h-4 w-4" /> {action.label}</Button></Link> })}
             {session?.role !== "EMPLOYEE" && <Link href="/settings" passHref className="flex-1 md:flex-auto">
               <Button size="sm" variant="outline" className="gap-1.5 w-full border-dashed">
                 <Settings className="h-4 w-4" /> {t.nav.settings}

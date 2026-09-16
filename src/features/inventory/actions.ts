@@ -210,6 +210,8 @@ export async function deleteInventoryItem(id: string) {
   if (jobCardPartCount > 0) {
     throw new Error("This inventory item is used in a job card and cannot be deleted.")
   }
+  const directSaleItemCount = await prisma.directSaleItem.count({ where: { batch: { inventoryId: id } } })
+  if (directSaleItemCount > 0) throw new Error("This inventory item is used in a direct sale and cannot be deleted.")
 
   await prisma.$transaction([
     prisma.purchaseItem.deleteMany({ where: { inventoryId: id } }),

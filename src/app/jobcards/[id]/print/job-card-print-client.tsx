@@ -34,11 +34,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
     0,
   );
   const subTotal = servicesTotal + partsTotal + (job.estimatedCost || 0);
-  const discountAmount = job.discount || 0;
-  const taxRate = job.tax || 0;
-  const taxableAmount = Math.max(0, subTotal - discountAmount);
-  const taxAmount = (taxableAmount * taxRate) / 100;
-  const grandTotal = Math.max(0, subTotal + taxAmount - discountAmount);
+  const grandTotal = subTotal;
   const jobDate = formatDisplayDate(job.date || job.createdAt);
 
   return (
@@ -375,51 +371,6 @@ export function JobCardPrintClient({ job }: { job: any }) {
             </tbody>
             {grandTotal > 0 && (
               <tfoot>
-                {(taxRate > 0 || discountAmount > 0) && (
-                  <tr className="bg-gray-50 border-t border-gray-300 text-xs">
-                    <td
-                      colSpan={4}
-                      className={`p-2.5 border-r border-gray-300 font-semibold ${isRTL ? "text-left" : "text-right"}`}
-                    >
-                      {isRTL ? "المجموع الفرعي:" : "Subtotal:"}
-                    </td>
-                    <td className={`p-2.5 font-semibold ${isRTL ? "text-left" : "text-right"}`}>
-                      <Currency amount={subTotal} className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`} />
-                    </td>
-                  </tr>
-                )}
-                {discountAmount > 0 && (
-                  <tr className="bg-gray-50 border-t border-gray-200 text-xs text-red-600">
-                    <td
-                      colSpan={4}
-                      className={`p-2.5 border-r border-gray-300 font-semibold ${isRTL ? "text-left" : "text-right"}`}
-                    >
-                      {isRTL ? "الخصم:" : "Discount:"}
-                    </td>
-                    <td className={`p-2.5 font-semibold ${isRTL ? "text-left" : "text-right"}`}>
-                      <div className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`}>
-                        <span>-</span>
-                        <Currency amount={discountAmount} className="flex items-center gap-1" />
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {taxRate > 0 && (
-                  <tr className="bg-gray-50 border-t border-gray-200 text-xs text-gray-800">
-                    <td
-                      colSpan={4}
-                      className={`p-2.5 border-r border-gray-300 font-semibold ${isRTL ? "text-left" : "text-right"}`}
-                    >
-                      {isRTL ? "الضريبة" : "Tax"} ({taxRate}%):
-                    </td>
-                    <td className={`p-2.5 font-semibold ${isRTL ? "text-left" : "text-right"}`}>
-                      <div className={`flex items-center gap-1 ${isRTL ? "justify-start" : "justify-end"}`}>
-                        <span>+</span>
-                        <Currency amount={taxAmount} className="flex items-center gap-1" />
-                      </div>
-                    </td>
-                  </tr>
-                )}
                 <tr className="bg-gray-100 font-bold border-t border-gray-300 text-xs">
                   <td
                     colSpan={4}

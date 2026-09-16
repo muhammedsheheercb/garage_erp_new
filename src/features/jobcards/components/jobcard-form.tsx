@@ -116,8 +116,8 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
 
       serviceTotal: initialData?.serviceTotal || 0,
       partsTotal: initialData?.partsTotal || 0,
-      discount: initialData?.discount || 0,
-      tax: initialData?.tax || 0,
+      discount: 0,
+      tax: 0,
       grandTotal: initialData?.grandTotal || 0,
       advancePaid: initialData?.advancePaid || 0,
     },
@@ -144,8 +144,6 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   // Watch for totals calculation
   const watchedServices = watch("services") || [];
   const watchedParts = watch("parts") || [];
-  const watchedDiscount = watch("discount") || 0;
-  const watchedTax = watch("tax") || 0;
 
   const servicesJson = JSON.stringify(watchedServices);
   const partsJson = JSON.stringify(watchedParts);
@@ -164,12 +162,12 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
     setValue("partsTotal", pTotal);
 
     const subTotal = sTotal + pTotal;
-    const taxable = Math.max(0, subTotal - (Number(watchedDiscount) || 0));
-    const taxAmt = (taxable * (Number(watchedTax) || 0)) / 100;
-    const gTotal = subTotal + taxAmt - (Number(watchedDiscount) || 0);
+    const gTotal = subTotal;
+    setValue("discount", 0);
+    setValue("tax", 0);
 
     setValue("grandTotal", gTotal > 0 ? gTotal : 0);
-  }, [servicesJson, partsJson, watchedDiscount, watchedTax, setValue]);
+  }, [servicesJson, partsJson, setValue]);
 
   const {
     data: dropdowns = { customers: [], vehicles: [], mechanics: [] },
@@ -280,8 +278,6 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const grandTotal = watch("grandTotal");
   const advancePaid = watch("advancePaid") || 0;
   const balanceAmount = Math.max(0, grandTotal - advancePaid);
-  const taxableAmount = Math.max(0, (serviceTotal || 0) + (partsTotal || 0) - (Number(watchedDiscount) || 0));
-  const currentTaxAmt = (taxableAmount * (Number(watchedTax) || 0)) / 100;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -960,42 +956,6 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
               </span>
               <span>{formatAmount(partsTotal)} OMR</span>
             </div>
-
-            <div className="space-y-2 pt-2 border-t">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="discount">{t.jobcards.discountAmount}</Label>
-                <Input
-                  id="discount"
-                  type="number"
-                  step="any"
-                  className="w-24 h-8 text-right"
-                  {...register("discount", { valueAsNumber: true })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="tax">{t.jobcards.taxPercent}</Label>
-                <Input
-                  id="tax"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  className="w-24 h-8 text-right"
-                  {...register("tax", { valueAsNumber: true })}
-                />
-              </div>
-            </div>
-
-            {watchedTax > 0 && (
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">
-                  {t.jobcards.taxPercent} ({watchedTax}%):
-                </span>
-                <span className="font-medium text-foreground">+{formatAmount(currentTaxAmt)} OMR</span>
-              </div>
-            )}
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">

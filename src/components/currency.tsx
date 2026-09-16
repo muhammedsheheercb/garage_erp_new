@@ -9,10 +9,11 @@ interface CurrencyProps {
   amount: number
   className?: string
   size?: number
+  maximumFractionDigits?: number
 }
 
-export function Currency({ amount, className = "flex items-center gap-1", size = 1.2 }: CurrencyProps) {
-  const formattedAmount = formatAmount(amount)
+export function Currency({ amount, className = "flex items-center gap-1", size = 1.2, maximumFractionDigits }: CurrencyProps) {
+  const formattedAmount = maximumFractionDigits === undefined ? formatAmount(amount) : new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(amount)
   
   // Convert generic 'size' (e.g. 1.2) to pixel approximate size
   const pxSize = size * 20
@@ -33,4 +34,3 @@ export function OmanIcon({ className, size = 1 }: { className?: string; size?: n
     </div>
   )
 }
-

@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { JobCardFormValues, jobCardSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { requirePagePermission, getCreatorName } from "@/lib/authorization"
+import { batchAvailability } from "@/lib/batch-stock"
 
 export async function getJobCards(
   page = 1, 
@@ -156,14 +157,14 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
   })
 
   return batches.map(batch => {
-    const reservedQuantity = batch.jobCardParts.reduce((sum, part) => sum + part.quantity, 0);
+    const { reservedQuantity, availableQuantity } = batchAvailability(batch)
     return {
       ...batch,
       reservedQuantity,
-      availableQuantity: Math.max(0, batch.quantity - reservedQuantity),
+      availableQuantity,
       jobCardParts: undefined // remove relation array from response
     }
-  })
+  }).filter(batch => batch.availableQuantity > 0)
 }
 
 export async function createJobCard(data: JobCardFormValues) {

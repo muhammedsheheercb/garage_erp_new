@@ -25,7 +25,9 @@ export async function getDashboardStats() {
     pendingJobsCount,
     completedJobsCount,
     totalCustomersCount,
-    totalVehiclesCount
+    totalVehiclesCount,
+    todayDirectSales,
+    monthlyDirectSales
   ] = await Promise.all([
     // Today's Income
     prisma.payment.aggregate({
@@ -84,16 +86,18 @@ export async function getDashboardStats() {
     // Total Customers
     prisma.customer.count(),
     // Total Vehicles
-    prisma.vehicle.count()
+    prisma.vehicle.count(),
+    prisma.directSale.aggregate({ where: { saleDate: { gte: todayStart, lte: todayEnd } }, _sum: { grandTotal: true } }),
+    prisma.directSale.aggregate({ where: { saleDate: { gte: currentMonthStart, lte: currentMonthEnd } }, _sum: { grandTotal: true } }),
   ])
 
-  const dailyRevenue = todayPaymentsQuery._sum.amount || 0
+  const dailyRevenue = (todayPaymentsQuery._sum.amount || 0) + (todayDirectSales._sum.grandTotal || 0)
   const dailyPurchase = todayPurchasesQuery._sum.grandTotal || 0
   const dailyExpense = todayExpensesQuery._sum.amount || 0
   const dailyPaymeterPaid = (todayPaymeterExpensesQuery._sum.amount || 0) + (todayPaymeterPaymentsQuery._sum.amount || 0)
   const dailyProfit = dailyRevenue - dailyPurchase - dailyExpense - dailyPaymeterPaid
 
-  const monthlyRevenue = monthlyPaymentsQuery._sum.amount || 0
+  const monthlyRevenue = (monthlyPaymentsQuery._sum.amount || 0) + (monthlyDirectSales._sum.grandTotal || 0)
   const monthlyExpenses = monthlyExpensesQuery._sum.amount || 0
   const monthlyPaymeterPaid = (monthlyPaymeterExpensesQuery._sum.amount || 0) + (monthlyPaymeterPaymentsQuery._sum.amount || 0)
   const monthlyPurchaseTotal = monthlyPurchasesQuery._sum.grandTotal || 0
@@ -129,11 +133,12 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     const startDate = subDays(now, 14)
     const interval = eachDayOfInterval({ start: startDate, end: now })
     
-    const [payments, expenses, paymeterExpenses, paymeterPayments] = await Promise.all([
+    const [payments, directSales, expenses, paymeterExpenses, paymeterPayments] = await Promise.all([
       prisma.payment.findMany({
         where: { createdAt: { gte: startOfDay(startDate), lte: endOfDay(now) } },
         select: { amount: true, createdAt: true }
       }),
+      prisma.directSale.findMany({ where: { saleDate: { gte: startOfDay(startDate), lte: endOfDay(now) } }, select: { grandTotal: true, saleDate: true } }),
       prisma.expense.findMany({
         where: { date: { gte: startOfDay(startDate), lte: endOfDay(now) }, paymeterId: null },
         select: { amount: true, date: true }
@@ -151,8 +156,8 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     return interval.map(date => {
       const dateString = formatDisplayDate(date)
       
-      const revenue = payments.filter(p => formatDisplayDate(p.createdAt) === dateString)
-        .reduce((sum, p) => sum + p.amount, 0)
+      const revenue = payments.filter(p => formatDisplayDate(p.createdAt) === dateString).reduce((sum, p) => sum + p.amount, 0)
+        + directSales.filter(s => formatDisplayDate(s.saleDate) === dateString).reduce((sum, s) => sum + s.grandTotal, 0)
       
       const regularExpense = expenses.filter(e => formatDisplayDate(e.date) === dateString)
         .reduce((sum, e) => sum + e.amount, 0)
@@ -170,11 +175,12 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     const startDate = subMonths(now, 5)
     const interval = eachMonthOfInterval({ start: startDate, end: now })
 
-    const [payments, expenses, paymeterExpenses, paymeterPayments] = await Promise.all([
+    const [payments, directSales, expenses, paymeterExpenses, paymeterPayments] = await Promise.all([
       prisma.payment.findMany({
         where: { createdAt: { gte: startOfMonth(startDate), lte: endOfMonth(now) } },
         select: { amount: true, createdAt: true }
       }),
+      prisma.directSale.findMany({ where: { saleDate: { gte: startOfMonth(startDate), lte: endOfMonth(now) } }, select: { grandTotal: true, saleDate: true } }),
       prisma.expense.findMany({
         where: { date: { gte: startOfMonth(startDate), lte: endOfMonth(now) }, paymeterId: null },
         select: { amount: true, date: true }
@@ -192,8 +198,8 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     return interval.map(date => {
       const dateString = format(date, 'MM/yyyy')
       
-      const revenue = payments.filter(p => format(p.createdAt, 'MM/yyyy') === dateString)
-        .reduce((sum, p) => sum + p.amount, 0)
+      const revenue = payments.filter(p => format(p.createdAt, 'MM/yyyy') === dateString).reduce((sum, p) => sum + p.amount, 0)
+        + directSales.filter(s => format(s.saleDate, 'MM/yyyy') === dateString).reduce((sum, s) => sum + s.grandTotal, 0)
       
       const regularExpense = expenses.filter(e => format(e.date, 'MM/yyyy') === dateString)
         .reduce((sum, e) => sum + e.amount, 0)
@@ -367,16 +373,19 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
   }
 
   // 1. Total Income & breakdown
-  const payments = await prisma.payment.findMany({
+  const [payments, directSales] = await Promise.all([prisma.payment.findMany({
     where: { createdAt: dateFilter },
     select: { amount: true, method: true }
-  })
+  }), prisma.directSale.findMany({ where: { saleDate: dateFilter }, select: { grandTotal: true } })])
   let totalIncome = 0;
   const incomeByMethod: Record<string, number> = {};
   for (const p of payments) {
     totalIncome += p.amount;
     incomeByMethod[p.method] = (incomeByMethod[p.method] || 0) + p.amount;
   }
+  const directSaleIncome = directSales.reduce((sum, sale) => sum + sale.grandTotal, 0)
+  totalIncome += directSaleIncome
+  if (directSaleIncome) incomeByMethod["Direct Sale"] = directSaleIncome
 
   // 2. Regular expenses. Paymeter-funded expenses are counted below as
   // paymeter outflows, so they must not be counted twice.
@@ -465,7 +474,7 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
     dateFilter.lte = endOfDay(end)
   }
 
-  const [incomeList, expenseList, purchaseList, paymeterExpensesList, paymeterPaymentsList] = await Promise.all([
+  const [incomeList, directSaleList, expenseList, purchaseList, paymeterExpensesList, paymeterPaymentsList] = await Promise.all([
     prisma.payment.findMany({
       where: { createdAt: dateFilter },
       include: {
@@ -474,6 +483,11 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
         }
       },
       orderBy: { createdAt: 'desc' }
+    }),
+    prisma.directSale.findMany({
+      where: { saleDate: dateFilter },
+      select: { id: true, saleDate: true, customerName: true, vehicleNumber: true, customerMobile: true, grandTotal: true, createdBy: true },
+      orderBy: { saleDate: 'desc' }
     }),
     prisma.expense.findMany({
       where: { date: dateFilter },
@@ -497,7 +511,7 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
     })
   ])
 
-  const incomeDetails = incomeList.map(p => ({
+  const incomeDetails = [...incomeList.map(p => ({
     id: p.id,
     date: formatDisplayDate(p.createdAt, true),
     amount: p.amount,
@@ -506,7 +520,16 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
     vehicle: p.invoice.jobCard?.vehicle?.plateNumber || '-',
     invoice: `INV-${p.invoice.id.split('-')[0].toUpperCase()}`,
     createdBy: p.createdBy || 'Admin'
-  }))
+  })), ...directSaleList.map(sale => ({
+    id: `direct-${sale.id}`,
+    date: formatDisplayDate(sale.saleDate, true),
+    amount: sale.grandTotal,
+    method: 'Direct Sale',
+    customer: sale.customerName,
+    vehicle: sale.vehicleNumber,
+    invoice: `DS-${sale.id.split('-')[0].toUpperCase()}`,
+    createdBy: sale.createdBy || 'Admin'
+  }))].sort((a, b) => b.date.localeCompare(a.date))
 
   const expenseDetails = expenseList.map(e => ({
     id: e.id,

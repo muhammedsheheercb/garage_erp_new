@@ -98,6 +98,7 @@ export const en = {
     addVehicle: "Add Vehicle",
     mechanics: "Mechanics",
     invoices: "Invoices",
+    directSales: "Direct Sales",
     serviceCatalog: "Service Catalog",
     payments: "Payments",
     inventory: "Inventory",
@@ -110,6 +111,10 @@ export const en = {
     customers: "Customers",
     vehicles: "Vehicles",
     vehicleCompanies: "Vehicle Companies",
+  },
+
+  directSales: {
+    description: "Create and manage over-the-counter part sales.",
   },
 
   // Customers Module

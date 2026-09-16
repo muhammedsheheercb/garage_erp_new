@@ -251,11 +251,47 @@ model InventoryBatch {
   purchaseId    String?
   purchase      Purchase?     @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   jobCardParts  JobCardPart[]
+  directSaleItems DirectSaleItem[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   @@index([inventoryId])
   @@index([purchaseId])
   @@index([createdAt])
+}
+
+model DirectSale {
+  id             String           @id @default(uuid())
+  vehicleNumber  String
+  customerName   String
+  customerMobile String
+  subTotal       Float            @default(0)
+  discount       Float            @default(0)
+  tax            Float            @default(0)
+  grandTotal     Float            @default(0)
+  createdBy      String?
+  saleDate       DateTime         @default(now())
+  items          DirectSaleItem[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  @@index([createdAt])
+}
+
+model DirectSaleItem {
+  id           String         @id @default(uuid())
+  directSaleId String
+  directSale   DirectSale     @relation(fields: [directSaleId], references: [id], onDelete: Cascade)
+  batchId      String
+  batch        InventoryBatch @relation(fields: [batchId], references: [id])
+  quantity     Int
+  purchasePrice Float
+  salesPrice   Float
+  vat          Float          @default(5)
+  discount     Float          @default(0)
+  totalAmount  Float
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  @@index([directSaleId])
+  @@index([batchId])
 }
 
 model Expense {

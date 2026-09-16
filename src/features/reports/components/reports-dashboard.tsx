@@ -56,6 +56,8 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { formatDisplayDate } from "@/lib/date-format";
 
+const formatMoney = (amount: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(amount);
+
 function BreakdownCard({
   title,
   value,
@@ -102,7 +104,7 @@ function BreakdownCard({
             {Object.entries(breakdown).map(([method, amount]) => (
               <div key={method} className="flex justify-between text-sm">
                 <span className="text-muted-foreground capitalize">{method.toLowerCase()}</span>
-                <span className="font-medium">{(amount)} OMR</span>
+                <span className="font-medium">{formatMoney(amount)} OMR</span>
               </div>
             ))}
           </div>
@@ -197,7 +199,7 @@ export function ReportsDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-start">
         <BreakdownCard
           title="Total Income"
-          value={`${stats?.totalIncome != null ? (stats.totalIncome) : "0"} OMR`}
+          value={`${formatMoney(stats?.totalIncome ?? 0)} OMR`}
           icon={OmanIcon}
           color="text-green-500"
           breakdown={stats?.incomeByMethod}
@@ -205,7 +207,7 @@ export function ReportsDashboard() {
         />
         <BreakdownCard
           title="Total Expense"
-          value={`${stats?.totalExpense != null ? (stats.totalExpense) : "0"} OMR`}
+          value={`${formatMoney(stats?.totalExpense ?? 0)} OMR`}
           icon={TrendingUp}
           color="text-red-500"
           breakdown={stats?.expenseBySource}
@@ -213,7 +215,7 @@ export function ReportsDashboard() {
         />
         <BreakdownCard
           title="Total Purchase"
-          value={`${stats?.totalPurchase != null ? (stats.totalPurchase) : "0"} OMR`}
+          value={`${formatMoney(stats?.totalPurchase ?? 0)} OMR`}
           icon={Package}
           color="text-orange-500"
           breakdown={stats?.purchaseByMethod}
@@ -221,7 +223,7 @@ export function ReportsDashboard() {
         />
         <BreakdownCard
           title="Total Paymeter Paid"
-          value={`${stats?.totalPaymeterPaid != null ? (stats.totalPaymeterPaid) : "0"} OMR`}
+          value={`${formatMoney(stats?.totalPaymeterPaid ?? 0)} OMR`}
           icon={OmanIcon}
           color="text-orange-500"
           breakdown={stats?.paymeterByName}
@@ -229,7 +231,7 @@ export function ReportsDashboard() {
         />
         <BreakdownCard
           title="Total Revenue"
-          value={`${stats?.totalRevenue != null ? (stats.totalRevenue) : "0"} OMR`}
+          value={`${formatMoney(stats?.totalRevenue ?? 0)} OMR`}
           icon={Activity}
           color={stats?.totalRevenue != null && stats.totalRevenue >= 0 ? "text-primary" : "text-destructive"}
         />
@@ -292,7 +294,7 @@ export function ReportsDashboard() {
                       border: "none",
                       boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                     }}
-                    formatter={(val: any) => [`${(Number(val) || 0)} OMR`, ""]}
+                    formatter={(val: any) => [`${formatMoney(Number(val) || 0)} OMR`, ""]}
                   />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
                   <Bar
