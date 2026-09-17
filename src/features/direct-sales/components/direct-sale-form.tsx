@@ -45,7 +45,7 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
     if (Object.keys(next).length) { setErrors(next); return }
     setErrors({}); mutation.mutate()
   }
-  const addPart = (part: any) => setRows(current => [...current, { batchId: part.id, label: `${part.itemName} — Batch ${part.batchNumber}`, available: part.availableQuantity, quantity: 1, purchasePrice: part.purchasePrice, salesPrice: part.purchasePrice, vat: 0 }])
+  const addPart = (part: any) => setRows(current => [...current, { batchId: part.id, label: `${part.itemName} — Batch ${part.batchNumber}`, available: part.availableQuantity, quantity: 1, purchasePrice: part.purchasePrice, salesPrice: part.sellingPrice, vat: 0 }])
   return <div className="direct-sale-form space-y-5">
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <CustomerField id="sale-vehicle" label="Vehicle Number" required value={customer.vehicleNumber} error={errors.vehicleNumber} onChange={value => { setCustomer({ ...customer, vehicleNumber: value }); setErrors({ ...errors, vehicleNumber: undefined }) }} />
