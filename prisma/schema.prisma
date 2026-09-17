@@ -285,7 +285,7 @@ model DirectSaleItem {
   quantity     Int
   purchasePrice Float
   salesPrice   Float
-  vat          Float          @default(5)
+  vat          Float          @default(0)
   discount     Float          @default(0)
   totalAmount  Float
   createdAt    DateTime       @default(now())

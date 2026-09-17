@@ -15,7 +15,7 @@ const saleSchema = z.object({
   items: z.array(z.object({
     batchId: z.string().min(1), quantity: z.coerce.number().int().positive(),
     purchasePrice: z.coerce.number().min(0), salesPrice: z.coerce.number().min(0),
-    vat: z.coerce.number().refine(value => value === 5, "VAT must be 5%."),
+    vat: z.coerce.number().min(0, "VAT cannot be negative."),
   })).min(1, "Add at least one product."),
 })
 
