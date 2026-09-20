@@ -15,6 +15,23 @@ import { ArrowLeft, Eye, Settings, Wrench } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
+function getOtherChargesTotal(otherCharges: string | null | undefined) {
+  if (!otherCharges) return 0
+
+  try {
+    const charges: unknown = JSON.parse(otherCharges)
+    if (!Array.isArray(charges)) return 0
+
+    return charges.reduce<number>((total, charge) => {
+      if (!charge || typeof charge !== "object") return total
+      const amount = (charge as { amount?: unknown }).amount
+      return total + Math.max(0, Number(amount) || 0)
+    }, 0)
+  } catch {
+    return 0
+  }
+}
+
 export function CustomerDetailsClient({ customer }: { customer: any }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -153,7 +170,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                         <TableCell className="text-right text-green-600">{formatCurrency(jc.paidAmount)}</TableCell>
                         <TableCell className="text-right text-red-600">{formatCurrency(jc.pendingAmount)}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(jc.invoice?.grandTotal || 0)}
+                          {formatCurrency(jc.invoice?.grandTotal ?? jc.grandTotal ?? 0)}
                         </TableCell>
                         <TableCell className="text-center">
                           <Button variant="ghost" size="sm" onClick={() => setSelectedJobCard(jc)}>
@@ -281,11 +298,19 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span>Services Total:</span>
+                      <span>{formatCurrency(selectedJobCard.invoice.serviceCharge)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Labour Charge:</span>
                       <span>{formatCurrency(selectedJobCard.invoice.labourCharge)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Parts Total:</span>
                       <span>{formatCurrency(selectedJobCard.invoice.partsCost)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Other Charges:</span>
+                      <span>{formatCurrency(getOtherChargesTotal(selectedJobCard.invoice.otherCharges))}</span>
                     </div>
                     {selectedJobCard.invoice.discount > 0 && (
                       <div className="flex justify-between text-green-600">

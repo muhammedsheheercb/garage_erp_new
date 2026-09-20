@@ -185,13 +185,31 @@ export async function getCustomerFullDetails(id: string, fromDate?: string, toDa
     const jobCardsWithStats = vehicle.jobCards.map(jc => {
       const invoice = jc.invoice;
       if (invoice) {
-        const paid = invoice.payments.reduce((sum: number, p: any) => sum + p.amount, 0);
-        const pending = invoice.grandTotal - paid;
+        const recordedAdvance = invoice.payments
+          .filter((payment: any) => payment.method === "ADVANCE")
+          .reduce((sum: number, payment: any) => sum + payment.amount, 0);
+        const laterPayments = invoice.payments
+          .filter((payment: any) => payment.method !== "ADVANCE")
+          .reduce((sum: number, payment: any) => sum + payment.amount, 0);
+
+        // Keep the full job-card advance as customer credit, including when it
+        // exceeds the invoice total. The maximum also supports invoices created
+        // before advances were stored directly on job cards.
+        const advance = Math.max(jc.advancePaid ?? 0, recordedAdvance);
+        const paid = advance + laterPayments;
+        const pending = Math.max(0, invoice.grandTotal - paid);
         vPaid += paid;
         vPending += pending;
         return { ...jc, paidAmount: paid, pendingAmount: pending };
       }
-      return { ...jc, paidAmount: 0, pendingAmount: 0 };
+
+      // An advance is customer credit even if there is no work total yet.
+      const total = jc.grandTotal ?? 0;
+      const paid = jc.advancePaid ?? 0;
+      const pending = Math.max(0, total - paid);
+      vPaid += paid;
+      vPending += pending;
+      return { ...jc, paidAmount: paid, pendingAmount: pending };
     });
 
     totalPaid += vPaid;

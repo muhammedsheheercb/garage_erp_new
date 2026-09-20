@@ -150,11 +150,12 @@ export async function createInvoice(data: InvoiceFormValues) {
 
   // Auto-record initial payment if advancePaid is present
   if (advancePaid > 0) {
-    const paymentAmount = Math.min(advancePaid, grandTotal);
     await prisma.payment.create({
       data: {
         invoiceId: invoice.id,
-        amount: paymentAmount,
+        // Retain the full customer credit even when the current invoice total is
+        // zero or lower than the advance. It will offset charges added later.
+        amount: advancePaid,
         method: "ADVANCE",
         createdBy: creatorName,
       },
@@ -162,6 +163,7 @@ export async function createInvoice(data: InvoiceFormValues) {
   }
   
   revalidatePath('/invoices')
+  revalidatePath(`/customers/${jobCard.customerId}`)
   return invoice
 }
 
@@ -173,7 +175,9 @@ export async function updateInvoice(id: string, data: InvoiceFormValues) {
     include: { payments: true }
   });
 
-  if (existingInvoice && existingInvoice.status === "PAID") {
+  // A zero-value invoice with an advance is marked PAID, but it must remain
+  // editable so later service charges can use that saved customer credit.
+  if (existingInvoice && existingInvoice.status === "PAID" && existingInvoice.grandTotal > 0) {
     throw new Error("This invoice is fully paid and cannot be edited.")
   }
 
@@ -227,6 +231,7 @@ export async function updateInvoice(id: string, data: InvoiceFormValues) {
   })
   
   revalidatePath('/invoices')
+  revalidatePath(`/customers/${existingInvoice.customerId}`)
   return invoice
 }
 

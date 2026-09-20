@@ -210,6 +210,8 @@ export async function createJobCard(data: JobCardFormValues) {
   
   revalidatePath('/jobcards')
   revalidatePath('/vehicles')
+  revalidatePath('/customers')
+  revalidatePath(`/customers/${parsed.customerId}`)
   revalidatePath('/inventory')
   revalidatePath('/purchases')
   return jobCard
@@ -222,7 +224,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
   // Update inventory stock ONLY if status changes to COMPLETED
   const existingJobCard = await prisma.jobCard.findUnique({
     where: { id },
-    select: { status: true }
+    select: { status: true, customerId: true }
   })
   
   if (existingJobCard?.status !== "COMPLETED" && parsed.status === "COMPLETED") {
@@ -278,6 +280,11 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
   
   revalidatePath('/jobcards')
   revalidatePath('/vehicles')
+  revalidatePath('/customers')
+  revalidatePath(`/customers/${parsed.customerId}`)
+  if (existingJobCard?.customerId !== parsed.customerId) {
+    revalidatePath(`/customers/${existingJobCard?.customerId}`)
+  }
   revalidatePath('/inventory')
   revalidatePath('/purchases')
   return { success: true }
