@@ -36,22 +36,15 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
     onError: (error: Error) => { const message = error.message || "Direct sale could not be created."; setErrors({ items: message }); toast.error(message) },
   })
   const submit = () => {
-    const next: Errors = {}
-    if (!customer.vehicleNumber.trim()) next.vehicleNumber = "Vehicle number is required."
-    if (!customer.customerName.trim()) next.customerName = "Customer name is required."
-    if (!saleDate) next.saleDate = "Sale date is required."
-    if (saleDate > new Date().toISOString().slice(0, 10)) next.saleDate = "Sale date cannot be in the future."
-    if (!rows.length) next.items = "Add at least one available part before completing the sale."
-    if (Object.keys(next).length) { setErrors(next); return }
     setErrors({}); mutation.mutate()
   }
   const addPart = (part: any) => setRows(current => [...current, { batchId: part.id, label: `${part.itemName} — Batch ${part.batchNumber}`, available: part.availableQuantity, quantity: 1, purchasePrice: part.purchasePrice, salesPrice: part.sellingPrice, vat: 0 }])
   return <div className="direct-sale-form space-y-5">
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <CustomerField id="sale-vehicle" label="Vehicle Number" required value={customer.vehicleNumber} error={errors.vehicleNumber} onChange={value => { setCustomer({ ...customer, vehicleNumber: value }); setErrors({ ...errors, vehicleNumber: undefined }) }} />
-      <CustomerField id="sale-customer" label="Customer Name" required value={customer.customerName} error={errors.customerName} onChange={value => { setCustomer({ ...customer, customerName: value }); setErrors({ ...errors, customerName: undefined }) }} />
+      <CustomerField id="sale-vehicle" label="Vehicle Number" value={customer.vehicleNumber} error={errors.vehicleNumber} onChange={value => { setCustomer({ ...customer, vehicleNumber: value }); setErrors({ ...errors, vehicleNumber: undefined }) }} />
+      <CustomerField id="sale-customer" label="Customer Name" value={customer.customerName} error={errors.customerName} onChange={value => { setCustomer({ ...customer, customerName: value }); setErrors({ ...errors, customerName: undefined }) }} />
       <CustomerField id="sale-mobile" label="Customer Mobile Number" value={customer.customerMobile} onChange={value => setCustomer({ ...customer, customerMobile: value })} />
-      <CustomerField id="sale-date" label="Sale Date" required type="date" max={new Date().toISOString().slice(0, 10)} value={saleDate} error={errors.saleDate} onChange={value => { setSaleDate(value); setErrors({ ...errors, saleDate: undefined }) }} />
+      <CustomerField id="sale-date" label="Sale Date" type="date" max={new Date().toISOString().slice(0, 10)} value={saleDate} error={errors.saleDate} onChange={value => { setSaleDate(value); setErrors({ ...errors, saleDate: undefined }) }} />
     </div>
     <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Products</h3><DirectSalePartPicker onSelect={addPart} /></div>
     {errors.items && <p className="text-sm text-destructive">{errors.items}</p>}
@@ -61,7 +54,7 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
   </div>
 }
 
-function CustomerField({ id, label, required, type, max, value, error, onChange }: { id: string; label: string; required?: boolean; type?: string; max?: string; value: string; error?: string; onChange: (value: string) => void }) { return <div className="space-y-1.5"><Label htmlFor={id}>{label}{required && <span className="text-destructive"> *</span>}</Label><Input id={id} type={type} max={max} value={value} onChange={event => onChange(event.target.value)} />{error && <p className="text-sm text-destructive">{error}</p>}</div> }
+function CustomerField({ id, label, type, max, value, error, onChange }: { id: string; label: string; type?: string; max?: string; value: string; error?: string; onChange: (value: string) => void }) { return <div className="space-y-1.5"><Label htmlFor={id}>{label}</Label><Input id={id} type={type} max={max} value={value} onChange={event => onChange(event.target.value)} />{error && <p className="text-sm text-destructive">{error}</p>}</div> }
 
 function ProductRows({ rows, updateRow, removeRow }: { rows: Row[]; updateRow: (index: number, patch: Partial<Row>) => void; removeRow: (index: number) => void }) {
   return <><div className="space-y-3 md:hidden">{rows.map((row, index) => <ProductCard key={row.batchId} row={row} index={index} updateRow={updateRow} remove={() => removeRow(index)} />)}</div><div className="hidden overflow-x-auto rounded-lg border md:block"><table className="w-full min-w-[900px] text-sm"><thead className="bg-muted"><tr><th className="p-3 text-left">Part / Batch</th><th>Available</th><th>Qty</th><th>Purchase Price</th><th>Sales Price</th><th>VAT %</th><th>VAT Amount</th><th>Total Amount</th><th /></tr></thead><tbody>{rows.map((row, index) => { const tax = row.quantity * row.salesPrice * row.vat / 100; return <tr className="border-t" key={row.batchId}><td className="p-3 font-medium">{row.label}</td><td className="text-center">{row.available}</td><td className="p-2"><Input type="number" min="1" max={row.available} value={row.quantity} onChange={event => updateRow(index, { quantity: Number(event.target.value) || 1 })} /></td><td className="p-2"><Input readOnly value={row.purchasePrice} /></td><td className="p-2"><Input type="number" min="0" step="any" value={row.salesPrice} onChange={event => updateRow(index, { salesPrice: Math.max(0, Number(event.target.value)) })} /></td><td className="p-2"><Input aria-label={`VAT percentage for ${row.label}`} type="number" min="0" step="any" value={row.vat} onChange={event => updateRow(index, { vat: Math.max(0, Number(event.target.value) || 0) })} /></td><td className="text-right">{money(tax)}</td><td className="pr-3 text-right font-medium">{money(row.quantity * row.salesPrice + tax)}</td><td><Button type="button" variant="ghost" size="icon" onClick={() => removeRow(index)}><Trash className="h-4 w-4 text-destructive" /></Button></td></tr> })}</tbody></table></div></>

@@ -14,7 +14,7 @@ import { useTranslation } from "@/i18n"
 
 interface ServiceFormProps {
   initialData?: ServiceFormValues & { id?: string }
-  onSuccess?: () => void
+  onSuccess?: (service?: any) => void
 }
 
 export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
@@ -45,7 +45,7 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
       }
       toast.success(initialData?.id ? t.services.serviceUpdated : t.services.serviceCreated)
       queryClient.invalidateQueries({ queryKey: ['services'] })
-      onSuccess?.()
+      onSuccess?.(result)
     },
     onError: (error: any) => {
       toast.error(error.message || t.common.somethingWrong)

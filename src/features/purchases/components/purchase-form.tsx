@@ -17,6 +17,7 @@ import { createPortal } from "react-dom"
 import { Check, Plus, Search, Trash2, Loader2, UserPlus, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { SupplierForm } from "../../suppliers/components/supplier-form"
+import { InventoryForm } from "../../inventory/components/inventory-form"
 import { useTranslation } from "@/i18n"
 
 interface PurchaseFormProps {
@@ -29,6 +30,8 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const { t } = useTranslation()
   const [purchaseNumber, setPurchaseNumber] = useState<string>(initialData?.purchaseNumber || t.inventoryMod.generatingPartNo)
   const [isSupplierAddOpen, setIsSupplierAddOpen] = useState(false)
+  const [isNewItemOpen, setIsNewItemOpen] = useState(false)
+  const [newItemTargetIndex, setNewItemTargetIndex] = useState<number | null>(null)
 
   const { data: dropdownData, isLoading: dropdownsLoading } = useQuery({
     queryKey: ['purchase-dropdowns'],
@@ -461,14 +464,49 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <Label className="text-base font-semibold">{t.purchases.purchaseItems}</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => append({ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0, taxRate: activeTaxRate || 0 })}
-          >
-            <Plus className="mr-1 h-4 w-4" /> {t.purchases.addItem}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Dialog open={isNewItemOpen} onOpenChange={setIsNewItemOpen}>
+              <DialogTrigger render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewItemTargetIndex(items.findIndex((item) => !item.inventoryId))}
+                >
+                  <Plus className="mr-1 h-4 w-4" /> {t.inventoryMod.createNewItem}
+                </Button>
+              } />
+              <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{t.inventoryMod.addNewItem}</DialogTitle>
+                </DialogHeader>
+                <InventoryForm
+                  onSuccess={async (item) => {
+                    setIsNewItemOpen(false)
+                    await queryClient.invalidateQueries({ queryKey: ["purchase-dropdowns"] })
+
+                    const targetIndex = newItemTargetIndex ?? items.findIndex((purchaseItem) => !purchaseItem.inventoryId)
+                    if (item?.id && targetIndex >= 0) {
+                      setValue(`items.${targetIndex}.inventoryId`, item.id, { shouldDirty: true, shouldValidate: true })
+                      const targetField = fields[targetIndex]
+                      if (targetField) {
+                        setItemSearches((current) => ({ ...current, [targetField.id]: item.itemName }))
+                      }
+                    }
+                    setNewItemTargetIndex(null)
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => append({ inventoryId: "", quantity: 1, purchasePrice: 0, sellingPrice: 0, taxRate: activeTaxRate || 0 })}
+            >
+              <Plus className="mr-1 h-4 w-4" /> {t.purchases.addItem}
+            </Button>
+          </div>
         </div>
 
         <div className="border rounded-md overflow-x-auto bg-card">

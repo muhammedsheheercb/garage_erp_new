@@ -34,6 +34,7 @@ import { Trash, Plus, Eye, CarFront, Check, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ServiceSelectionModal } from "./service-selection-modal";
+import { ServiceForm } from "@/features/services/components/service-form";
 import { PartSelectionModal } from "./part-selection-modal";
 import {
   Dialog,
@@ -60,6 +61,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const { t } = useTranslation();
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isNewVehicleOpen, setIsNewVehicleOpen] = useState(false);
+  const [isNewServiceOpen, setIsNewServiceOpen] = useState(false);
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [isVehiclePickerOpen, setIsVehiclePickerOpen] = useState(false);
   const [vehiclePickerPosition, setVehiclePickerPosition] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -757,22 +759,51 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
           <div className="space-y-4 border rounded-md p-4">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-lg">{t.jobcards.services}</h3>
-              <ServiceSelectionModal
-                onSelect={(service) => {
-                  if (
-                    !watchedServices.find((s) => s.serviceId === service.id)
-                  ) {
-                    appendService({
-                      serviceId: service.id,
-                      name: service.name,
-                      quantity: 1,
-                      price: service.price,
-                    });
-                  } else {
-                    toast.error(t.jobcards.serviceAlreadyAdded);
-                  }
-                }}
-              />
+              <div className="flex items-center gap-2">
+                <Dialog open={isNewServiceOpen} onOpenChange={setIsNewServiceOpen}>
+                  <DialogTrigger render={
+                    <Button type="button" variant="outline" size="sm">
+                      <Plus className="mr-2 h-4 w-4" /> {t.services.createNewService}
+                    </Button>
+                  } />
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{t.services.addNewService}</DialogTitle>
+                    </DialogHeader>
+                    <ServiceForm
+                      onSuccess={(service) => {
+                        queryClient.invalidateQueries({ queryKey: ["services-list"] });
+                        setIsNewServiceOpen(false);
+
+                        if (service?.id && !watchedServices.find((item) => item.serviceId === service.id)) {
+                          appendService({
+                            serviceId: service.id,
+                            name: service.name,
+                            quantity: 1,
+                            price: service.price,
+                          });
+                        }
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+                <ServiceSelectionModal
+                  onSelect={(service) => {
+                    if (
+                      !watchedServices.find((s) => s.serviceId === service.id)
+                    ) {
+                      appendService({
+                        serviceId: service.id,
+                        name: service.name,
+                        quantity: 1,
+                        price: service.price,
+                      });
+                    } else {
+                      toast.error(t.jobcards.serviceAlreadyAdded);
+                    }
+                  }}
+                />
+              </div>
             </div>
             <Table>
               <TableHeader>

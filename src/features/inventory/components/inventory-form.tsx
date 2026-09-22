@@ -15,7 +15,7 @@ import { Check, Search, X } from "lucide-react"
 
 interface InventoryFormProps {
   initialData?: any
-  onSuccess?: () => void
+  onSuccess?: (item?: any) => void
   openingStockMode?: boolean
 }
 
@@ -82,7 +82,7 @@ export function InventoryForm({ initialData, onSuccess, openingStockMode = false
       queryClient.invalidateQueries({ queryKey: ['purchase-dropdowns'] })
       queryClient.invalidateQueries({ queryKey: ['jobcards'] })
       queryClient.invalidateQueries({ queryKey: ['jobcards-dropdowns'] })
-      onSuccess?.()
+      onSuccess?.(result)
     },
     onError: (error: any) => {
       toast.error(error.message || t.common.somethingWrong)

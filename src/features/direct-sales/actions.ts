@@ -7,16 +7,16 @@ import { z } from "zod"
 import { batchAvailability } from "@/lib/batch-stock"
 
 const saleSchema = z.object({
-  vehicleNumber: z.string().trim().min(1, "Vehicle number is required."),
-  customerName: z.string().trim().min(1, "Customer name is required."),
+  vehicleNumber: z.string().trim().optional().default(""),
+  customerName: z.string().trim().optional().default(""),
   customerMobile: z.string().trim().optional().default(""),
-  saleDate: z.string().date("Sale date is invalid."),
+  saleDate: z.union([z.literal(""), z.string().date("Sale date is invalid.")]).optional().default(""),
   discount: z.coerce.number().min(0, "Discount cannot be negative.").default(0),
   items: z.array(z.object({
     batchId: z.string().min(1), quantity: z.coerce.number().int().positive(),
     purchasePrice: z.coerce.number().min(0), salesPrice: z.coerce.number().min(0),
     vat: z.coerce.number().min(0, "VAT cannot be negative."),
-  })).min(1, "Add at least one product."),
+  })).optional().default([]),
 })
 
 type SaleInput = z.input<typeof saleSchema>
@@ -40,6 +40,14 @@ function calculate(items: z.infer<typeof saleSchema>["items"], saleDiscount: num
     subTotal, discount: saleDiscount, tax,
     grandTotal: subTotal + tax - saleDiscount,
   }
+}
+
+function parseSaleDate(value: string) {
+  const saleDate = value ? new Date(`${value}T00:00:00`) : new Date()
+  if (saleDate > new Date(new Date().setHours(23, 59, 59, 999))) {
+    throw new Error("Sale date cannot be in the future.")
+  }
+  return saleDate
 }
 
 async function assertAndDeduct(tx: any, rows: Array<{ batchId: string; quantity: number }>) {
@@ -91,8 +99,7 @@ export async function getDirectSaleById(id: string) {
 
 export async function createDirectSale(data: SaleInput) {
   await requirePagePermission("inventory", "create")
-  const parsed = saleSchema.parse(data), saleDate = new Date(`${parsed.saleDate}T00:00:00`), totals = calculate(parsed.items, parsed.discount), createdBy = await getCreatorName()
-  if (saleDate > new Date(new Date().setHours(23, 59, 59, 999))) throw new Error("Sale date cannot be in the future.")
+  const parsed = saleSchema.parse(data), saleDate = parseSaleDate(parsed.saleDate), totals = calculate(parsed.items, parsed.discount), createdBy = await getCreatorName()
   const { rows, ...summary } = totals
   const sale = await prisma.$transaction(async tx => {
     await assertAndDeduct(tx, rows)
@@ -103,8 +110,7 @@ export async function createDirectSale(data: SaleInput) {
 
 export async function updateDirectSale(id: string, data: SaleInput) {
   await requirePagePermission("inventory", "edit")
-  const parsed = saleSchema.parse(data), saleDate = new Date(`${parsed.saleDate}T00:00:00`), totals = calculate(parsed.items, parsed.discount)
-  if (saleDate > new Date(new Date().setHours(23, 59, 59, 999))) throw new Error("Sale date cannot be in the future.")
+  const parsed = saleSchema.parse(data), saleDate = parseSaleDate(parsed.saleDate), totals = calculate(parsed.items, parsed.discount)
   const { rows, ...summary } = totals
   await prisma.$transaction(async tx => {
     const existing = await tx.directSale.findUnique({ where: { id }, include: { items: true } })
