@@ -17,10 +17,11 @@ import { Check, Search, X } from "lucide-react"
 
 interface VehicleFormProps {
   initialData?: VehicleFormValues & { id?: string }
+  initialCustomerId?: string
   onSuccess?: (vehicle?: any) => void
 }
 
-export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
+export function VehicleForm({ initialData, initialCustomerId, onSuccess }: VehicleFormProps) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const [brandSearch, setBrandSearch] = useState("")
@@ -44,7 +45,7 @@ export function VehicleForm({ initialData, onSuccess }: VehicleFormProps) {
       model: initialData?.model || "",
       fuelType: initialData?.fuelType || "",
       year: initialData?.year || new Date().getFullYear(),
-      customerId: initialData?.customerId || "",
+      customerId: initialData?.customerId || initialCustomerId || "",
     }
   })
 

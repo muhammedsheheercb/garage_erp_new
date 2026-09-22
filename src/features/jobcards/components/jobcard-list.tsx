@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getJobCards, getJobCardById, deleteJobCard } from "../actions";
 import {
@@ -50,7 +50,8 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { endOfDay } from "date-fns";
 import { formatDisplayDate } from "@/lib/date-format";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getQuotationJobCardPrefill } from "@/features/quotations/actions";
 
 const getTranslatedStatus = (t: any, status: string): string => {
   const statusMap: Record<string, string> = {
@@ -66,15 +67,31 @@ const getTranslatedStatus = (t: any, status: string): string => {
 
 export function JobCardList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const quotationId = searchParams.get("quotation");
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isQuotationPrefillActive, setIsQuotationPrefillActive] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const { t } = useTranslation();
   const { can } = usePermissions();
   const [createdDateRange, setCreatedDateRange] = useState<DateRange | undefined>();
   const [expectedDateRange, setExpectedDateRange] = useState<DateRange | undefined>();
+  const { data: quotationPrefill } = useQuery({
+    queryKey: ["quotation-jobcard-prefill", quotationId],
+    queryFn: () => getQuotationJobCardPrefill(quotationId!),
+    enabled: Boolean(quotationId),
+  });
+
+  useEffect(() => {
+    if (quotationPrefill) {
+      setIsAddOpen(true);
+      setIsQuotationPrefillActive(true);
+      if (quotationPrefill.quotationStockWarning) toast.error(quotationPrefill.quotationStockWarning);
+    }
+  }, [quotationPrefill]);
 
   const fromDateStr = createdDateRange?.from?.toISOString();
   const toDateStr = createdDateRange?.to ? endOfDay(createdDateRange.to).toISOString() : undefined;
@@ -141,7 +158,7 @@ export function JobCardList() {
         </div>
 
         {can("jobcards", "create") && (
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) setIsQuotationPrefillActive(false); }}>
             <DialogTrigger
               render={
                 <Button className="w-full sm:w-auto">
@@ -153,7 +170,7 @@ export function JobCardList() {
               <DialogHeader>
                 <DialogTitle>{t.jobcards.newJobCard}</DialogTitle>
               </DialogHeader>
-              <JobCardForm onSuccess={() => setIsAddOpen(false)} />
+              <JobCardForm initialData={isQuotationPrefillActive ? quotationPrefill || undefined : undefined} quotationId={isQuotationPrefillActive ? quotationId || undefined : undefined} onSuccess={() => { setIsAddOpen(false); if (quotationId) router.replace("/jobcards"); }} />
             </DialogContent>
           </Dialog>
         )}

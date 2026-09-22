@@ -50,13 +50,15 @@ import { formatDisplayDate } from "@/lib/date-format";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/amount";
+import { markQuotationConverted } from "@/features/quotations/actions";
 
 interface JobCardFormProps {
   initialData?: any; // JobCard with relations
   onSuccess?: () => void;
+  quotationId?: string;
 }
 
-export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
+export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardFormProps) {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
@@ -187,7 +189,10 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
       }
       return createJobCard(data);
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
+      if (quotationId && !initialData?.id && result && typeof result === "object" && "id" in result) {
+        await markQuotationConverted(quotationId, String(result.id));
+      }
       toast.success(
         initialData?.id ? t.jobcards.jobCardUpdated : t.jobcards.jobCardCreated,
       );
@@ -281,9 +286,11 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
   const grandTotal = watch("grandTotal");
   const advancePaid = watch("advancePaid") || 0;
   const balanceAmount = Math.max(0, grandTotal - advancePaid);
+  const isStatusReadOnly = Boolean(quotationId);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="jobcard-form space-y-6">
+      <style dangerouslySetInnerHTML={{ __html: `@media (max-width: 639px) { .jobcard-form .flex.justify-between.items-center { flex-wrap:wrap; align-items:flex-start; gap:.5rem; } .jobcard-form .flex.justify-between.items-center > div { flex-wrap:wrap; } .jobcard-form .space-y-4.border { overflow-x:auto; } .jobcard-form .space-y-4.border table { min-width:520px; } .jobcard-form .sticky { position:static; } }` }} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT COLUMN: Main Form */}
         <div className="lg:col-span-2 space-y-6">
@@ -667,41 +674,45 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
               <Label htmlFor="status">
                 {t.common.status} <span className="text-destructive">*</span>
               </Label>
-              <Controller
-                control={control}
-                name="status"
-                render={({ field }) => (
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={!initialData}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={t.jobcards.selectStatus}>
-                        {(value: string) => getTranslatedStatus(value)}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PENDING">
-                        {t.jobcards.statusPending}
-                      </SelectItem>
-                      {initialData ? (
-                        <>
-                          <SelectItem value="IN_PROGRESS">
-                            {t.jobcards.statusInProgress}
-                          </SelectItem>
-                          <SelectItem value="COMPLETED">
-                            {t.jobcards.statusCompleted}
-                          </SelectItem>
-                          <SelectItem value="CANCELLED">
-                            {t.jobcards.statusCancelled}
-                          </SelectItem>
-                        </>
-                      ) : null}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+              {isStatusReadOnly ? (
+                <><input type="hidden" {...register("status")} /><Input value={getTranslatedStatus(watch("status"))} readOnly aria-readonly="true" className="cursor-default bg-muted" /></>
+              ) : (
+                <Controller
+                  control={control}
+                  name="status"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!initialData}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={t.jobcards.selectStatus}>
+                          {(value: string) => getTranslatedStatus(value)}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PENDING">
+                          {t.jobcards.statusPending}
+                        </SelectItem>
+                        {initialData ? (
+                          <>
+                            <SelectItem value="IN_PROGRESS">
+                              {t.jobcards.statusInProgress}
+                            </SelectItem>
+                            <SelectItem value="COMPLETED">
+                              {t.jobcards.statusCompleted}
+                            </SelectItem>
+                            <SelectItem value="CANCELLED">
+                              {t.jobcards.statusCancelled}
+                            </SelectItem>
+                          </>
+                        ) : null}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              )}
             </div>
           </div>
 

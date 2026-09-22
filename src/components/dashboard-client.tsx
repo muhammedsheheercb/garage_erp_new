@@ -37,6 +37,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
   const { t } = useTranslation()
   const canAccess = (page: string) => session?.role !== "EMPLOYEE" || session.permissions?.includes(page)
   const actions = [
+    { page: "quotations", href: "/quotations", label: "Quotations", icon: FileText },
     { page: "jobcards", href: "/jobcards", label: t.nav.createJobCard, icon: Wrench, primary: true },
     { page: "invoices", href: "/invoices", label: t.nav.invoices, icon: FileText }, { page: "payments", href: "/payments", label: t.nav.payments, icon: CreditCard }, { page: "direct-sales", permission: "inventory", href: "/direct-sales", label: "Direct Sales", icon: FileText },
     { page: "inventory", href: "/inventory", label: t.nav.inventory, icon: Package }, { page: "purchases", href: "/purchases", label: t.nav.purchases, icon: Package },

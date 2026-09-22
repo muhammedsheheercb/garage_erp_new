@@ -2,6 +2,7 @@ export const EMPLOYEE_EMAIL = "employee@garage.com"
 
 export const PAGE_PERMISSIONS = [
   { key: "jobcards", label: "Job cards" },
+  { key: "quotations", label: "Quotations" },
   { key: "customers", label: "Customers" },
   { key: "vehicles", label: "Vehicles" },
   { key: "vehicle-companies", label: "Vehicle companies" },

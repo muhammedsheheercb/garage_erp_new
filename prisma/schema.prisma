@@ -40,6 +40,7 @@ model Customer {
   type      String?   @default("Individual")
   vehicles  Vehicle[]
   jobCards  JobCard[]
+  quotations Quotation[]
   invoices  Invoice[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -56,6 +57,7 @@ model Vehicle {
   customerId  String
   customer    Customer  @relation(fields: [customerId], references: [id])
   jobCards    JobCard[]
+  quotations  Quotation[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   @@index([customerId])
@@ -102,6 +104,7 @@ model Service {
   estimatedTime String?
   category      String?
   jobCards      JobCardService[]
+  quotations    QuotationService[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   @@index([createdAt])
@@ -136,6 +139,7 @@ model JobCard {
   vehicleKm    Float @default(0)
 
   invoice   Invoice?
+  quotation Quotation?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([customerId])
@@ -174,6 +178,62 @@ model JobCardPart {
 
   @@unique([jobCardId, batchId])
   @@index([batchId])
+}
+
+model Quotation {
+  id           String             @id @default(uuid())
+  status       String             @default("PENDING")
+  complaint    String
+  notes        String?
+  date         DateTime           @default(now())
+  validUntil   DateTime
+  vehicleKm    Float              @default(0)
+  otherCharge  Float              @default(0)
+  serviceTotal Float              @default(0)
+  partsTotal   Float              @default(0)
+  grandTotal   Float              @default(0)
+  createdBy    String?
+  customerId   String
+  customer     Customer           @relation(fields: [customerId], references: [id])
+  vehicleId    String
+  vehicle      Vehicle            @relation(fields: [vehicleId], references: [id])
+  services     QuotationService[]
+  parts        QuotationPart[]
+  jobCardId    String?            @unique
+  jobCard      JobCard?           @relation(fields: [jobCardId], references: [id])
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([customerId])
+  @@index([vehicleId])
+  @@index([status, createdAt])
+  @@index([validUntil])
+}
+
+model QuotationService {
+  id          String    @id @default(uuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  serviceId   String
+  service     Service   @relation(fields: [serviceId], references: [id])
+  quantity    Int       @default(1)
+  price       Float
+
+  @@unique([quotationId, serviceId])
+  @@index([serviceId])
+}
+
+model QuotationPart {
+  id          String    @id @default(uuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  inventoryId String
+  inventory   Inventory @relation(fields: [inventoryId], references: [id])
+  quantity    Int       @default(1)
+  price       Float
+
+  @@unique([quotationId, inventoryId])
+  @@index([inventoryId])
 }
 
 model Invoice {
@@ -236,6 +296,7 @@ model Inventory {
   partNumber    String           @unique
   purchaseItems PurchaseItem[]
   batches       InventoryBatch[]
+  quotations    QuotationPart[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   @@index([createdAt])
