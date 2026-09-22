@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect } from "react"
-import { Printer } from "lucide-react"
+import Link from "next/link"
+import { ArrowLeft, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export function PrintButton() {
@@ -13,9 +14,14 @@ export function PrintButton() {
   }, [])
 
   return (
-    <div className="fixed bottom-8 right-8 print:hidden">
-      <Button onClick={() => window.print()} size="lg" className="shadow-lg rounded-full h-14 w-14 p-0">
-        <Printer className="h-6 w-6" />
+    <div className="fixed top-4 left-4 right-4 z-50 flex justify-between gap-3 print:hidden sm:left-8 sm:right-8">
+      <Link href="/jobcards">
+        <Button variant="outline" className="flex-1 bg-background shadow-lg sm:flex-none">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+      </Link>
+      <Button onClick={() => window.print()} className="flex-1 shadow-lg sm:flex-none">
+        <Printer className="mr-2 h-4 w-4" /> Print
       </Button>
     </div>
   )

@@ -14,8 +14,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Edit, Eye, Plus, Printer, Search, Trash, X } from "lucide-react"
 import { toast } from "sonner"
 import { formatDisplayDate } from "@/lib/date-format"
+import { useRouter } from "next/navigation"
 
 export function DirectSaleList() {
+  const router = useRouter()
   const client = useQueryClient()
   const [search, setSearch] = useState("")
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
@@ -29,7 +31,7 @@ export function DirectSaleList() {
   const { data: viewing } = useQuery({ queryKey: ["direct-sale", viewingId], queryFn: () => getDirectSaleById(viewingId!), enabled: !!viewingId })
   const deletion = useMutation({ mutationFn: deleteDirectSale, onSuccess: () => { toast.success("Direct sale deleted and stock restored."); client.invalidateQueries({ queryKey: ["direct-sales"] }) }, onError: (error: Error) => toast.error(error.message) })
   const resetFilters = () => { setSearch(""); setDateRange(undefined) }
-  const openBill = (id: string) => window.open(`/direct-sales/${id}/print`, "_blank")
+  const openBill = (id: string) => router.push(`/direct-sales/${id}/print`)
   return <div className="space-y-5">
     <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
       <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end lg:max-w-3xl">

@@ -35,6 +35,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
       <style dangerouslySetInnerHTML={{ __html: `
         @page { size: A4 portrait; margin: 7mm; }
         * { box-sizing: border-box; }
+        .jc-page-shell { padding:80px 0 24px; }
         .jc-page { width:196mm; min-height:283mm; margin:0 auto; padding:4mm; color:#281315; background:#fff1f2; border:.55mm solid #551d25; font-family:Arial, "Noto Sans Arabic", sans-serif; font-size:9.4px; line-height:1.24; overflow-wrap:anywhere; }
         .jc-page-one { break-after:page; page-break-after:always; }
         .jc-page *, .jc-page *::before, .jc-page *::after { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -62,6 +63,10 @@ export function JobCardPrintClient({ job }: { job: any }) {
         .jc-terms { padding:1.6mm 2mm; }.jc-ar { direction:rtl; text-align:right; font-weight:700; }.jc-notice { padding-bottom:1.1mm; margin-bottom:1.1mm; border-bottom:.2mm solid #d5a1a7; font-size:8.4px; }.jc-notice:last-of-type { border:0; }.jc-ack { padding:1.2mm; margin-top:1.1mm; background:#f8d9dd; border:.2mm solid #b35d68; font-size:8.3px; font-weight:700; }.jc-approval { margin-top:1.1mm; font-size:8.2px; }.jc-sign-line { display:inline-block; min-width:45mm; margin-left:2mm; border-bottom:.25mm solid #59212a; height:4mm; vertical-align:bottom; }
         .jc-signatures { display:grid; grid-template-columns:repeat(3, 1fr); gap:4mm; padding:2.4mm 2mm 1.8mm; }.jc-signature { padding-top:6mm; text-align:center; border-top:.25mm solid #59212a; font-size:8.5px; font-weight:800; }
         .jc-damage-page { height:283mm; display:flex; align-items:center; justify-content:center; break-inside:avoid; page-break-inside:avoid; }.jc-damage-page img { display:block; width:100%; height:auto; max-width:100%; max-height:100%; object-fit:contain; }
+        @media screen and (max-width:768px) { .jc-page-shell { display:flex; flex-direction:column; align-items:center; overflow-x:hidden; } .jc-page { margin:0 !important; } }
+        @media screen and (max-width:768px) and (min-width:601px) { .jc-page { zoom:.85; } }
+        @media screen and (max-width:600px) and (min-width:421px) { .jc-page { zoom:.6; } }
+        @media screen and (max-width:420px) { .jc-page { zoom:.45; } }
         @media print { html, body { width:210mm; min-height:297mm; margin:0 !important; padding:0 !important; background:#fff !important; } .jc-page-shell { width:196mm !important; margin:0 auto !important; padding:0 !important; } .jc-page { margin:0 !important; } .print-hidden { display:none !important; } }
       ` }} />
       <article className="jc-page jc-page-one">

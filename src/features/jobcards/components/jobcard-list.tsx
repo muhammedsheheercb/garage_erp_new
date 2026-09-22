@@ -50,6 +50,7 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { endOfDay } from "date-fns";
 import { formatDisplayDate } from "@/lib/date-format";
+import { useRouter } from "next/navigation";
 
 const getTranslatedStatus = (t: any, status: string): string => {
   const statusMap: Record<string, string> = {
@@ -64,6 +65,7 @@ const getTranslatedStatus = (t: any, status: string): string => {
 };
 
 export function JobCardList() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -102,7 +104,7 @@ export function JobCardList() {
   });
 
   const openPrint = (id: string) => {
-    window.open(`/jobcards/${id}/print`, "_blank");
+    router.push(`/jobcards/${id}/print`);
   };
 
   return (
