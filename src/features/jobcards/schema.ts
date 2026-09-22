@@ -31,6 +31,7 @@ export const jobCardSchema = z.object({
   notes: z.string().trim().optional(),
   date: z.string().trim().min(1, "Date is required"),
   expectedFinishDate: z.string().trim().min(1, "Expected finish date is required"),
+  vehicleKm: z.number().finite("Vehicle KM is required").min(0, "Vehicle KM cannot be negative"),
   
   services: z.array(jobCardServiceSchema),
   parts: z.array(jobCardPartSchema),

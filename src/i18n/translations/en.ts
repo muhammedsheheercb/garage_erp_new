@@ -233,6 +233,7 @@ export const en = {
     noJobCards: "No job cards found.",
     jobNumber: "Job Number",
     vehicle: "Vehicle",
+    vehicleKm: "Vehicle KM",
     mechanic: "Mechanic",
     services: "Services",
     parts: "Parts",

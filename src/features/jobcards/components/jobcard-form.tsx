@@ -96,6 +96,7 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
         ? format(new Date(initialData.date), "yyyy-MM-dd")
         : format(initialData?.createdAt ? new Date(initialData.createdAt) : new Date(), "yyyy-MM-dd"),
       expectedFinishDate: initialData?.expectedFinishDate ? new Date(initialData.expectedFinishDate).toISOString().slice(0, 10) : "",
+      vehicleKm: initialData?.vehicleKm ?? 0,
 
       services:
         initialData?.services?.map((s: any) => ({
@@ -576,7 +577,21 @@ export function JobCardForm({ initialData, onSuccess }: JobCardFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="vehicleKm">{t.jobcards.vehicleKm}</Label>
+              <Input
+                id="vehicleKm"
+                type="number"
+                min="0"
+                step="any"
+                inputMode="decimal"
+                {...register("vehicleKm", { valueAsNumber: true })}
+              />
+              {errors.vehicleKm && (
+                <p className="text-sm text-destructive">{errors.vehicleKm.message}</p>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="mechanicId">
                 {t.jobcards.assignMechanic}{" "}

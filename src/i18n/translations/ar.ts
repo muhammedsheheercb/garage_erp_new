@@ -231,6 +231,7 @@ export const ar: TranslationKeys = {
     noJobCards: "لا توجد بطاقات عمل.",
     jobNumber: "رقم العمل",
     vehicle: "المركبة",
+    vehicleKm: "كيلومترات المركبة",
     mechanic: "الفني",
     services: "الخدمات",
     parts: "القطع",
