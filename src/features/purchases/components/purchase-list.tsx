@@ -16,9 +16,10 @@ import { formatDisplayDate } from "@/lib/date-format"
 import { useTranslation } from "@/i18n"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export function PurchaseList() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const paramFrom = searchParams.get("from")
   const paramTo = searchParams.get("to")
@@ -143,7 +144,7 @@ export function PurchaseList() {
                   </TableCell>
                   <TableCell>{p.paymentMethod?.name || '-'}</TableCell>
                   <TableCell className="text-right space-x-1">
-                    <Button variant="ghost" size="icon" onClick={() => window.open(`/purchases/${p.id}/print`, "_blank")} title={t.purchases.downloadInvoice || "Download Purchase Invoice"}>
+                    <Button variant="ghost" size="icon" onClick={() => router.push(`/purchases/${p.id}/print`)} title={t.purchases.downloadInvoice || "Download Purchase Invoice"}>
                       <Printer className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => setViewingPurchase(p)} title={t.purchases.viewDetails}>
@@ -288,7 +289,7 @@ export function PurchaseList() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                 <Button 
                   variant="outline" 
-                  onClick={() => window.open(`/purchases/${viewingPurchase.id}/print`, "_blank")}
+                  onClick={() => router.push(`/purchases/${viewingPurchase.id}/print`)}
                   className="gap-2"
                 >
                   <Download className="h-4 w-4" />
