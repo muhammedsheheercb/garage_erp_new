@@ -14,7 +14,7 @@ export default async function JobCardInvoicePage({ params }: { params: Promise<{
     subTotal: job.serviceTotal + job.partsTotal + otherChargesList.reduce((sum, charge) => sum + charge.amount, 0),
     discount: job.discount, tax: job.tax,
     servicesDetails: job.services.map(item => item.service.name).join("\n"),
-    partsDetails: job.parts.map(item => `${item.batch.inventory.itemName} (${item.quantity})`).join("\n"),
+    partsDetails: job.parts.map(item => `${item.batch?.inventory.itemName || "Pending part"} (${item.quantity})`).join("\n"),
     customer: job.customer,
     jobCard: { complaint: job.complaint, workDone: job.workDone, vehicle: job.vehicle, tax: job.tax, hideServicePartsAmounts: job.hideServicePartsAmounts },
   }} otherChargesList={otherChargesList} />

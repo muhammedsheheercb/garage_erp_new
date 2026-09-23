@@ -172,14 +172,17 @@ model JobCardPart {
   id        String         @id @default(uuid())
   jobCardId String
   jobCard   JobCard        @relation(fields: [jobCardId], references: [id])
-  batchId   String
-  batch     InventoryBatch @relation(fields: [batchId], references: [id])
+  batchId     String?
+  batch       InventoryBatch? @relation(fields: [batchId], references: [id])
+  inventoryId String?
+  inventory   Inventory? @relation(fields: [inventoryId], references: [id])
   isPending Boolean        @default(false) // Requested while out of stock; not reserved or deducted
   quantity  Int            @default(1)
   price     Float // Selling price at the time of use
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
+  @@index([inventoryId])
   @@unique([jobCardId, batchId])
   @@index([batchId])
 }
@@ -305,6 +308,7 @@ model Inventory {
   purchaseItems PurchaseItem[]
   batches       InventoryBatch[]
   quotations    QuotationPart[]
+  jobCardParts  JobCardPart[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   @@index([createdAt])

@@ -9,13 +9,15 @@ export const jobCardServiceSchema = z.object({
 
 export const jobCardPartSchema = z
   .object({
-    batchId: z.string().trim().min(1, "Part is required"),
+    batchId: z.string().trim(),
+    inventoryId: z.string().trim().optional(),
     name: z.string().trim().min(1, "Part name is required"),
     quantity: z.number().finite("Quantity is required").int("Quantity must be a whole number").min(1, "Quantity must be at least 1"),
     price: z.number().finite("Price is required").min(0, "Price cannot be negative"),
     maxStock: z.number().finite(), // Used for validation in UI
     isPending: z.boolean(),
   })
+  .refine((part) => Boolean(part.batchId || part.inventoryId), { message: "Part is required", path: ["batchId"] })
   .refine((part) => part.isPending || part.quantity <= part.maxStock, {
     message: "Quantity cannot exceed available stock",
     path: ["quantity"],

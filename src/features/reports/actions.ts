@@ -420,7 +420,7 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
     0,
   )
   const jobCardPartsCost = completedJobCards.reduce(
-    (sum, jobCard) => sum + jobCard.parts.reduce((partSum, part) => partSum + part.batch.purchasePrice * part.quantity, 0),
+    (sum, jobCard) => sum + jobCard.parts.reduce((partSum, part) => partSum + (part.batch?.purchasePrice || 0) * part.quantity, 0),
     0,
   )
   const jobCardPartsProfit = jobCardPartsSales - jobCardPartsCost

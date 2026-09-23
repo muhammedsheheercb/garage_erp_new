@@ -112,8 +112,9 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
 
       parts:
         initialData?.parts?.map((p: any) => ({
-          batchId: p.batchId,
-          name: p.batch?.inventory?.itemName || t.common.unknown,
+          batchId: p.batchId || "",
+          inventoryId: p.inventoryId || p.batch?.inventory?.id,
+          name: p.batch?.inventory?.itemName || p.inventory?.itemName || t.common.unknown,
           isPending: p.isPending || false,
           quantity: p.quantity,
           price: p.price,
@@ -305,7 +306,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
   const grandTotal = watch("grandTotal");
   const advancePaid = watch("advancePaid") || 0;
   const balanceAmount = Math.max(0, grandTotal - advancePaid);
-  const isStatusReadOnly = Boolean(quotationId || initialData?.quotation);
+  const isStatusReadOnly = Boolean(quotationId && !initialData?.id);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="jobcard-form space-y-6">
@@ -905,8 +906,9 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                 onSelect={(batch) => {
                   if (!watchedParts.find((p) => p.batchId === batch.id)) {
                     appendPart({
-                      batchId: batch.id,
-                      isPending: Boolean(batch.isPending),
+                      batchId: batch.isNoBatchItem ? "" : batch.id,
+                      inventoryId: batch.inventory.id,
+                      isPending: Boolean(batch.isPending || batch.isNoBatchItem),
                       name: `${batch.inventory.itemName} (${batch.inventory.partNumber})`,
                       quantity: 1,
                       price: batch.sellingPrice,
@@ -951,7 +953,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                         <TableCell>
                           {field.name}{" "}
                           <span className="text-xs text-muted-foreground block">
-                            {isPending ? "Pending — out of stock. Remove and add again after stock arrives." : "Stock: " + maxStock}
+                            {isPending ? "Pending — out of stock. Purchase it from Pending Parts Purchase." : "Stock: " + maxStock}
                           </span>
                         </TableCell>
                         <TableCell>

@@ -116,7 +116,7 @@ export async function getPurchaseDropdownData() {
       include: {
         vehicle: true,
         customer: true,
-        parts: { where: { isPending: true }, include: { batch: { include: { inventory: true } } } }
+        parts: { where: { isPending: true }, include: { batch: { include: { inventory: true } }, inventory: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -258,13 +258,13 @@ export async function createPurchase(data: PurchaseFormValues) {
 
       if (parsed.purchaseType === "PENDING_PARTS" && parsed.jobCardId) {
         const pendingPart = await tx.jobCardPart.findFirst({
-          where: { jobCardId: parsed.jobCardId, isPending: true, batch: { inventoryId: item.inventoryId } },
+          where: { jobCardId: parsed.jobCardId, isPending: true, OR: [{ inventoryId: item.inventoryId }, { batch: { inventoryId: item.inventoryId } }] },
           orderBy: { createdAt: "asc" },
         })
         if (!pendingPart) throw new Error("Select a pending part from the selected Job Card.")
         await tx.jobCardPart.update({
           where: { id: pendingPart.id },
-          data: { batchId: batch.id, isPending: false, quantity: item.quantity, price: item.sellingPrice },
+          data: { batchId: batch.id, inventoryId: item.inventoryId, isPending: false, quantity: item.quantity, price: item.sellingPrice },
         })
       }
     }

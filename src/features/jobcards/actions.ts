@@ -76,7 +76,7 @@ export async function getJobCardById(id: string) {
         include: { service: true }
       },
       parts: {
-        include: { batch: { include: { inventory: true } } }
+        include: { batch: { include: { inventory: true } }, inventory: true }
       },
       quotation: { select: { id: true, customerId: true, vehicleId: true } }
     }
@@ -157,15 +157,22 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
     take: 20
   })
 
-  return batches.map(batch => {
-    const { reservedQuantity, availableQuantity } = batchAvailability(batch)
-    return {
-      ...batch,
-      reservedQuantity,
-      availableQuantity,
-      jobCardParts: undefined // remove relation array from response
-    }
+  const manualItems = await prisma.inventory.findMany({
+    where: {
+      batches: { none: {} },
+      OR: [{ itemName: { contains: search, mode: "insensitive" } }, { partNumber: { contains: search, mode: "insensitive" } }],
+    },
+    take: 20,
   })
+
+  const batchParts = batches.map(batch => {
+    const { reservedQuantity, availableQuantity } = batchAvailability(batch)
+    return { ...batch, reservedQuantity, availableQuantity, jobCardParts: undefined }
+  })
+  return [...batchParts, ...manualItems.map((inventory) => ({
+    id: "pending-" + inventory.id, inventoryId: inventory.id, inventory, quantity: 0, sellingPrice: 0,
+    reservedQuantity: 0, availableQuantity: 0, isNoBatchItem: true,
+  }))]
 }
 
 export async function createJobCard(data: JobCardFormValues) {
@@ -204,7 +211,8 @@ export async function createJobCard(data: JobCardFormValues) {
       },
       parts: {
         create: parsed.parts.map(p => ({
-          batchId: p.batchId,
+          batchId: p.batchId || null,
+          inventoryId: p.inventoryId || null,
           isPending: p.isPending,
           quantity: p.quantity,
           price: p.price
@@ -243,7 +251,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
 
   if (existingJobCard?.status !== "COMPLETED" && parsed.status === "COMPLETED") {
     // Deduct stock
-    for (const part of parsed.parts.filter((part) => !part.isPending)) {
+    for (const part of parsed.parts.filter((part) => !part.isPending && part.batchId)) {
       await prisma.inventoryBatch.update({
         where: { id: part.batchId },
         data: { quantity: { decrement: part.quantity } }
@@ -286,7 +294,8 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
         },
         parts: {
           create: parsed.parts.map(p => ({
-            batchId: p.batchId,
+            batchId: p.batchId || null,
+            inventoryId: p.inventoryId || null,
             isPending: p.isPending,
             quantity: p.quantity,
             price: p.price

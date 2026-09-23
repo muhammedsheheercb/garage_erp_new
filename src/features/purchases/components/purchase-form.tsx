@@ -277,7 +277,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                           field.onChange(jc.id)
                           setVehicleSearch(jc.vehicle.plateNumber + " - " + jc.customer.name)
                           if (purchaseType === "PENDING_PARTS" && jc.parts?.length) {
-                            setValue("items", jc.parts.map((part: any) => ({ inventoryId: part.batch.inventory.id, quantity: part.quantity, purchasePrice: part.batch.purchasePrice || 0, sellingPrice: part.price, taxRate: activeTaxRate || 0 })), { shouldDirty: true, shouldValidate: true })
+                            setValue("items", jc.parts.map((part: any) => ({ inventoryId: (part.inventory || part.batch?.inventory).id, quantity: part.quantity, purchasePrice: part.batch?.purchasePrice || 0, sellingPrice: part.price, taxRate: activeTaxRate || 0 })), { shouldDirty: true, shouldValidate: true })
                           }
                           setIsJobCardSelectOpen(false)
                           setJobCardPickerPosition(null)

@@ -89,7 +89,6 @@ export function JobCardList() {
     if (quotationPrefill) {
       setIsAddOpen(true);
       setIsQuotationPrefillActive(true);
-      if (quotationPrefill.quotationStockWarning) toast.error(quotationPrefill.quotationStockWarning);
     }
   }, [quotationPrefill]);
 

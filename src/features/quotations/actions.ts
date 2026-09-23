@@ -57,7 +57,7 @@ export async function getQuotationInventory(search = "") {
     where: { OR: [{ itemName: { contains: search, mode: "insensitive" } }, { partNumber: { contains: search, mode: "insensitive" } }] },
     include: {
       batches: {
-        include: { jobCardParts: { where: { jobCard: { status: { notIn: ["COMPLETED", "CANCELLED"] } } } } },
+        include: { jobCardParts: { where: { isPending: false, jobCard: { status: { notIn: ["COMPLETED", "CANCELLED"] } } } } },
         orderBy: { createdAt: "asc" },
       },
     },
@@ -139,26 +139,50 @@ export async function getQuotationJobCardPrefill(id: string) {
   await requirePagePermission("jobcards", "create")
   const quote = await prisma.quotation.findFirst({ where: { id, status: "PENDING", jobCardId: null }, include: quotationInclude })
   if (!quote) return null
-  const partRows: Array<{ batchId: string; name: string; quantity: number; price: number; maxStock: number }> = []
-  const unavailable: string[] = []
+
+  const partRows: Array<any> = []
   for (const part of quote.parts) {
-    const batches = await prisma.inventoryBatch.findMany({ where: { inventoryId: part.inventoryId, quantity: { gt: 0 } }, include: { inventory: true, jobCardParts: { where: { jobCard: { status: { notIn: ["COMPLETED", "CANCELLED"] } } } } }, orderBy: { createdAt: "asc" } })
+    const batches = await prisma.inventoryBatch.findMany({
+      where: { inventoryId: part.inventoryId },
+      include: {
+        inventory: true,
+        jobCardParts: { where: { isPending: false, jobCard: { status: { notIn: ["COMPLETED", "CANCELLED"] } } } },
+      },
+      orderBy: { createdAt: "asc" },
+    })
+
     let remaining = part.quantity
     for (const batch of batches) {
       const { availableQuantity } = batchAvailability(batch)
       const quantity = Math.min(remaining, availableQuantity)
       if (quantity > 0) {
-        partRows.push({ batchId: batch.id, name: `${batch.inventory.itemName} (${batch.inventory.partNumber})`, quantity, price: part.price, maxStock: availableQuantity, batch: { quantity: batch.quantity, inventory: { itemName: batch.inventory.itemName, partNumber: batch.inventory.partNumber } } } as any)
+        partRows.push({
+          batchId: batch.id, name: batch.inventory.itemName + " (" + batch.inventory.partNumber + ")",
+          quantity, price: part.price, maxStock: availableQuantity, isPending: false,
+          batch: { quantity: batch.quantity, inventory: { itemName: batch.inventory.itemName, partNumber: batch.inventory.partNumber } },
+        })
         remaining -= quantity
       }
       if (remaining === 0) break
     }
-    if (remaining > 0) unavailable.push(part.inventory.itemName)
+
+    if (remaining > 0) {
+      const batch = batches[0]
+      const inventory = batch?.inventory || part.inventory
+      partRows.push({
+        batchId: batch?.id || "", inventoryId: part.inventoryId, name: inventory.itemName + " (" + inventory.partNumber + ")",
+        quantity: remaining, price: part.price, maxStock: 0, isPending: true,
+        batch: batch ? { quantity: batch.quantity, inventory: { itemName: inventory.itemName, partNumber: inventory.partNumber } } : undefined,
+        inventory: { id: part.inventoryId, itemName: inventory.itemName, partNumber: inventory.partNumber },
+      })
+    }
   }
+
+  const partsTotal = partRows.reduce((sum, part) => sum + part.quantity * part.price, 0)
   return {
     customerId: quote.customerId, vehicleId: quote.vehicleId, complaint: quote.complaint, notes: quote.notes || "", vehicleKm: quote.vehicleKm,
-    date: new Date().toISOString(), services: quote.services.map((service) => ({ serviceId: service.serviceId, service: { name: service.service.name }, quantity: service.quantity, price: service.price })),
-    parts: partRows, serviceTotal: quote.serviceTotal, partsTotal: partRows.reduce((sum, part) => sum + part.quantity * part.price, 0), grandTotal: quote.serviceTotal + partRows.reduce((sum, part) => sum + part.quantity * part.price, 0),
-    quotationStockWarning: unavailable.length ? `Insufficient current stock for: ${unavailable.join(", ")}. Please update the parts before saving.` : undefined,
+    date: new Date().toISOString(),
+    services: quote.services.map((service) => ({ serviceId: service.serviceId, service: { name: service.service.name }, quantity: service.quantity, price: service.price })),
+    parts: partRows, serviceTotal: quote.serviceTotal, partsTotal, grandTotal: quote.serviceTotal + partsTotal,
   }
 }
