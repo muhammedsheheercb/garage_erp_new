@@ -27,7 +27,8 @@ import {
   Receipt,
   CreditCard,
   ShoppingCart,
-  Wallet
+  Wallet,
+  Wrench,
 } from "lucide-react";
 import {
   BarChart,
@@ -235,6 +236,59 @@ export function ReportsDashboard() {
           icon={Activity}
           color={stats?.totalRevenue != null && stats.totalRevenue >= 0 ? "text-primary" : "text-destructive"}
         />
+      </div>
+
+      {/* Completed Job Card service and parts performance. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+        <BreakdownCard
+          title="Labour Charges"
+          value={`${formatMoney(stats?.totalLabourCharges ?? 0)} OMR`}
+          icon={Wrench}
+          color="text-sky-500"
+        />
+        <BreakdownCard
+          title="Job Card Parts Sales"
+          value={`${formatMoney(stats?.jobCardPartsSales ?? 0)} OMR`}
+          icon={ShoppingCart}
+          color="text-violet-500"
+        />
+        <BreakdownCard
+          title="Job Card Parts Cost"
+          value={`${formatMoney(stats?.jobCardPartsCost ?? 0)} OMR`}
+          icon={Package}
+          color="text-orange-500"
+        />
+        <BreakdownCard
+          title="Job Card Parts Profit"
+          value={`${formatMoney(stats?.jobCardPartsProfit ?? 0)} OMR`}
+          icon={TrendingUp}
+          color={stats?.jobCardPartsProfit != null && stats.jobCardPartsProfit >= 0 ? "text-green-500" : "text-destructive"}
+        />
+        <BreakdownCard
+          title="Direct Sale Parts Sales"
+          value={`${formatMoney(stats?.directSalePartsSales ?? 0)} OMR`}
+          icon={ShoppingCart}
+          color="text-violet-500"
+        />
+        <BreakdownCard
+          title="Direct Sale Parts Cost"
+          value={`${formatMoney(stats?.directSalePartsCost ?? 0)} OMR`}
+          icon={Package}
+          color="text-orange-500"
+        />
+        <BreakdownCard
+          title="Direct Sale Parts Profit"
+          value={`${formatMoney(stats?.directSalePartsProfit ?? 0)} OMR`}
+          icon={TrendingUp}
+          color={stats?.directSalePartsProfit != null && stats.directSalePartsProfit >= 0 ? "text-green-500" : "text-destructive"}
+        />
+        <BreakdownCard
+          title="Total Parts Profit"
+          value={`${formatMoney(stats?.totalPartsProfit ?? 0)} OMR`}
+          icon={TrendingUp}
+          color={stats?.totalPartsProfit != null && stats.totalPartsProfit >= 0 ? "text-green-500" : "text-destructive"}
+        />
+
       </div>
 
       {/* Chart Section */}

@@ -22,7 +22,6 @@ export const quotationSchema = z.object({
   date: z.string().min(1, "Date is required"),
   validUntil: z.string().min(1, "Valid until date is required"),
   vehicleKm: z.number().finite().min(0),
-  otherCharge: z.number().finite().min(0),
   services: z.array(quotationServiceSchema),
   parts: z.array(quotationPartSchema),
   serviceTotal: z.number().finite().min(0),

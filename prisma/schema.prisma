@@ -35,7 +35,7 @@ model Customer {
   id        String    @id @default(uuid())
   name      String
   email     String?   @unique
-  phone     String?
+  phone     String?   @unique
   address   String?
   type      String?   @default("Individual")
   vehicles  Vehicle[]

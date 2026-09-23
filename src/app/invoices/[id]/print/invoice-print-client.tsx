@@ -70,7 +70,7 @@ export function InvoicePrintClient({ invoice, otherChargesList }: { invoice: Inv
   }
 
   const handleBack = () => {
-    router.push("/payments")
+    router.back()
   }
 
   return (
@@ -83,9 +83,9 @@ export function InvoicePrintClient({ invoice, otherChargesList }: { invoice: Inv
       ` }} />
       <style dangerouslySetInnerHTML={{ __html: ".bill-paper { border-radius:0!important; } @media print { .bill-paper { padding:4mm!important; } }" }} />
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between print:hidden mb-8 gap-4">
+        <div className="print-preview-actions flex flex-col gap-2 sm:flex-row sm:justify-between print:hidden mb-8">
           <button type="button" className="border rounded-md px-4 py-2 flex items-center" onClick={handleBack}><ArrowLeft className="mr-2 h-4 w-4" />{l.back}</button>
-          <button type="button" className="bg-primary text-primary-foreground rounded-md px-4 py-2 flex items-center" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />{l.print}</button>
+          <button type="button" className="bg-primary text-primary-foreground rounded-md px-4 py-2 flex items-center" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print</button>
         </div>
         <div className="bill-paper print-container border p-6 rounded-lg">
           <header className="bill-header">

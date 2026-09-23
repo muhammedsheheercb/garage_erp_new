@@ -255,12 +255,12 @@ export function JobCardList() {
                   </TableCell>
                   <TableCell className="text-right space-x-1 whitespace-nowrap">
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="outline"
+                      size="sm"
                       onClick={() => openPrint(job.id)}
                       title={t.jobcards.printJobCard}
                     >
-                      <Printer className="h-4 w-4" />
+                      <Printer className="mr-2 h-4 w-4" />Print
                     </Button>
 
                     {can("jobcards", "edit") && (

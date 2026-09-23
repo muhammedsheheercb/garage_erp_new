@@ -373,10 +373,32 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
   }
 
   // 1. Total Income & breakdown
-  const [payments, directSales] = await Promise.all([prisma.payment.findMany({
+  const [payments, directSales, completedJobCards] = await Promise.all([prisma.payment.findMany({
     where: { createdAt: dateFilter },
     select: { amount: true, method: true }
-  }), prisma.directSale.findMany({ where: { saleDate: dateFilter }, select: { grandTotal: true } })])
+  }),
+  prisma.directSale.findMany({
+    where: { saleDate: dateFilter },
+    select: {
+      grandTotal: true,
+      items: { select: { quantity: true, purchasePrice: true, salesPrice: true } },
+    },
+  }),
+  // Job Cards are reported from the moment their saved service or part rows exist.
+  // Cancelled cards are excluded. Each part retains its linked stock batch.
+  prisma.jobCard.findMany({
+    where: { status: { not: "CANCELLED" }, date: dateFilter },
+    select: {
+      services: { select: { price: true } },
+      parts: {
+        select: {
+          quantity: true,
+          price: true,
+          batch: { select: { purchasePrice: true } },
+        },
+      },
+    },
+  })])
   let totalIncome = 0;
   const incomeByMethod: Record<string, number> = {};
   for (const p of payments) {
@@ -386,6 +408,34 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
   const directSaleIncome = directSales.reduce((sum, sale) => sum + sale.grandTotal, 0)
   totalIncome += directSaleIncome
   if (directSaleIncome) incomeByMethod["Direct Sale"] = directSaleIncome
+
+  // Service price is the Labour Charge. Parts, discounts, and other charges are excluded.
+  const totalLabourCharges = completedJobCards.reduce(
+    (sum, jobCard) => sum + jobCard.services.reduce((serviceSum, service) => serviceSum + service.price, 0),
+    0,
+  )
+
+  const jobCardPartsSales = completedJobCards.reduce(
+    (sum, jobCard) => sum + jobCard.parts.reduce((partSum, part) => partSum + part.price * part.quantity, 0),
+    0,
+  )
+  const jobCardPartsCost = completedJobCards.reduce(
+    (sum, jobCard) => sum + jobCard.parts.reduce((partSum, part) => partSum + part.batch.purchasePrice * part.quantity, 0),
+    0,
+  )
+  const jobCardPartsProfit = jobCardPartsSales - jobCardPartsCost
+
+  // DirectSaleItem snapshots the actual batch purchase price and selling price at sale time.
+  const directSalePartsSales = directSales.reduce(
+    (sum, sale) => sum + sale.items.reduce((itemSum, item) => itemSum + item.salesPrice * item.quantity, 0),
+    0,
+  )
+  const directSalePartsCost = directSales.reduce(
+    (sum, sale) => sum + sale.items.reduce((itemSum, item) => itemSum + item.purchasePrice * item.quantity, 0),
+    0,
+  )
+  const directSalePartsProfit = directSalePartsSales - directSalePartsCost
+  const totalPartsProfit = jobCardPartsProfit + directSalePartsProfit
 
   // 2. Regular expenses. Paymeter-funded expenses are counted below as
   // paymeter outflows, so they must not be counted twice.
@@ -460,7 +510,15 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
     purchaseByMethod,
     totalPaymeterPaid,
     paymeterByName,
-    totalRevenue
+    totalRevenue,
+    totalLabourCharges,
+    jobCardPartsSales,
+    jobCardPartsCost,
+    jobCardPartsProfit,
+    directSalePartsSales,
+    directSalePartsCost,
+    directSalePartsProfit,
+    totalPartsProfit,
   }
 }
 

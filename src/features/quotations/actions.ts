@@ -90,7 +90,7 @@ export async function createQuotation(data: QuotationFormValues) {
   const parsed = quotationSchema.parse(data)
   const quotation = await prisma.quotation.create({ data: {
     customerId: parsed.customerId, vehicleId: parsed.vehicleId, complaint: parsed.complaint, notes: parsed.notes || null,
-    date: new Date(parsed.date), validUntil: new Date(parsed.validUntil), vehicleKm: parsed.vehicleKm, otherCharge: parsed.otherCharge,
+    date: new Date(parsed.date), validUntil: new Date(parsed.validUntil), vehicleKm: parsed.vehicleKm, otherCharge: 0,
     serviceTotal: parsed.serviceTotal, partsTotal: parsed.partsTotal, grandTotal: parsed.grandTotal, createdBy: await getCreatorName(), status: "PENDING",
     services: { create: parsed.services.map((service) => ({ serviceId: service.serviceId, quantity: service.quantity, price: service.price })) },
     parts: { create: parsed.parts.map((part) => ({ inventoryId: part.inventoryId, quantity: part.quantity, price: part.price })) },
@@ -104,7 +104,7 @@ export async function updateQuotation(id: string, data: QuotationFormValues) {
   const parsed = quotationSchema.parse(data)
   await prisma.quotation.update({ where: { id }, data: {
     customerId: parsed.customerId, vehicleId: parsed.vehicleId, complaint: parsed.complaint, notes: parsed.notes || null,
-    date: new Date(parsed.date), validUntil: new Date(parsed.validUntil), vehicleKm: parsed.vehicleKm, otherCharge: parsed.otherCharge,
+    date: new Date(parsed.date), validUntil: new Date(parsed.validUntil), vehicleKm: parsed.vehicleKm, otherCharge: 0,
     serviceTotal: parsed.serviceTotal, partsTotal: parsed.partsTotal, grandTotal: parsed.grandTotal,
     services: { deleteMany: {}, create: parsed.services.map((service) => ({ serviceId: service.serviceId, quantity: service.quantity, price: service.price })) },
     parts: { deleteMany: {}, create: parsed.parts.map((part) => ({ inventoryId: part.inventoryId, quantity: part.quantity, price: part.price })) },

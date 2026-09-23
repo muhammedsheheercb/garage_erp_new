@@ -304,7 +304,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
   const grandTotal = watch("grandTotal");
   const advancePaid = watch("advancePaid") || 0;
   const balanceAmount = Math.max(0, grandTotal - advancePaid);
-  const isStatusReadOnly = Boolean(quotationId);
+  const isStatusReadOnly = Boolean(quotationId || initialData?.quotation);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="jobcard-form space-y-6">
@@ -368,7 +368,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   placeholder={t.jobcards.selectCustomer}
                   className="pl-9 pr-9"
                   autoComplete="off"
-                  disabled={isLoading}
+                  disabled={isLoading || Boolean(quotationId || initialData?.quotation)}
                   onFocus={(event) => {
                     setCustomerSearch("");
                     setIsCustomerPickerOpen(true);
@@ -387,7 +387,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                     updateCustomerPickerPosition(event.currentTarget);
                   }}
                 />
-                {(selectedCustomer || customerSearch) && (
+                {!(quotationId || initialData?.quotation) && (selectedCustomer || customerSearch) && (
                   <button
                     type="button"
                     aria-label="Clear customer selection"
@@ -444,6 +444,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   {errors.customerId.message}
                 </p>
               )}
+              {isStatusReadOnly && <p className="text-xs text-muted-foreground">Read-only: linked to the accepted quotation.</p>}
             </div>
 
             <div className="space-y-2">
@@ -528,11 +529,11 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                       updateVehiclePickerPosition(event.currentTarget);
                     }}
                     placeholder={t.jobcards.searchVehiclesByPlate}
-                    disabled={isLoading}
+                    disabled={isLoading || Boolean(quotationId || initialData?.quotation)}
                     autoComplete="off"
                     className="pl-9 pr-9"
                   />
-                  {vehicleSearch && (
+                  {!(quotationId || initialData?.quotation) && vehicleSearch && (
                     <button
                       type="button"
                       aria-label="Clear vehicle search"
@@ -601,6 +602,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   {errors.vehicleId.message}
                 </p>
               )}
+              {isStatusReadOnly && <p className="text-xs text-muted-foreground">Read-only: linked to the accepted quotation.</p>}
             </div>
           </div>
 

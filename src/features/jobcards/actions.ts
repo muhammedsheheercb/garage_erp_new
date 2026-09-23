@@ -77,7 +77,8 @@ export async function getJobCardById(id: string) {
       },
       parts: {
         include: { batch: { include: { inventory: true } } }
-      }
+      },
+      quotation: { select: { id: true, customerId: true, vehicleId: true } }
     }
   })
 }
@@ -217,6 +218,7 @@ export async function createJobCard(data: JobCardFormValues) {
   revalidatePath(`/customers/${parsed.customerId}`)
   revalidatePath('/inventory')
   revalidatePath('/purchases')
+  revalidatePath('/reports')
   return jobCard
 }
 
@@ -227,9 +229,13 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
   // Update inventory stock ONLY if status changes to COMPLETED
   const existingJobCard = await prisma.jobCard.findUnique({
     where: { id },
-    select: { status: true, customerId: true }
+    select: { status: true, customerId: true, vehicleId: true, quotation: { select: { customerId: true, vehicleId: true } } }
   })
   
+  if (existingJobCard?.quotation && (parsed.customerId !== existingJobCard.quotation.customerId || parsed.vehicleId !== existingJobCard.quotation.vehicleId)) {
+    throw new Error("Customer and vehicle are locked because this job card was created from a quotation.")
+  }
+
   if (existingJobCard?.status !== "COMPLETED" && parsed.status === "COMPLETED") {
     // Deduct stock
     for (const part of parsed.parts) {
@@ -293,6 +299,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
   }
   revalidatePath('/inventory')
   revalidatePath('/purchases')
+  revalidatePath('/reports')
   return { success: true }
 }
 
@@ -308,5 +315,6 @@ export async function deleteJobCard(id: string) {
   revalidatePath('/vehicles')
   revalidatePath('/inventory')
   revalidatePath('/purchases')
+  revalidatePath('/reports')
   return { success: true }
 }
