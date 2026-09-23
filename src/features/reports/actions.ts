@@ -232,14 +232,14 @@ export async function getDetailedReportData(type: 'revenue' | 'expenses' | 'jobs
       orderBy: { createdAt: 'desc' }
     })
     
-    return data.map(p => ({
+    return data.map((p: any) => ({
       id: p.id,
       date: formatDisplayDate(p.createdAt, true),
       amount: p.amount,
       method: p.method,
-      customer: p.invoice.customer.name,
-      vehicle: p.invoice.jobCard.vehicle.plateNumber,
-      invoice: `INV-${p.invoice.id.split('-')[0].toUpperCase()}`
+      customer: p.invoice?.customer.name || p.jobCard?.customer.name || '-',
+      vehicle: p.invoice?.jobCard.vehicle.plateNumber || p.jobCard?.vehicle.plateNumber || '-',
+      invoice: p.invoice ? `INV-${p.invoice.id.split('-')[0].toUpperCase()}` : `JOB-${p.jobCard?.id.split('-')[0].toUpperCase() || '-'}`
     }))
   }
   
@@ -511,14 +511,14 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
     })
   ])
 
-  const incomeDetails = [...incomeList.map(p => ({
+  const incomeDetails = [...incomeList.map((p: any) => ({
     id: p.id,
     date: formatDisplayDate(p.createdAt, true),
     amount: p.amount,
     method: p.method,
-    customer: p.invoice.customer.name,
-    vehicle: p.invoice.jobCard?.vehicle?.plateNumber || '-',
-    invoice: `INV-${p.invoice.id.split('-')[0].toUpperCase()}`,
+    customer: p.invoice?.customer.name || p.jobCard?.customer.name || '-',
+    vehicle: p.invoice?.jobCard?.vehicle?.plateNumber || p.jobCard?.vehicle?.plateNumber || '-',
+    invoice: p.invoice ? `INV-${p.invoice.id.split('-')[0].toUpperCase()}` : `JOB-${p.jobCard?.id.split('-')[0].toUpperCase() || '-'}`,
     createdBy: p.createdBy || 'Admin'
   })), ...directSaleList.map(sale => ({
     id: `direct-${sale.id}`,

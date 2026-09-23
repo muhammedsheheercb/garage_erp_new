@@ -128,10 +128,13 @@ model JobCard {
   mechanic           Mechanic         @relation(fields: [mechanicId], references: [id])
   services           JobCardService[]
   parts              JobCardPart[]
+  payments           Payment[]
   purchases          Purchase[]
 
   serviceTotal Float @default(0)
   partsTotal   Float @default(0)
+  otherCharges String? // JSON string of [{ description, amount }]
+  hideServicePartsAmounts Boolean @default(false)
   discount     Float @default(0)
   tax          Float @default(0)
   grandTotal   Float @default(0)
@@ -268,11 +271,15 @@ model Payment {
   amount    Float
   method    String // CASH, CARD, TRANSFER
   createdBy String?
-  invoiceId String
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  // Kept for payments created before Job Cards became directly payable.
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+  jobCardId String?
+  jobCard   JobCard? @relation(fields: [jobCardId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([invoiceId])
+  @@index([jobCardId])
   @@index([createdAt])
 }
 

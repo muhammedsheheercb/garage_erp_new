@@ -11,8 +11,8 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
 
   const where: any = search ? {
     OR: [
-      { invoice: { id: { contains: search, mode: "insensitive" } } },
-      { invoice: { customer: { name: { contains: search, mode: "insensitive" } } } }
+      { jobCard: { customer: { name: { contains: search, mode: "insensitive" } } } },
+      { jobCard: { vehicle: { plateNumber: { contains: search, mode: "insensitive" } } } },
     ]
   } : {};
 
@@ -28,10 +28,10 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
       skip,
       take: limit,
       include: {
-        invoice: {
+        jobCard: {
           include: {
             customer: { select: { id: true, name: true } },
-            jobCard: { include: { vehicle: { select: { plateNumber: true } } } }
+            vehicle: { select: { plateNumber: true } },
           }
         }
       },
@@ -54,51 +54,48 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
 export async function getPendingInvoices(page = 1, search = "") {
   const limit = 5
   const skip = (page - 1) * limit
-  const where: any = { status: { in: ['UNPAID', 'PARTIAL'] } }
+  const where: any = {}
   if (search.trim()) {
     where.OR = [
       { customer: { name: { contains: search.trim(), mode: "insensitive" } } },
-      { jobCard: { vehicle: { plateNumber: { contains: search.trim(), mode: "insensitive" } } } },
+      { vehicle: { plateNumber: { contains: search.trim(), mode: "insensitive" } } },
     ]
   }
 
   const [data, total] = await Promise.all([
-    prisma.invoice.findMany({
+    prisma.jobCard.findMany({
       where,
       skip,
       take: limit,
       include: {
         customer: true,
         payments: true,
-        jobCard: { include: { vehicle: true } }
+        vehicle: true,
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'desc' }
     }),
-    prisma.invoice.count({ where })
+    prisma.jobCard.count({ where })
   ])
 
   return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } }
 }
 
 export async function getPendingInvoicesDropdown() {
-  const invoices = await prisma.invoice.findMany({
-    where: {
-      status: { in: ['UNPAID', 'PARTIAL'] }
-    },
+  const invoices = await prisma.jobCard.findMany({
     include: {
       customer: true,
       payments: true,
-      jobCard: { include: { vehicle: { select: { plateNumber: true } } } },
+      vehicle: { select: { plateNumber: true } },
     },
     orderBy: { createdAt: 'asc' }
   })
 
-  return invoices.map(inv => {
+  return invoices.filter(inv => inv.grandTotal > inv.payments.reduce((acc, p) => acc + p.amount, 0)).map(inv => {
     const paidAmount = inv.payments.reduce((acc, p) => acc + p.amount, 0)
     const due = inv.grandTotal - paidAmount
     return {
       id: inv.id,
-      label: `INV-${inv.id.split('-')[0].toUpperCase()} - ${inv.customer.name} - ${inv.jobCard.vehicle.plateNumber} - Due: ${(due)} OMR`,
+      label: `JOB-${inv.id.split('-')[0].toUpperCase()} - ${inv.customer.name} - ${inv.vehicle.plateNumber} - Due: ${(due)} OMR`,
       dueAmount: due
     }
   })
@@ -109,13 +106,13 @@ export async function createPayment(data: PaymentFormValues) {
   const discountAmount = parsed.discountAmount || 0
   
   const result = await prisma.$transaction(async (tx) => {
-    const invoiceBeforePayment = await tx.invoice.findUnique({
-      where: { id: parsed.invoiceId },
+    const invoiceBeforePayment = await tx.jobCard.findUnique({
+      where: { id: parsed.jobCardId },
       include: { payments: true },
     })
 
     if (!invoiceBeforePayment) {
-      throw new Error("The selected invoice no longer exists.")
+      throw new Error("The selected Job Card no longer exists.")
     }
 
     const alreadyPaid = invoiceBeforePayment.payments.reduce(
@@ -133,46 +130,47 @@ export async function createPayment(data: PaymentFormValues) {
     const payment = await tx.payment.create({
       data: {
         ...paymentData,
+        jobCardId: parsed.jobCardId,
         createdBy: creatorName,
       }
     })
 
     if (discountAmount > 0) {
-      await tx.invoice.update({
-        where: { id: parsed.invoiceId },
+      await tx.jobCard.update({
+        where: { id: parsed.jobCardId },
         data: {
           discount: { increment: discountAmount },
           grandTotal: { decrement: discountAmount },
-          amount: { decrement: discountAmount },
         },
       })
     }
 
-    const invoice = await tx.invoice.findUnique({
-      where: { id: parsed.invoiceId },
-      include: { payments: true }
-    })
-
-    if (invoice) {
-      // Calculate total paid across all payments
-      const totalPaid = invoice.payments.reduce((acc, p) => acc + p.amount, 0)
-      
-      let newStatus = invoice.status
-      if (totalPaid >= invoice.grandTotal) {
-        newStatus = "PAID"
-      } else if (totalPaid > 0) {
-        newStatus = "PARTIAL"
-      }
-      
-      await tx.invoice.update({
-        where: { id: invoice.id },
-        data: { status: newStatus }
-      })
-    }
     return payment
   })
   
   revalidatePath('/payments')
-  revalidatePath('/invoices')
+  revalidatePath('/jobcards')
   return result
+}
+
+export async function getPaymentBill(id: string) {
+  return prisma.payment.findUnique({
+    where: { id },
+    include: {
+      jobCard: { include: { customer: true, vehicle: true, services: { include: { service: true } }, parts: { include: { batch: { include: { inventory: true } } } }, payments: { orderBy: { createdAt: "asc" } } } },
+    },
+  })
+}
+
+export async function getJobCardBill(id: string) {
+  return prisma.jobCard.findUnique({
+    where: { id },
+    include: {
+      customer: true,
+      vehicle: true,
+      services: { include: { service: true } },
+      parts: { include: { batch: { include: { inventory: true } } } },
+      payments: { orderBy: { createdAt: "asc" } },
+    },
+  })
 }

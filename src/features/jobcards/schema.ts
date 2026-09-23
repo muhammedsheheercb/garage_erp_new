@@ -20,6 +20,11 @@ export const jobCardPartSchema = z
     path: ["quantity"],
   })
 
+export const otherChargeSchema = z.object({
+  description: z.string().trim().min(1, "Description is required"),
+  amount: z.number().finite("Amount is required").min(0, "Amount cannot be negative"),
+})
+
 export const jobCardSchema = z.object({
   id: z.string().optional(),
   customerId: z.string().trim().min(1, "Customer is required"),
@@ -35,6 +40,8 @@ export const jobCardSchema = z.object({
   
   services: z.array(jobCardServiceSchema),
   parts: z.array(jobCardPartSchema),
+  otherCharges: z.array(otherChargeSchema),
+  hideServicePartsAmounts: z.boolean(),
   
   serviceTotal: z.number().finite().min(0, "Service total cannot be negative"),
   partsTotal: z.number().finite().min(0, "Parts total cannot be negative"),
@@ -56,3 +63,4 @@ export const jobCardSchema = z.object({
 export type JobCardFormValues = z.infer<typeof jobCardSchema>
 export type JobCardServiceValues = z.infer<typeof jobCardServiceSchema>
 export type JobCardPartValues = z.infer<typeof jobCardPartSchema>
+export type OtherChargeValues = z.infer<typeof otherChargeSchema>

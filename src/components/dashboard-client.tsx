@@ -39,7 +39,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
   const actions = [
     { page: "quotations", href: "/quotations", label: "Quotations", icon: FileText },
     { page: "jobcards", href: "/jobcards", label: t.nav.createJobCard, icon: Wrench, primary: true },
-    { page: "invoices", href: "/invoices", label: t.nav.invoices, icon: FileText }, { page: "payments", href: "/payments", label: t.nav.payments, icon: CreditCard }, { page: "direct-sales", permission: "inventory", href: "/direct-sales", label: "Direct Sales", icon: FileText },
+    { page: "payments", href: "/payments", label: t.nav.payments, icon: CreditCard }, { page: "direct-sales", permission: "inventory", href: "/direct-sales", label: "Direct Sales", icon: FileText },
     { page: "inventory", href: "/inventory", label: t.nav.inventory, icon: Package }, { page: "purchases", href: "/purchases", label: t.nav.purchases, icon: Package },
     { page: "suppliers", href: "/suppliers", label: t.nav.suppliers, icon: Truck }, { page: "paymeters", href: "/paymeters", label: t.nav.paymeters, icon: CreditCard },
     { page: "customers", href: "/customers", label: t.nav.addCustomer, icon: Users }, { page: "vehicles", href: "/vehicles", label: t.nav.addVehicle, icon: Car },

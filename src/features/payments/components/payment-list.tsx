@@ -28,7 +28,7 @@ export function PaymentList() {
   const [pendingSearch, setPendingSearch] = useState("")
   const [pendingPage, setPendingPage] = useState(1)
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null)
+  const [payingJobCardId, setPayingJobCardId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"history" | "pending">("history")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (paramFrom) {
@@ -54,7 +54,7 @@ export function PaymentList() {
   })
 
   const { data: pendingData, isLoading: pendingLoading } = useQuery({
-    queryKey: ['pending-invoices', pendingPage, pendingSearch],
+    queryKey: ['pending-jobcards', pendingPage, pendingSearch],
     queryFn: () => getPendingInvoices(pendingPage, pendingSearch),
     enabled: activeTab === "pending",
   })
@@ -68,7 +68,7 @@ export function PaymentList() {
     }
   }
 
-  const pendingInvoices = pendingData?.data ?? []
+  const pendingJobCards = pendingData?.data ?? []
 
   return (
     <div className="space-y-4">
@@ -86,7 +86,7 @@ export function PaymentList() {
             onClick={() => setActiveTab("pending")}
             className="flex-1 sm:flex-none relative"
           >
-            {t.payments.pendingInvoices}
+            {"Payable Job Cards"}
             {pendingData && pendingData.meta.total > 0 && (
               <span className="absolute -top-2 -right-2 bg-destructive text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 {pendingData.meta.total}
@@ -120,7 +120,7 @@ export function PaymentList() {
             <div className="relative w-full sm:max-w-xs">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={t.payments.searchPendingInvoices}
+                placeholder={"Search by customer or vehicle number..."}
                 className="pl-8 w-full"
                   value={pendingSearch}
                   onChange={(e) => { setPendingSearch(e.target.value); setPendingPage(1) }}
@@ -150,29 +150,30 @@ export function PaymentList() {
                 <TableRow>
                   <TableHead>{t.payments.date}</TableHead>
                   <TableHead>{t.jobcards.customer}</TableHead>
-                  <TableHead>{t.payments.invoice}</TableHead>
+                  <TableHead>{"Job Card"}</TableHead>
                   <TableHead>{t.payments.method}</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead className="text-right">{t.payments.amount} (OMR)</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historyLoading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
                 ) : historyData?.data.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center h-24">{t.payments.noPayments}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center h-24">{t.payments.noPayments}</TableCell></TableRow>
                 ) : (
                   historyData?.data.map((payment) => (
                     <TableRow key={payment.id}>
                       <TableCell>{formatDisplayDate(payment.createdAt)}</TableCell>
-                      <TableCell>{payment.invoice.customer.name}</TableCell>
+                      <TableCell>{payment.jobCard?.customer.name || "—"}</TableCell>
                       <TableCell>
                         <Button 
                           variant="link" 
                           className="h-auto p-0 text-primary" 
-                          onClick={() => router.push(`/invoices/${payment.invoice.id}/print`)}
+                          onClick={() => payment.jobCard && router.push(`/jobcards/${payment.jobCard.id}/print`)}
                         >
-                          INV-{payment.invoice.id.split('-')[0].toUpperCase()}
+                          {payment.jobCard ? `JOB-${payment.jobCard.id.split('-')[0].toUpperCase()}` : "Legacy payment"}
                         </Button>
                       </TableCell>
                       <TableCell>
@@ -187,6 +188,7 @@ export function PaymentList() {
                       <TableCell className="text-right font-medium text-green-600">
                         +{(payment.amount)}
                       </TableCell>
+                      <TableCell><Button variant="outline" size="sm" onClick={() => router.push(`/payments/${payment.id}/invoice`)}><FileText className="mr-2 h-4 w-4" />Invoice Bill</Button></TableCell>
                     </TableRow>
                   ))
                 )}
@@ -227,10 +229,10 @@ export function PaymentList() {
             <div className="col-span-full text-center py-12 text-muted-foreground">{t.common.loading}</div>
           ) : pendingData?.meta.total === 0 ? (
             <div className="col-span-full text-center py-12 text-muted-foreground">{t.payments.allCaughtUp}</div>
-          ) : pendingInvoices.length === 0 ? (
+          ) : pendingJobCards.length === 0 ? (
             <div className="col-span-full text-center py-12 text-muted-foreground">{t.common.noResults}</div>
           ) : (
-            pendingInvoices.map((inv) => {
+            pendingJobCards.map((inv) => {
               const paidAmount = inv.payments.reduce((acc, p) => acc + p.amount, 0)
               const due = inv.grandTotal - paidAmount
               
@@ -241,10 +243,10 @@ export function PaymentList() {
                       <div>
                         <h3 className="font-semibold text-lg">{inv.customer.name}</h3>
                         <p className="text-sm text-muted-foreground">
-                          INV-{inv.id.split('-')[0].toUpperCase()}
+                          JOB-{inv.id.split('-')[0].toUpperCase()}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {t.vehicles.plateNumber}: {inv.jobCard?.vehicle?.plateNumber || t.common.NA}
+                          {t.vehicles.plateNumber}: {inv.vehicle?.plateNumber || t.common.NA}
                         </p>
                       </div>
                       <Badge variant={inv.status === 'PARTIAL' ? 'secondary' : 'destructive'}>
@@ -272,20 +274,20 @@ export function PaymentList() {
                     <Button 
                       variant="outline" 
                       className="flex-1"
-                      onClick={() => router.push(`/invoices/${inv.id}/print`)}
+                      onClick={() => router.push(`/payments/jobcard/${inv.id}/invoice`)}
                     >
                       <FileText className="h-4 w-4 mr-2" /> {t.payments.view}
                     </Button>
-                    <Dialog open={payingInvoiceId === inv.id} onOpenChange={(open) => setPayingInvoiceId(open ? inv.id : null)}>
+                    <Dialog open={payingJobCardId === inv.id} onOpenChange={(open) => setPayingJobCardId(open ? inv.id : null)}>
                       <DialogTrigger render={
                         <Button className="flex-1"><Plus className="h-4 w-4 mr-2" /> {t.payments.pay}</Button>
                       } />
-                      {payingInvoiceId === inv.id && (
+                      {payingJobCardId === inv.id && (
                         <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto sm:w-[min(94vw,720px)] sm:max-w-[min(94vw,720px)] sm:p-6">
                           <DialogHeader>
                             <DialogTitle>{t.payments.recordPaymentFor} {inv.customer.name}</DialogTitle>
                           </DialogHeader>
-                          <PaymentForm initialInvoiceId={inv.id} onSuccess={() => setPayingInvoiceId(null)} />
+                          <PaymentForm initialJobCardId={inv.id} onSuccess={() => setPayingJobCardId(null)} />
                         </DialogContent>
                       )}
                     </Dialog>

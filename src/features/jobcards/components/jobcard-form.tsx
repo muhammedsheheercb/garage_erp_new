@@ -119,6 +119,11 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
           maxStock: Math.max(p.batch?.quantity || 0, p.quantity),
         })) || [],
 
+      otherCharges: (() => {
+        try { return initialData?.otherCharges ? JSON.parse(initialData.otherCharges) : []; } catch { return []; }
+      })(),
+      hideServicePartsAmounts: initialData?.hideServicePartsAmounts || false,
+
       serviceTotal: initialData?.serviceTotal || 0,
       partsTotal: initialData?.partsTotal || 0,
       discount: 0,
@@ -146,12 +151,20 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
     name: "parts",
   });
 
+  const {
+    fields: otherChargeFields,
+    append: appendOtherCharge,
+    remove: removeOtherCharge,
+  } = useFieldArray({ control, name: "otherCharges" });
+
   // Watch for totals calculation
   const watchedServices = watch("services") || [];
   const watchedParts = watch("parts") || [];
+  const watchedOtherCharges = watch("otherCharges") || [];
 
   const servicesJson = JSON.stringify(watchedServices);
   const partsJson = JSON.stringify(watchedParts);
+  const otherChargesJson = JSON.stringify(watchedOtherCharges);
 
   useEffect(() => {
     const sTotal = (watchedServices || []).reduce(
@@ -162,17 +175,21 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
         (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
         0,
       );
+    const otherChargesTotal = (watchedOtherCharges || []).reduce(
+      (acc, charge) => acc + (Number(charge?.amount) || 0),
+      0,
+    );
 
     setValue("serviceTotal", sTotal);
     setValue("partsTotal", pTotal);
 
-    const subTotal = sTotal + pTotal;
+    const subTotal = sTotal + pTotal + otherChargesTotal;
     const gTotal = subTotal;
     setValue("discount", 0);
     setValue("tax", 0);
 
     setValue("grandTotal", gTotal > 0 ? gTotal : 0);
-  }, [servicesJson, partsJson, setValue]);
+  }, [servicesJson, partsJson, otherChargesJson, setValue]);
 
   const {
     data: dropdowns = { customers: [], vehicles: [], mechanics: [] },
@@ -283,6 +300,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
 
   const serviceTotal = watch("serviceTotal");
   const partsTotal = watch("partsTotal");
+  const otherChargesTotal = watchedOtherCharges.reduce((total, charge) => total + (Number(charge?.amount) || 0), 0);
   const grandTotal = watch("grandTotal");
   const advancePaid = watch("advancePaid") || 0;
   const balanceAmount = Math.max(0, grandTotal - advancePaid);
@@ -984,6 +1002,31 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
             </Table>
           </div>
 
+          <div className="space-y-4 border rounded-md p-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-lg">Other Charges</h3>
+              <Button type="button" variant="outline" size="sm" onClick={() => appendOtherCharge({ description: "", amount: 0 })}>
+                <Plus className="mr-2 h-4 w-4" /> Add charge
+              </Button>
+            </div>
+            {otherChargeFields.length === 0 ? <p className="text-sm text-muted-foreground">No other charges added.</p> : (
+              <div className="space-y-3">
+                {otherChargeFields.map((field, index) => <div className="grid grid-cols-[1fr_9rem_auto] gap-2" key={field.id}>
+                  <Input placeholder="Description" {...register(`otherCharges.${index}.description`)} />
+                  <Input type="number" step="any" min="0" placeholder="Amount" {...register(`otherCharges.${index}.amount`, { valueAsNumber: true })} />
+                  <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeOtherCharge(index)}><Trash className="h-4 w-4" /></Button>
+                  {errors.otherCharges?.[index]?.description && <p className="col-span-3 text-sm text-destructive">{errors.otherCharges[index]?.description?.message}</p>}
+                  {errors.otherCharges?.[index]?.amount && <p className="col-span-3 text-sm text-destructive">{errors.otherCharges[index]?.amount?.message}</p>}
+                </div>)}
+              </div>
+            )}
+          </div>
+
+          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <input type="checkbox" className="h-4 w-4" {...register("hideServicePartsAmounts")} />
+            Hide Service &amp; Parts Amounts in Job Card Print
+          </label>
+
           <div className="space-y-2">
             <Label htmlFor="notes">{t.jobcards.notesRemarks}</Label>
             <Textarea
@@ -1012,6 +1055,11 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                 {t.jobcards.partsTotal}:
               </span>
               <span>{formatAmount(partsTotal)} OMR</span>
+            </div>
+
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Other charges:</span>
+              <span>{formatAmount(otherChargesTotal)} OMR</span>
             </div>
 
             <div className="space-y-2">

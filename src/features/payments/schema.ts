@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 export const paymentSchema = z.object({
-  invoiceId: z.string().min(1, "Invoice is required"),
+  jobCardId: z.string().min(1, "Job Card is required"),
   amount: z.number().finite("Amount is required").min(0, "Amount cannot be negative"),
   discountAmount: z.number().finite("Discount amount is required").min(0, "Discount amount cannot be negative"),
   method: z.enum(["CASH", "CARD", "TRANSFER"]),
