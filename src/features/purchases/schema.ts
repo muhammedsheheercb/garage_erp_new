@@ -12,7 +12,7 @@ export const purchaseSchema = z.object({
   id: z.string().optional(),
   purchaseDate: z.string().or(z.date()),
   supplierId: z.string().trim().min(1, "Supplier is required"),
-  purchaseType: z.enum(["STOCK", "VEHICLE"]),
+  purchaseType: z.enum(["STOCK", "VEHICLE", "PENDING_PARTS"]),
   jobCardId: z.string().optional().nullable(),
   paymentSource: z.enum(["PAYMETER", "DIRECT"]),
   paymentMethodId: z.string().trim().optional(),
@@ -27,7 +27,7 @@ export const purchaseSchema = z.object({
   if (data.paymentSource === "DIRECT" && !data.directPaymentMethod) {
     ctx.addIssue({ code: "custom", path: ["directPaymentMethod"], message: "Select a direct payment method" })
   }
-  if (data.purchaseType === "VEHICLE" && !data.jobCardId) {
+  if (["VEHICLE", "PENDING_PARTS"].includes(data.purchaseType) && !data.jobCardId) {
     ctx.addIssue({ code: "custom", path: ["jobCardId"], message: "Select a Job Card for vehicle purchase" })
   }
 

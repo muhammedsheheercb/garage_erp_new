@@ -93,7 +93,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
 
   const matchingPurchaseJobCards = dropdownData?.jobCards?.filter((jc: any) => {
     const query = vehicleSearch.trim().toLowerCase()
-    return !query || jc.vehicle.plateNumber.toLowerCase().includes(query) || jc.customer.name.toLowerCase().includes(query) || jc.complaint.toLowerCase().includes(query)
+    return (!query || jc.vehicle.plateNumber.toLowerCase().includes(query) || jc.customer.name.toLowerCase().includes(query) || jc.complaint.toLowerCase().includes(query))
   }) || []
 
   const { fields, append, remove } = useFieldArray({
@@ -215,7 +215,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                 <SelectTrigger id="purchaseType"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="STOCK">Stock Purchase</SelectItem>
-                  <SelectItem value="VEHICLE">Vehicle Purchase</SelectItem>
+                  <SelectItem value="VEHICLE">Vehicle Purchase</SelectItem><SelectItem value="PENDING_PARTS">Pending Parts Purchase</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -229,9 +229,10 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
         </div>
       </div>
 
-      {purchaseType === "VEHICLE" && (
+      {["VEHICLE", "PENDING_PARTS"].includes(purchaseType) && (
         <div className="bg-muted/30 p-4 rounded-lg border space-y-4">
-          <h3 className="font-semibold">Vehicle & Job Card Selection</h3>
+          <h3 className="font-semibold">{purchaseType === "PENDING_PARTS" ? "Pending Parts Job Card Selection" : "Vehicle & Job Card Selection"}</h3>
+
           <div className="space-y-2">
             <Label htmlFor="jobCardId">Select Job Card <span className="text-destructive">*</span></Label>
             <Controller
@@ -274,7 +275,10 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                       {matchingPurchaseJobCards.length > 0 ? matchingPurchaseJobCards.map((jc: any) => (
                         <button key={jc.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
                           field.onChange(jc.id)
-                          setVehicleSearch(`${jc.vehicle.plateNumber} - ${jc.customer.name}`)
+                          setVehicleSearch(jc.vehicle.plateNumber + " - " + jc.customer.name)
+                          if (purchaseType === "PENDING_PARTS" && jc.parts?.length) {
+                            setValue("items", jc.parts.map((part: any) => ({ inventoryId: part.batch.inventory.id, quantity: part.quantity, purchasePrice: part.batch.purchasePrice || 0, sellingPrice: part.price, taxRate: activeTaxRate || 0 })), { shouldDirty: true, shouldValidate: true })
+                          }
                           setIsJobCardSelectOpen(false)
                           setJobCardPickerPosition(null)
                         }}>

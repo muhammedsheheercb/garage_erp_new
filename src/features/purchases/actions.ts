@@ -115,7 +115,8 @@ export async function getPurchaseDropdownData() {
       where: { status: { notIn: ["COMPLETED", "CANCELLED"] } },
       include: {
         vehicle: true,
-        customer: true
+        customer: true,
+        parts: { where: { isPending: true }, include: { batch: { include: { inventory: true } } } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -248,16 +249,23 @@ export async function createPurchase(data: PurchaseFormValues) {
         }
       })
       
-      if (parsed.purchaseType === 'VEHICLE' && parsed.jobCardId) {
+      if (parsed.purchaseType === "VEHICLE" && parsed.jobCardId) {
         await tx.jobCardPart.create({
-          data: {
-            jobCardId: parsed.jobCardId,
-            batchId: batch.id,
-            quantity: item.quantity,
-            price: item.sellingPrice
-          }
+          data: { jobCardId: parsed.jobCardId, batchId: batch.id, isPending: false, quantity: item.quantity, price: item.sellingPrice }
         })
-        addedPartsTotal += (item.quantity * item.sellingPrice)
+        addedPartsTotal += item.quantity * item.sellingPrice
+      }
+
+      if (parsed.purchaseType === "PENDING_PARTS" && parsed.jobCardId) {
+        const pendingPart = await tx.jobCardPart.findFirst({
+          where: { jobCardId: parsed.jobCardId, isPending: true, batch: { inventoryId: item.inventoryId } },
+          orderBy: { createdAt: "asc" },
+        })
+        if (!pendingPart) throw new Error("Select a pending part from the selected Job Card.")
+        await tx.jobCardPart.update({
+          where: { id: pendingPart.id },
+          data: { batchId: batch.id, isPending: false, quantity: item.quantity, price: item.sellingPrice },
+        })
       }
     }
     

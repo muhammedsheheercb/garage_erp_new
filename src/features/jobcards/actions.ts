@@ -135,7 +135,6 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
   await requirePagePermission("jobcards")
   const batches = await prisma.inventoryBatch.findMany({
     where: {
-      quantity: { gt: 0 },
       inventory: {
         OR: [
           { itemName: { contains: search, mode: "insensitive" } },
@@ -147,6 +146,7 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
       inventory: true,
       jobCardParts: {
         where: {
+          isPending: false,
           jobCard: {
             status: { notIn: ["COMPLETED", "CANCELLED"] },
             ...(excludeJobCardId ? { id: { not: excludeJobCardId } } : {})
@@ -165,7 +165,7 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
       availableQuantity,
       jobCardParts: undefined // remove relation array from response
     }
-  }).filter(batch => batch.availableQuantity > 0)
+  })
 }
 
 export async function createJobCard(data: JobCardFormValues) {
@@ -205,6 +205,7 @@ export async function createJobCard(data: JobCardFormValues) {
       parts: {
         create: parsed.parts.map(p => ({
           batchId: p.batchId,
+          isPending: p.isPending,
           quantity: p.quantity,
           price: p.price
         }))
@@ -236,9 +237,13 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
     throw new Error("Customer and vehicle are locked because this job card was created from a quotation.")
   }
 
+  if (parsed.status === "COMPLETED" && parsed.parts.some((part) => part.isPending)) {
+    throw new Error("Pending out-of-stock parts must be replaced with available stock before completing this job card.")
+  }
+
   if (existingJobCard?.status !== "COMPLETED" && parsed.status === "COMPLETED") {
     // Deduct stock
-    for (const part of parsed.parts) {
+    for (const part of parsed.parts.filter((part) => !part.isPending)) {
       await prisma.inventoryBatch.update({
         where: { id: part.batchId },
         data: { quantity: { decrement: part.quantity } }
@@ -282,6 +287,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
         parts: {
           create: parsed.parts.map(p => ({
             batchId: p.batchId,
+            isPending: p.isPending,
             quantity: p.quantity,
             price: p.price
           }))

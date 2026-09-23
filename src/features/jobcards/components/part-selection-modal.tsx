@@ -80,11 +80,11 @@ export function PartSelectionModal({ onSelect, jobCardId }: PartSelectionModalPr
                     </TableCell>
                     <TableCell className="text-right">{(part.sellingPrice)} OMR</TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" type="button" disabled={part.availableQuantity <= 0} onClick={() => {
-                        onSelect(part)
+                      <Button size="sm" type="button" variant={part.availableQuantity <= 0 ? "secondary" : "default"} onClick={() => {
+                        onSelect({ ...part, isPending: part.availableQuantity <= 0 })
                         setOpen(false)
                       }}>
-                        {part.availableQuantity <= 0 ? t.jobcards.outOfStock : t.jobcards.select}
+                        {part.availableQuantity <= 0 ? "Add as pending" : t.jobcards.select}
                       </Button>
                     </TableCell>
                   </TableRow>

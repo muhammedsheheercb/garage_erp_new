@@ -14,8 +14,9 @@ export const jobCardPartSchema = z
     quantity: z.number().finite("Quantity is required").int("Quantity must be a whole number").min(1, "Quantity must be at least 1"),
     price: z.number().finite("Price is required").min(0, "Price cannot be negative"),
     maxStock: z.number().finite(), // Used for validation in UI
+    isPending: z.boolean(),
   })
-  .refine((part) => part.quantity <= part.maxStock, {
+  .refine((part) => part.isPending || part.quantity <= part.maxStock, {
     message: "Quantity cannot exceed available stock",
     path: ["quantity"],
   })

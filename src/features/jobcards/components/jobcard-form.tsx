@@ -114,6 +114,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
         initialData?.parts?.map((p: any) => ({
           batchId: p.batchId,
           name: p.batch?.inventory?.itemName || t.common.unknown,
+          isPending: p.isPending || false,
           quantity: p.quantity,
           price: p.price,
           maxStock: Math.max(p.batch?.quantity || 0, p.quantity),
@@ -221,8 +222,8 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       queryClient.invalidateQueries({ queryKey: ["purchase-dropdowns"] });
       onSuccess?.();
     },
-    onError: () => {
-      toast.error(t.common.somethingWrong);
+    onError: (error: Error) => {
+      toast.error(error.message || t.common.somethingWrong);
     },
   });
 
@@ -905,6 +906,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   if (!watchedParts.find((p) => p.batchId === batch.id)) {
                     appendPart({
                       batchId: batch.id,
+                      isPending: Boolean(batch.isPending),
                       name: `${batch.inventory.itemName} (${batch.inventory.partNumber})`,
                       quantity: 1,
                       price: batch.sellingPrice,
@@ -943,25 +945,23 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                     const qty = watchedParts[index]?.quantity || 0;
                     const price = watchedParts[index]?.price || 0;
                     const maxStock = field.maxStock;
+                    const isPending = watchedParts[index]?.isPending;
                     return (
                       <TableRow key={field.id}>
                         <TableCell>
                           {field.name}{" "}
                           <span className="text-xs text-muted-foreground block">
-                            {t.inventoryMod.stock}: {maxStock}
+                            {isPending ? "Pending — out of stock. Remove and add again after stock arrives." : "Stock: " + maxStock}
                           </span>
                         </TableCell>
                         <TableCell>
                           <Input
                             type="number"
                             min="1"
-                            max={maxStock}
+                            max={isPending ? undefined : maxStock}
                             {...register(`parts.${index}.quantity`, {
                               valueAsNumber: true,
-                              max: {
-                                value: maxStock,
-                                message: `${t.jobcards.maxStockIs} ${maxStock}`,
-                              },
+                              ...(isPending ? {} : { max: { value: maxStock, message: "Quantity cannot exceed available stock" } }),
                             })}
                           />
                           {errors.parts?.[index]?.quantity && (
@@ -975,8 +975,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                             type="number"
                             step="any"
                             min="0"
-                            readOnly
-                            className="bg-muted cursor-not-allowed"
+                            className=""
                             {...register(`parts.${index}.price`, {
                               valueAsNumber: true,
                             })}
