@@ -385,6 +385,10 @@ export async function payPurchase(purchaseId: string, amount: number) {
       data: { spentAmount: { decrement: amount } }
     })
 
+    await tx.paymeterSettlement.create({
+      data: { paymeterId: purchase.paymentMethodId, amount, type: "PURCHASE_REIMBURSEMENT" }
+    })
+
     return updatedPurchase
   })
 

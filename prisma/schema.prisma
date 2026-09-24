@@ -429,6 +429,7 @@ model Paymeter {
   purchases          Purchase[]
   purchasePayments   PurchasePayment[]
   expenses           Expense[]
+  settlements        PaymeterSettlement[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   @@index([createdAt])
@@ -496,6 +497,18 @@ model PurchasePayment {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   @@index([purchaseId])
+  @@index([paymeterId])
+  @@index([date])
+}
+
+model PaymeterSettlement {
+  id         String   @id @default(uuid())
+  paymeterId String
+  paymeter   Paymeter @relation(fields: [paymeterId], references: [id], onDelete: Cascade)
+  amount     Float
+  type       String
+  date       DateTime @default(now())
+  createdAt  DateTime @default(now())
   @@index([paymeterId])
   @@index([date])
 }

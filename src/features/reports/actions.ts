@@ -6,125 +6,88 @@ import { formatDisplayDate } from "@/lib/date-format"
 
 export async function getDashboardStats() {
   const now = new Date()
-  const currentMonthStart = startOfMonth(now)
-  const currentMonthEnd = endOfMonth(now)
   const todayStart = startOfDay(now)
   const todayEnd = endOfDay(now)
+  const today = { gte: todayStart, lte: todayEnd }
+  const directPaymeterNames = ["Direct Cash", "Direct Bank Transfer", "Card", "Direct Card"]
+  const isDirectPaymeter = (name?: string) => directPaymeterNames.includes(name || "")
 
   const [
-    todayPaymentsQuery,
-    todayExpensesQuery,
-    todayPaymeterExpensesQuery,
-    todayPaymeterPaymentsQuery,
-    todayPurchasesQuery,
-    monthlyPaymentsQuery,
-    monthlyExpensesQuery,
-    monthlyPaymeterExpensesQuery,
-    monthlyPaymeterPaymentsQuery,
-    monthlyPurchasesQuery,
-    pendingJobsCount,
-    completedJobsCount,
-    totalCustomersCount,
-    totalVehiclesCount,
-    todayDirectSales,
-    monthlyDirectSales
+    payments,
+    jobCards,
+    directSales,
+    purchases,
+    expenses,
+    purchasePayments,
+    paymeterExpenses,
+    settlements,
+    pendingJobs,
   ] = await Promise.all([
-    // Today's Income
-    prisma.payment.aggregate({
-      where: { createdAt: { gte: todayStart, lte: todayEnd } },
-      _sum: { amount: true }
+    prisma.payment.aggregate({ where: { createdAt: today }, _sum: { amount: true } }),
+    prisma.jobCard.aggregate({
+      where: { date: today, status: { not: "CANCELLED" } },
+      _sum: { grandTotal: true },
     }),
-    // Today's Expenses
-    prisma.expense.aggregate({
-      where: { date: { gte: todayStart, lte: todayEnd } },
-      _sum: { amount: true }
+    prisma.directSale.aggregate({ where: { saleDate: today }, _sum: { grandTotal: true } }),
+    prisma.purchase.aggregate({ where: { purchaseDate: today }, _sum: { grandTotal: true } }),
+    prisma.expense.findMany({ where: { date: today }, select: { amount: true, paymeterId: true } }),
+    prisma.purchasePayment.findMany({
+      where: { date: today },
+      select: { amount: true, paidAmount: true, pendingAmount: true, paymeter: { select: { name: true } } },
     }),
-    prisma.expense.aggregate({
-      where: { date: { gte: todayStart, lte: todayEnd }, paymeterId: { not: null } },
-      _sum: { amount: true }
+    prisma.expense.findMany({
+      where: { date: today, paymeterId: { not: null } },
+      select: { amount: true, paymeter: { select: { name: true } } },
     }),
-    prisma.purchasePayment.aggregate({
-      where: { date: { gte: todayStart, lte: todayEnd } },
-      _sum: { amount: true }
+    prisma.paymeterSettlement.findMany({
+      where: { date: today },
+      select: { amount: true, paymeter: { select: { name: true } } },
     }),
-    // Today's Purchases
-    prisma.purchase.aggregate({
-      where: { createdAt: { gte: todayStart, lte: todayEnd } },
-      _sum: { grandTotal: true }
-    }),
-    // Monthly Income
-    prisma.payment.aggregate({
-      where: { createdAt: { gte: currentMonthStart, lte: currentMonthEnd } },
-      _sum: { amount: true }
-    }),
-    // Monthly Expenses
-    prisma.expense.aggregate({
-      where: { date: { gte: currentMonthStart, lte: currentMonthEnd } },
-      _sum: { amount: true }
-    }),
-    prisma.expense.aggregate({
-      where: { date: { gte: currentMonthStart, lte: currentMonthEnd }, paymeterId: { not: null } },
-      _sum: { amount: true }
-    }),
-    prisma.purchasePayment.aggregate({
-      where: { date: { gte: currentMonthStart, lte: currentMonthEnd } },
-      _sum: { amount: true }
-    }),
-    // Monthly Purchases
-    prisma.purchase.aggregate({
-      where: { createdAt: { gte: currentMonthStart, lte: currentMonthEnd } },
-      _sum: { grandTotal: true }
-    }),
-    // Pending Jobs
-    prisma.jobCard.count({
-      where: { status: { in: ['PENDING', 'IN_PROGRESS'] } }
-    }),
-    // Completed Jobs
-    prisma.jobCard.count({
-      where: { status: 'COMPLETED', createdAt: { gte: currentMonthStart, lte: currentMonthEnd } }
-    }),
-    // Total Customers
-    prisma.customer.count(),
-    // Total Vehicles
-    prisma.vehicle.count(),
-    prisma.directSale.aggregate({ where: { saleDate: { gte: todayStart, lte: todayEnd } }, _sum: { grandTotal: true } }),
-    prisma.directSale.aggregate({ where: { saleDate: { gte: currentMonthStart, lte: currentMonthEnd } }, _sum: { grandTotal: true } }),
+    prisma.jobCard.count({ where: { status: { in: ["PENDING", "IN_PROGRESS"] } } }),
   ])
 
-  const dailyRevenue = (todayPaymentsQuery._sum.amount || 0) + (todayDirectSales._sum.grandTotal || 0)
-  const dailyPurchase = todayPurchasesQuery._sum.grandTotal || 0
-  const dailyExpense = todayExpensesQuery._sum.amount || 0
-  const dailyPaymeterPaid = (todayPaymeterExpensesQuery._sum.amount || 0) + (todayPaymeterPaymentsQuery._sum.amount || 0)
-  // A Paymeter entry identifies who paid; it is not another business cost.
-  // Purchases and expenses already contain the cost and are deducted once.
-  const dailyProfit = dailyRevenue - dailyPurchase - dailyExpense
-
-  const monthlyRevenue = (monthlyPaymentsQuery._sum.amount || 0) + (monthlyDirectSales._sum.grandTotal || 0)
-  const monthlyExpenses = monthlyExpensesQuery._sum.amount || 0
-  const monthlyPaymeterPaid = (monthlyPaymeterExpensesQuery._sum.amount || 0) + (monthlyPaymeterPaymentsQuery._sum.amount || 0)
-  const monthlyPurchaseTotal = monthlyPurchasesQuery._sum.grandTotal || 0
-
-  const pendingJobs = pendingJobsCount
-  const completedJobs = completedJobsCount
-  const totalCustomers = totalCustomersCount
-  const totalVehicles = totalVehiclesCount
-
-  const profit = monthlyRevenue - monthlyPurchaseTotal - monthlyExpenses
+  const dailyJobCardSales = jobCards._sum.grandTotal || 0
+  const dailyIncome = (payments._sum.amount || 0) + (directSales._sum.grandTotal || 0)
+  const dailyPurchase = purchases._sum.grandTotal || 0
+  const dailyExpense = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+  const dailyRevenue = dailyIncome - dailyPurchase - dailyExpense
+  const dailyDirectPurchasePaid = purchasePayments
+    .filter((payment) => isDirectPaymeter(payment.paymeter.name) && payment.paidAmount === 0 && payment.pendingAmount === 0)
+    .reduce((sum, payment) => sum + payment.amount, 0)
+  const dailyDirectSupplierPaid = purchasePayments
+    .filter((payment) => isDirectPaymeter(payment.paymeter.name) && (payment.paidAmount > 0 || payment.pendingAmount > 0))
+    .reduce((sum, payment) => sum + payment.amount, 0)
+  const dailyDirectExpensePaid = expenses
+    .filter((expense) => !expense.paymeterId)
+    .reduce((sum, expense) => sum + expense.amount, 0)
+  const dailyPaymeterPaid = paymeterExpenses
+    .filter((expense) => !isDirectPaymeter(expense.paymeter?.name))
+    .reduce((sum, expense) => sum + expense.amount, 0)
+    + purchasePayments
+      .filter((payment) => !isDirectPaymeter(payment.paymeter.name))
+      .reduce((sum, payment) => sum + payment.amount, 0)
+  const dailyCompanyReturnToPaymeter = settlements
+    .filter((settlement) => !isDirectPaymeter(settlement.paymeter.name))
+    .reduce((sum, settlement) => sum + settlement.amount, 0)
+  const dailyNetCashFlow = dailyIncome
+    - dailyDirectPurchasePaid
+    - dailyDirectSupplierPaid
+    - dailyDirectExpensePaid
+    - dailyCompanyReturnToPaymeter
 
   return {
-    dailyRevenue,
+    dailyJobCardSales,
+    dailyIncome,
     dailyPurchase,
     dailyExpense,
-    dailyProfit,
+    dailyRevenue,
+    dailyDirectPurchasePaid,
+    dailyDirectSupplierPaid,
+    dailyDirectExpensePaid,
     dailyPaymeterPaid,
-    monthlyRevenue,
-    monthlyExpenses,
-    profit,
-    monthlyPaymeterPaid,
+    dailyCompanyReturnToPaymeter,
+    dailyNetCashFlow,
     pendingJobs,
-    completedJobs,
-    totalCustomers,
-    totalVehicles
   }
 }
 

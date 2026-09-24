@@ -238,6 +238,10 @@ export async function settlePaymeter(id: string, amount: number) {
       spentAmount: { decrement: amount }
     }
   })
+
+  await prisma.paymeterSettlement.create({
+    data: { paymeterId: id, amount, type: "MANUAL_REIMBURSEMENT" }
+  })
   
   revalidatePath('/paymeters')
   return paymeter
@@ -270,6 +274,9 @@ export async function payPurchasePayment(paymentId: string, amount: number) {
     await tx.paymeter.update({
       where: { id: payment.paymeterId },
       data: { spentAmount: { decrement: amount } }
+    })
+    await tx.paymeterSettlement.create({
+      data: { paymeterId: payment.paymeterId, amount, type: "SUPPLIER_REIMBURSEMENT" }
     })
   })
 

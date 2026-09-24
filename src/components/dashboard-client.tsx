@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Wrench, Users, Car, CheckCircle2, FileText, Activity, Briefcase, CreditCard, Package, Truck, UserCog, Settings } from "lucide-react"
+import { Wrench, Users, Car, FileText, Activity, Briefcase, CreditCard, Package, Truck, UserCog, Settings } from "lucide-react"
 import { SignOutButton } from "@/components/sign-out-button"
 import { Currency, OmanIcon } from "@/components/currency"
 import Link from "next/link"
@@ -15,14 +15,18 @@ import { useTranslation } from "@/i18n"
 interface DashboardClientProps {
   session: { email?: string; role?: "ADMIN" | "EMPLOYEE"; permissions?: string[] } | null
   realStats: {
-    dailyRevenue: number
+    dailyJobCardSales: number
+    dailyIncome: number
     dailyPurchase: number
     dailyExpense: number
-    dailyProfit: number
+    dailyRevenue: number
+    dailyDirectPurchasePaid: number
+    dailyDirectSupplierPaid: number
+    dailyDirectExpensePaid: number
     dailyPaymeterPaid: number
+    dailyCompanyReturnToPaymeter: number
+    dailyNetCashFlow: number
     pendingJobs: number
-    completedJobs: number
-    profit: number
   }
   recentActivities: Array<{
     id: string
@@ -49,12 +53,17 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
   ]
 
   const stats = [
-    { title: t.dashboard.todaysIncome, value: <Currency amount={realStats.dailyRevenue} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.paymentsReceivedToday },
-    { title: "Today's Purchase", value: <Currency amount={realStats.dailyPurchase} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total purchases today" },
-    { title: t.dashboard.todaysExpense, value: <Currency amount={realStats.dailyExpense} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total expenses today" },
-    { title: "Today's Paymeter Paid", value: <Currency amount={realStats.dailyPaymeterPaid} size={1.2} maximumFractionDigits={3} />, icon: CreditCard, description: "Money taken from paymeters today" },
-    { title: t.dashboard.todaysRevenue, value: <Currency amount={realStats.dailyProfit} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: t.dashboard.incomeMinusExpense },
-    { title: t.dashboard.completedJobsMonth, value: realStats.completedJobs.toString(), icon: CheckCircle2, description: t.dashboard.thisMonth },
+    { title: "Today Job Card Sales", value: <Currency amount={realStats.dailyJobCardSales} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total job card sale value today" },
+    { title: "Today Income Received", value: <Currency amount={realStats.dailyIncome} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Customer payments and direct sales received today" },
+    { title: "Today Purchase", value: <Currency amount={realStats.dailyPurchase} size={1.2} maximumFractionDigits={3} />, icon: Package, description: "Total purchase bills created today" },
+    { title: "Today Direct Purchase Paid", value: <Currency amount={realStats.dailyDirectPurchasePaid} size={1.2} maximumFractionDigits={3} />, icon: CreditCard, description: "Direct payment made with a new purchase today" },
+    { title: "Today Direct Supplier Paid", value: <Currency amount={realStats.dailyDirectSupplierPaid} size={1.2} maximumFractionDigits={3} />, icon: Truck, description: "Direct payment made to suppliers today" },
+    { title: "Today Expense", value: <Currency amount={realStats.dailyExpense} size={1.2} maximumFractionDigits={3} />, icon: CreditCard, description: "All expenses recorded today" },
+    { title: "Today Direct Expense Paid", value: <Currency amount={realStats.dailyDirectExpensePaid} size={1.2} maximumFractionDigits={3} />, icon: CreditCard, description: "Expenses paid directly by the company today" },
+    { title: "Today Paymeter Paid", value: <Currency amount={realStats.dailyPaymeterPaid} size={1.2} maximumFractionDigits={3} />, icon: CreditCard, description: "Staff Paymeter payments today" },
+    { title: "Today Company Return to Paymeter", value: <Currency amount={realStats.dailyCompanyReturnToPaymeter} size={1.2} maximumFractionDigits={3} />, icon: CreditCard, description: "Company repayments to staff Paymeters today" },
+    { title: "Today Cash Flow", value: <Currency amount={realStats.dailyNetCashFlow} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Income less direct payments and Paymeter repayments" },
+    { title: "Today Revenue", value: <Currency amount={realStats.dailyRevenue} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-primary" />, description: "Income less today purchases and expenses" },
   ]
 
   return (

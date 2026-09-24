@@ -203,6 +203,10 @@ export async function payExpense(expenseId: string, amount: number) {
       data: { spentAmount: { decrement: amount } }
     })
 
+    await tx.paymeterSettlement.create({
+      data: { paymeterId: expense.paymeterId!, amount, type: "EXPENSE_REIMBURSEMENT" }
+    })
+
     return updatedExpense
   })
 
