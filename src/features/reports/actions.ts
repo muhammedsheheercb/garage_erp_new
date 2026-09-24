@@ -327,6 +327,9 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
     dateFilter.lte = endOfDay(end)
   }
 
+  const directPaymeterNames = ["Direct Cash", "Direct Bank Transfer", "Card", "Direct Card"]
+  const isDirectPaymeter = (name?: string) => directPaymeterNames.includes(name || "")
+
   // 1. Total Income & breakdown
   const [payments, directSales, completedJobCards] = await Promise.all([prisma.payment.findMany({
     where: { createdAt: dateFilter },
@@ -344,6 +347,7 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
   prisma.jobCard.findMany({
     where: { status: { not: "CANCELLED" }, date: dateFilter },
     select: {
+      grandTotal: true,
       discount: true,
       services: { select: { price: true } },
       parts: {
@@ -400,7 +404,7 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
   // paymeter outflows, so they must not be counted twice.
   const expenses = await prisma.expense.findMany({
     where: { date: dateFilter },
-    select: { amount: true, paymentMethod: true }
+    select: { amount: true, paymentMethod: true, paymeterId: true }
   })
   const totalExpense = expenses.reduce((sum, expense) => sum + expense.amount, 0)
   const expenseByMethod: Record<string, number> = {}
@@ -419,7 +423,7 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
 
   // 3. Actual money taken from paymeters: paymeter expenses plus every
   // purchase payment (initial purchase payments and later supplier payments).
-  const [paymeterExpenses, paymeterPayments] = await Promise.all([
+  const [paymeterExpenses, paymeterPayments, paymeterSettlements] = await Promise.all([
     prisma.expense.findMany({
       where: { date: dateFilter, paymeterId: { not: null } },
       include: { paymeter: true },
@@ -429,23 +433,34 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
       where: { date: dateFilter },
       include: { paymeter: true, purchase: { select: { purchaseNumber: true } } },
       orderBy: { date: "desc" }
+    }),
+    prisma.paymeterSettlement.findMany({
+      where: { date: dateFilter },
+      include: { paymeter: true },
+      orderBy: { date: "desc" }
     })
   ])
-  const totalPaymeterPaid = paymeterExpenses.reduce((sum, expense) => sum + expense.amount, 0)
-    + paymeterPayments.reduce((sum, payment) => sum + payment.amount, 0)
+  const totalPaymeterPaid = paymeterExpenses
+    .filter((expense) => !isDirectPaymeter(expense.paymeter?.name))
+    .reduce((sum, expense) => sum + expense.amount, 0)
+    + paymeterPayments
+      .filter((payment) => !isDirectPaymeter(payment.paymeter.name))
+      .reduce((sum, payment) => sum + payment.amount, 0)
   const paymeterByName: Record<string, number> = {}
   for (const expense of paymeterExpenses) {
     const name = expense.paymeter?.name || "Unknown"
+    if (isDirectPaymeter(name)) continue
     paymeterByName[name] = (paymeterByName[name] || 0) + expense.amount
   }
   for (const payment of paymeterPayments) {
     const name = payment.paymeter.name
+    if (isDirectPaymeter(name)) continue
     paymeterByName[name] = (paymeterByName[name] || 0) + payment.amount
   }
 
   // Kept for the existing purchase KPI and its breakdown.
   const purchases = await prisma.purchase.findMany({
-    where: { createdAt: dateFilter },
+    where: { purchaseDate: dateFilter },
     include: { paymentMethod: true }
   })
   let totalPurchase = 0;
@@ -456,9 +471,28 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
     purchaseByMethod[method] = (purchaseByMethod[method] || 0) + p.grandTotal;
   }
 
-  // 4. Total Revenue (Profit). Paymeter payments only settle amounts owed
-  // to staff and are already represented by the related purchase or expense.
-  const totalRevenue = totalIncome - totalPurchase - totalExpense;
+  const totalJobCardSales = completedJobCards.reduce((sum, jobCard) => sum + jobCard.grandTotal, 0)
+  const totalDirectPurchasePaid = paymeterPayments
+    .filter((payment) => isDirectPaymeter(payment.paymeter.name) && payment.paidAmount === 0 && payment.pendingAmount === 0)
+    .reduce((sum, payment) => sum + payment.amount, 0)
+  const totalDirectSupplierPaid = paymeterPayments
+    .filter((payment) => isDirectPaymeter(payment.paymeter.name) && (payment.paidAmount > 0 || payment.pendingAmount > 0))
+    .reduce((sum, payment) => sum + payment.amount, 0)
+  const totalDirectExpensePaid = expenses
+    .filter((expense) => !expense.paymeterId)
+    .reduce((sum, expense) => sum + expense.amount, 0)
+  const totalCompanyReturnToPaymeter = paymeterSettlements
+    .filter((settlement) => !isDirectPaymeter(settlement.paymeter.name))
+    .reduce((sum, settlement) => sum + settlement.amount, 0)
+
+  // Revenue is income less the actual purchase and expense cost.
+  const totalRevenue = totalIncome - totalPurchase - totalExpense
+  // Cash flow includes only direct company payments plus staff repayments.
+  const totalCashFlow = totalIncome
+    - totalDirectPurchasePaid
+    - totalDirectSupplierPaid
+    - totalDirectExpensePaid
+    - totalCompanyReturnToPaymeter;
 
   return {
     totalIncome,
@@ -467,6 +501,12 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
     expenseByMethod,
     expenseBySource,
     totalPurchase,
+    totalJobCardSales,
+    totalDirectPurchasePaid,
+    totalDirectSupplierPaid,
+    totalDirectExpensePaid,
+    totalCompanyReturnToPaymeter,
+    totalCashFlow,
     purchaseByMethod,
     totalPaymeterPaid,
     paymeterByName,

@@ -238,6 +238,16 @@ export function ReportsDashboard() {
         />
       </div>
 
+      {/* Dashboard cash-flow breakdown for the selected report period. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+        <BreakdownCard title="Total Job Card Sales" value={formatMoney(stats?.totalJobCardSales ?? 0) + " OMR"} icon={Wrench} color="text-sky-500" />
+        <BreakdownCard title="Total Direct Purchase Paid" value={formatMoney(stats?.totalDirectPurchasePaid ?? 0) + " OMR"} icon={Package} color="text-orange-500" />
+        <BreakdownCard title="Total Direct Supplier Paid" value={formatMoney(stats?.totalDirectSupplierPaid ?? 0) + " OMR"} icon={Wallet} color="text-orange-500" />
+        <BreakdownCard title="Total Direct Expense Paid" value={formatMoney(stats?.totalDirectExpensePaid ?? 0) + " OMR"} icon={Receipt} color="text-red-500" />
+        <BreakdownCard title="Total Company Return to Paymeter" value={formatMoney(stats?.totalCompanyReturnToPaymeter ?? 0) + " OMR"} icon={OmanIcon} color="text-orange-500" />
+        <BreakdownCard title="Total Cash Flow" value={formatMoney(stats?.totalCashFlow ?? 0) + " OMR"} icon={Activity} color={stats?.totalCashFlow != null && stats.totalCashFlow >= 0 ? "text-primary" : "text-destructive"} />
+      </div>
+
       {/* Completed Job Card service and parts performance. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
         <BreakdownCard
