@@ -19,6 +19,9 @@ interface InvoicePrintData {
   id: string
   createdAt: Date | string
   payments: Array<{ amount: number }>
+  transactionPaymentAmount?: number
+  totalPaidToDate?: number
+  balanceAfterPayment?: number
   grandTotal: number
   serviceCharge: number
   labourCharge: number
@@ -52,20 +55,20 @@ export function InvoicePrintClient({ invoice, otherChargesList }: { invoice: Inv
   if (!hydrated) return null
 
   const hideServicePartsAmounts = Boolean(invoice.jobCard?.hideServicePartsAmounts)
-  const paidAmount = invoice.payments.reduce((total: number, payment) => total + payment.amount, 0)
-  const balance = Math.max(0, invoice.grandTotal - paidAmount)
+  const totalPaid = invoice.totalPaidToDate ?? invoice.payments.reduce((total: number, payment) => total + payment.amount, 0)
+  const balance = invoice.balanceAfterPayment ?? Math.max(0, invoice.grandTotal - totalPaid)
   const money = (value: number) => `${amountText(value, locale)} ${isRTL ? "ر.ع." : "OMR"}`
   const l = isRTL ? {
     invoice: "فاتورة", customer: "اسم العميل", vehicle: "المركبة", phone: "الهاتف / الاتصال", plate: "رقم اللوحة",
     complaint: "الشكوى / المشكلة", description: "الوصف / التفاصيل", service: "رسوم الخدمة والعمل",
     parts: "القطع والمواد", other: "رسوم أخرى", subtotal: "المجموع الفرعي:", discount: "الخصم:",
-    tax: "الضريبة (VAT):", grandTotal: "المجموع الإجمالي:", paid: "المبلغ المدفوع:", balance: "المبلغ المتبقي:", customerSignature: "توقيع العميل",
+    tax: "الضريبة (VAT):", grandTotal: "المجموع الإجمالي:", paid: "المبلغ المدفوع:", thisPayment: "دفعة هذه المعاملة:", totalPaid: "إجمالي المدفوع:", balance: "المبلغ المتبقي:", customerSignature: "توقيع العميل",
     authorizedSignature: "التوقيع المعتمد", back: "رجوع", print: "طباعة / تنزيل PDF", amount: "المبلغ (ر.ع.)",
   } : {
     invoice: "INVOICE", customer: "Customer Name", vehicle: "Vehicle", phone: "Phone / Contact", plate: "Plate Number",
     complaint: "Complaint / Issue", description: "Description / Details", service: "Service & Labour Charges",
     parts: "Parts & Materials", other: "Other Charge", subtotal: "Subtotal:", discount: "Discount:",
-    tax: "Tax (VAT):", grandTotal: "Grand Total:", paid: "Paid Amount:", balance: "Balance Due:", customerSignature: "Customer Signature",
+    tax: "Tax (VAT):", grandTotal: "Grand Total:", paid: "Paid Amount:", thisPayment: "This Payment:", totalPaid: "Total Paid to Date:", balance: "Balance Due:", customerSignature: "Customer Signature",
     authorizedSignature: "Authorized Signature", back: "Back", print: "Print / Download PDF", amount: "Amount (OMR)",
   }
 
@@ -109,7 +112,7 @@ export function InvoicePrintClient({ invoice, otherChargesList }: { invoice: Inv
             {!hideServicePartsAmounts && <tr className="border-b border-gray-200 bg-gray-50"><td className="p-2 text-gray-700 font-medium">{l.subtotal}</td><td className="p-2 text-right font-semibold">{money(invoice.subTotal)}</td></tr>}
             {!hideServicePartsAmounts && invoice.discount > 0 && <tr className="border-b border-gray-200 text-red-600"><td className="p-2 font-medium">{l.discount}</td><td className="p-2 text-right font-semibold">-{money(invoice.discount)}</td></tr>}
             {!hideServicePartsAmounts && invoice.tax > 0 && <tr className="border-b border-gray-200"><td className="p-2 text-gray-700 font-medium">{l.tax}{invoice.jobCard?.tax ? ` (${invoice.jobCard.tax}%)` : ""}</td><td className="p-2 text-right font-semibold">+{money(invoice.tax)}</td></tr>}
-            <tr className="border-b border-gray-300 bg-gray-100 font-bold text-sm"><td className="p-2 text-gray-900">{l.grandTotal}</td><td className="p-2 text-right text-gray-900">{money(invoice.grandTotal)}</td></tr><tr className="border-b border-gray-200 text-green-700 font-medium"><td className="p-2">{l.paid}</td><td className="p-2 text-right">-{money(paidAmount)}</td></tr><tr className="bg-red-50 text-red-700 font-bold"><td className="p-2">{l.balance}</td><td className="p-2 text-right">{money(balance)}</td></tr>
+            <tr className="border-b border-gray-300 bg-gray-100 font-bold text-sm"><td className="p-2 text-gray-900">{l.grandTotal}</td><td className="p-2 text-right text-gray-900">{money(invoice.grandTotal)}</td></tr>{invoice.transactionPaymentAmount != null && <tr className="border-b border-gray-200 text-green-700 font-medium"><td className="p-2">{l.thisPayment}</td><td className="p-2 text-right">-{money(invoice.transactionPaymentAmount)}</td></tr>}<tr className="border-b border-gray-200 text-green-700 font-medium"><td className="p-2">{invoice.transactionPaymentAmount != null ? l.totalPaid : l.paid}</td><td className="p-2 text-right">-{money(totalPaid)}</td></tr><tr className="bg-red-50 text-red-700 font-bold"><td className="p-2">{l.balance}</td><td className="p-2 text-right">{money(balance)}</td></tr>
           </tbody></table></div></div>
           <div className="bill-signatures grid grid-cols-2 gap-8 mt-12 pt-6 border-t"><div className="text-center"><div className="border-b border-gray-400 w-44 mx-auto mb-2" /><p className="text-xs font-semibold uppercase tracking-wider">{l.customerSignature}</p></div><div className="text-center"><div className="border-b border-gray-400 w-44 mx-auto mb-2" /><p className="text-xs font-semibold uppercase tracking-wider">{l.authorizedSignature}</p></div></div>
         </div>

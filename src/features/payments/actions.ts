@@ -17,9 +17,9 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
   } : {};
 
   if (fromDate || toDate) {
-    where.createdAt = {};
-    if (fromDate) where.createdAt.gte = new Date(fromDate);
-    if (toDate) where.createdAt.lte = new Date(toDate);
+    where.paymentDate = {};
+    if (fromDate) where.paymentDate.gte = new Date(fromDate);
+    if (toDate) where.paymentDate.lte = new Date(toDate);
   }
 
   const [data, total] = await Promise.all([
@@ -32,6 +32,8 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
           include: {
             customer: { select: { id: true, name: true } },
             vehicle: { select: { plateNumber: true } },
+            payments: { select: { id: true, amount: true, createdAt: true, totalPaidAtPayment: true, balanceAfterPayment: true, grandTotalAtPayment: true } },
+            parts: { where: { isPending: true }, select: { id: true } },
           }
         }
       },
@@ -40,8 +42,27 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
     prisma.payment.count({ where })
   ]);
 
+  const paymentsWithBalances = data.map((payment) => {
+    const transactionHistory = [...(payment.jobCard?.payments ?? [])].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    const transactionIndex = transactionHistory.findIndex((item) => item.id === payment.id)
+    const fallbackTotalPaid = transactionHistory.slice(0, transactionIndex + 1).reduce((sum, item) => sum + item.amount, 0)
+    const totalPaid = payment.totalPaidAtPayment ?? fallbackTotalPaid
+    const grandTotal = payment.grandTotalAtPayment ?? payment.jobCard?.grandTotal ?? 0
+    const balanceAmount = payment.balanceAfterPayment ?? Math.max(0, grandTotal - totalPaid)
+    const latestTransaction = transactionHistory[transactionHistory.length - 1]
+
+    return {
+      ...payment,
+      paymentAmount: payment.amount,
+      totalPaid,
+      balanceAmount,
+      isLatestTransaction: latestTransaction?.id === payment.id,
+      hasPendingParts: Boolean(payment.jobCard?.parts.length),
+    }
+  })
+
   return {
-    data,
+    data: paymentsWithBalances,
     meta: {
       total,
       page,
@@ -71,6 +92,7 @@ export async function getPendingInvoices(page = 1, search = "") {
         customer: true,
         payments: true,
         vehicle: true,
+        parts: { where: { isPending: true }, select: { id: true } },
       },
       orderBy: { createdAt: 'desc' }
     }),
@@ -86,6 +108,7 @@ export async function getPendingInvoicesDropdown() {
       customer: true,
       payments: true,
       vehicle: { select: { plateNumber: true } },
+      parts: { where: { isPending: true }, select: { id: true } },
     },
     orderBy: { createdAt: 'asc' }
   })
@@ -96,7 +119,8 @@ export async function getPendingInvoicesDropdown() {
     return {
       id: inv.id,
       label: `JOB-${inv.id.split('-')[0].toUpperCase()} - ${inv.customer.name} - ${inv.vehicle.plateNumber} - Due: ${(due)} OMR`,
-      dueAmount: due
+      dueAmount: due,
+      hasPendingParts: inv.parts.length > 0,
     }
   })
 }
@@ -108,11 +132,15 @@ export async function createPayment(data: PaymentFormValues) {
   const result = await prisma.$transaction(async (tx) => {
     const invoiceBeforePayment = await tx.jobCard.findUnique({
       where: { id: parsed.jobCardId },
-      include: { payments: true },
+      include: { payments: true, parts: { where: { isPending: true }, select: { id: true } } },
     })
 
     if (!invoiceBeforePayment) {
       throw new Error("The selected Job Card no longer exists.")
+    }
+
+    if (invoiceBeforePayment.parts.length > 0) {
+      throw new Error("Payment cannot be completed because this Job Card has pending parts. Please purchase all pending parts before making the payment.")
     }
 
     const alreadyPaid = invoiceBeforePayment.payments.reduce(
@@ -125,13 +153,21 @@ export async function createPayment(data: PaymentFormValues) {
     }
 
     const creatorName = await getCreatorName()
-    const { discountAmount: _discountAmount, ...paymentData } = parsed
+    const { discountAmount: _discountAmount, paymentDate: paymentDateValue, ...paymentData } = parsed
+    const paymentDate = new Date(paymentDateValue + "T12:00:00")
+    const grandTotalAtPayment = Math.max(0, invoiceBeforePayment.grandTotal - discountAmount)
+    const totalPaidAtPayment = alreadyPaid + parsed.amount
+    const balanceAfterPayment = Math.max(0, grandTotalAtPayment - totalPaidAtPayment)
 
     const payment = await tx.payment.create({
       data: {
         ...paymentData,
         jobCardId: parsed.jobCardId,
-        createdBy: creatorName,
+         createdBy: creatorName,
+        paymentDate,
+        grandTotalAtPayment,
+        totalPaidAtPayment,
+        balanceAfterPayment,
       }
     })
 
@@ -150,6 +186,8 @@ export async function createPayment(data: PaymentFormValues) {
   
   revalidatePath('/payments')
   revalidatePath('/jobcards')
+  revalidatePath('/')
+  revalidatePath('/reports')
   return result
 }
 

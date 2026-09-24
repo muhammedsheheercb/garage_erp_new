@@ -67,7 +67,14 @@ export async function getQuotationInventory(search = "") {
     const batches = item.batches.map((batch) => ({ ...batch, ...batchAvailability(batch) }))
     const availableQuantity = batches.reduce((sum, batch) => sum + batch.availableQuantity, 0)
     const firstAvailable = batches.find((batch) => batch.availableQuantity > 0) || batches[0]
-    return { id: item.id, itemName: item.itemName, partNumber: item.partNumber, availableQuantity, sellingPrice: firstAvailable?.sellingPrice ?? 0 }
+    return {
+      id: item.id,
+      itemName: item.itemName,
+      partNumber: item.partNumber,
+      availableQuantity,
+      purchasePrice: firstAvailable?.purchasePrice ?? 0,
+      sellingPrice: firstAvailable?.sellingPrice ?? 0,
+    }
   })
 }
 
@@ -91,7 +98,7 @@ export async function createQuotation(data: QuotationFormValues) {
   const quotation = await prisma.quotation.create({ data: {
     customerId: parsed.customerId, vehicleId: parsed.vehicleId, complaint: parsed.complaint, notes: parsed.notes || null,
     date: new Date(parsed.date), validUntil: new Date(parsed.validUntil), vehicleKm: parsed.vehicleKm, otherCharge: 0,
-    serviceTotal: parsed.serviceTotal, partsTotal: parsed.partsTotal, grandTotal: parsed.grandTotal, createdBy: await getCreatorName(), status: "PENDING",
+    serviceTotal: parsed.serviceTotal, partsTotal: parsed.partsTotal, grandTotal: parsed.grandTotal, hideServicePartsAmounts: parsed.hideServicePartsAmounts, createdBy: await getCreatorName(), status: "PENDING",
     services: { create: parsed.services.map((service) => ({ serviceId: service.serviceId, quantity: service.quantity, price: service.price })) },
     parts: { create: parsed.parts.map((part) => ({ inventoryId: part.inventoryId, quantity: part.quantity, price: part.price })) },
   } })
@@ -105,7 +112,7 @@ export async function updateQuotation(id: string, data: QuotationFormValues) {
   await prisma.quotation.update({ where: { id }, data: {
     customerId: parsed.customerId, vehicleId: parsed.vehicleId, complaint: parsed.complaint, notes: parsed.notes || null,
     date: new Date(parsed.date), validUntil: new Date(parsed.validUntil), vehicleKm: parsed.vehicleKm, otherCharge: 0,
-    serviceTotal: parsed.serviceTotal, partsTotal: parsed.partsTotal, grandTotal: parsed.grandTotal,
+    serviceTotal: parsed.serviceTotal, partsTotal: parsed.partsTotal, grandTotal: parsed.grandTotal, hideServicePartsAmounts: parsed.hideServicePartsAmounts,
     services: { deleteMany: {}, create: parsed.services.map((service) => ({ serviceId: service.serviceId, quantity: service.quantity, price: service.price })) },
     parts: { deleteMany: {}, create: parsed.parts.map((part) => ({ inventoryId: part.inventoryId, quantity: part.quantity, price: part.price })) },
   } })
@@ -180,7 +187,7 @@ export async function getQuotationJobCardPrefill(id: string) {
 
   const partsTotal = partRows.reduce((sum, part) => sum + part.quantity * part.price, 0)
   return {
-    customerId: quote.customerId, vehicleId: quote.vehicleId, complaint: quote.complaint, notes: quote.notes || "", vehicleKm: quote.vehicleKm,
+    customerId: quote.customerId, vehicleId: quote.vehicleId, complaint: quote.complaint, notes: quote.notes || "", vehicleKm: quote.vehicleKm, hideServicePartsAmounts: quote.hideServicePartsAmounts,
     date: new Date().toISOString(),
     services: quote.services.map((service) => ({ serviceId: service.serviceId, service: { name: service.service.name }, quantity: service.quantity, price: service.price })),
     parts: partRows, serviceTotal: quote.serviceTotal, partsTotal, grandTotal: quote.serviceTotal + partsTotal,

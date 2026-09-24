@@ -960,10 +960,34 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                           <Input
                             type="number"
                             min="1"
-                            max={isPending ? undefined : maxStock}
                             {...register(`parts.${index}.quantity`, {
                               valueAsNumber: true,
-                              ...(isPending ? {} : { max: { value: maxStock, message: "Quantity cannot exceed available stock" } }),
+                              onChange: (event) => {
+                                const requestedQuantity = Number(event.target.value) || 0
+                                if (isPending || requestedQuantity <= maxStock) return
+
+                                const availableQuantity = Math.max(0, Number(maxStock) || 0)
+                                const pendingQuantity = requestedQuantity - availableQuantity
+                                setValue(`parts.${index}.quantity`, availableQuantity, { shouldValidate: true })
+
+                                const pendingIndex = watchedParts.findIndex((part) =>
+                                  part.isPending && part.inventoryId === field.inventoryId,
+                                )
+                                if (pendingIndex >= 0) {
+                                  setValue(`parts.${pendingIndex}.quantity`, (Number(watchedParts[pendingIndex].quantity) || 0) + pendingQuantity, { shouldValidate: true })
+                                } else {
+                                  appendPart({
+                                    batchId: "",
+                                    inventoryId: field.inventoryId,
+                                    isPending: true,
+                                    name: field.name,
+                                    quantity: pendingQuantity,
+                                    price,
+                                    maxStock: 0,
+                                  })
+                                }
+                                toast.info(`${availableQuantity} item(s) reserved from stock and ${pendingQuantity} item(s) added as pending.`)
+                              },
                             })}
                           />
                           {errors.parts?.[index]?.quantity && (

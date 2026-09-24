@@ -16,6 +16,7 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
 import { formatDisplayDate } from "@/lib/date-format"
+import { toast } from "sonner"
 
 export function PaymentList() {
   const router = useRouter()
@@ -153,19 +154,21 @@ export function PaymentList() {
                   <TableHead>{"Job Card"}</TableHead>
                   <TableHead>{t.payments.method}</TableHead>
                   <TableHead>Created By</TableHead>
-                  <TableHead className="text-right">{t.payments.amount} (OMR)</TableHead>
+                  <TableHead className="text-right">Payment Amount (OMR)</TableHead>
+                  <TableHead className="text-right">Total Paid (OMR)</TableHead>
+                  <TableHead className="text-right">Balance After Payment (OMR)</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historyLoading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center h-24">{t.common.loading}</TableCell></TableRow>
                 ) : historyData?.data.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center h-24">{t.payments.noPayments}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center h-24">{t.payments.noPayments}</TableCell></TableRow>
                 ) : (
                   historyData?.data.map((payment) => (
                     <TableRow key={payment.id}>
-                      <TableCell>{formatDisplayDate(payment.createdAt)}</TableCell>
+                      <TableCell>{formatDisplayDate(payment.paymentDate)}</TableCell>
                       <TableCell>{payment.jobCard?.customer.name || "—"}</TableCell>
                       <TableCell>
                         <Button 
@@ -186,9 +189,15 @@ export function PaymentList() {
                         {payment.createdBy || "Admin"}
                       </TableCell>
                       <TableCell className="text-right font-medium text-green-600">
-                        +{(payment.amount)}
+                        {payment.paymentAmount.toFixed(3)}
                       </TableCell>
-                      <TableCell><Button variant="outline" size="sm" onClick={() => router.push(`/payments/${payment.id}/invoice`)}><FileText className="mr-2 h-4 w-4" />Invoice Bill</Button></TableCell>
+                      <TableCell className="text-right font-medium text-green-600">
+                        {payment.totalPaid.toFixed(3)}
+                      </TableCell>
+                      <TableCell className={payment.balanceAmount > 0 ? "text-right font-medium text-destructive" : "text-right font-medium text-muted-foreground"}>
+                        {payment.balanceAmount.toFixed(3)}
+                      </TableCell>
+                      <TableCell className="flex gap-2"><Button variant="outline" size="sm" onClick={() => router.push("/payments/" + payment.id + "/invoice")}><FileText className="mr-2 h-4 w-4" />Invoice Bill</Button>{payment.jobCard && payment.isLatestTransaction && payment.balanceAmount > 0 && <Dialog open={payingJobCardId === payment.jobCard.id} onOpenChange={(open) => { if (open && payment.hasPendingParts) { toast.error("Payment cannot be completed because this Job Card has pending parts. Please purchase all pending parts before making the payment."); return } setPayingJobCardId(open ? payment.jobCard!.id : null) }}><DialogTrigger render={<Button size="sm">Pay Balance</Button>} />{payingJobCardId === payment.jobCard.id && <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto sm:w-[min(94vw,720px)] sm:max-w-[min(94vw,720px)] sm:p-6"><DialogHeader><DialogTitle>Pay Balance — JOB-{payment.jobCard.id.split("-")[0].toUpperCase()}</DialogTitle></DialogHeader><PaymentForm initialJobCardId={payment.jobCard.id} onSuccess={() => setPayingJobCardId(null)} /></DialogContent>}</Dialog>}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -278,7 +287,7 @@ export function PaymentList() {
                     >
                       <FileText className="h-4 w-4 mr-2" /> {t.payments.view}
                     </Button>
-                    <Dialog open={payingJobCardId === inv.id} onOpenChange={(open) => setPayingJobCardId(open ? inv.id : null)}>
+                    <Dialog open={payingJobCardId === inv.id} onOpenChange={(open) => { if (open && inv.parts.length > 0) { toast.error("Payment cannot be completed because this Job Card has pending parts. Please purchase all pending parts before making the payment."); return } setPayingJobCardId(open ? inv.id : null) }}>
                       <DialogTrigger render={
                         <Button className="flex-1"><Plus className="h-4 w-4 mr-2" /> {t.payments.pay}</Button>
                       } />

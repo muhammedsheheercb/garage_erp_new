@@ -155,7 +155,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
             {details.purchases.some((purchase: any) => purchase.pendingAmount > 0) && (
               <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
                 <DialogTrigger render={<Button size="sm"><Plus className="h-4 w-4 mr-2" /> {t.suppliers.addPayment}</Button>} />
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="sm:max-w-4xl">
                   <DialogHeader><DialogTitle>{t.suppliers.recordPayment} {details.name}</DialogTitle></DialogHeader>
                   <SupplierPaymentForm supplierId={details.id} purchases={details.purchases} paymentMethods={details.paymentMethods} onSuccess={() => setIsPaymentOpen(false)} />
                 </DialogContent>

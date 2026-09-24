@@ -99,6 +99,10 @@ export async function createInvoice(data: InvoiceFormValues) {
       serviceTotal: true,
       partsTotal: true,
       advancePaid: true,
+      payments: {
+        where: { method: "ADVANCE" },
+        select: { id: true },
+      },
     },
   })
 
@@ -149,15 +153,19 @@ export async function createInvoice(data: InvoiceFormValues) {
   })
 
   // Auto-record initial payment if advancePaid is present
-  if (advancePaid > 0) {
+  if (advancePaid > 0 && jobCard.payments.length === 0) {
     await prisma.payment.create({
       data: {
         invoiceId: invoice.id,
+        jobCardId: parsed.jobCardId,
         // Retain the full customer credit even when the current invoice total is
         // zero or lower than the advance. It will offset charges added later.
         amount: advancePaid,
         method: "ADVANCE",
-        createdBy: creatorName,
+         createdBy: creatorName,
+        grandTotalAtPayment: grandTotal,
+        totalPaidAtPayment: advancePaid,
+        balanceAfterPayment: Math.max(0, grandTotal - advancePaid),
       },
     })
   }
@@ -172,7 +180,10 @@ export async function updateInvoice(id: string, data: InvoiceFormValues) {
   
   const existingInvoice = await prisma.invoice.findUnique({
     where: { id },
-    include: { payments: true }
+    include: {
+      payments: true,
+      jobCard: { select: { payments: { select: { id: true, amount: true } } } },
+    }
   });
 
   // A zero-value invoice with an advance is marked PAID, but it must remain
@@ -201,7 +212,12 @@ export async function updateInvoice(id: string, data: InvoiceFormValues) {
   const grandTotal = Math.max(0, subTotal + parsed.tax - parsed.discount);
 
   let newStatus = existingInvoice.status;
-  const totalPaid = existingInvoice.payments.reduce((acc, p) => acc + p.amount, 0);
+  const totalPaid = Array.from(
+    new Map(
+      [...existingInvoice.payments, ...(existingInvoice.jobCard?.payments ?? [])]
+        .map((payment) => [payment.id, payment.amount]),
+    ).values(),
+  ).reduce((total, amount) => total + amount, 0);
   if (totalPaid >= grandTotal) {
     newStatus = "PAID";
   } else if (totalPaid > 0) {

@@ -201,6 +201,16 @@ export async function createJobCard(data: JobCardFormValues) {
       grandTotal: parsed.grandTotal,
       advancePaid: parsed.advancePaid,
       vehicleKm: parsed.vehicleKm,
+      payments: parsed.advancePaid > 0 ? {
+        create: {
+          amount: parsed.advancePaid,
+          method: "ADVANCE",
+          createdBy: creatorName,
+          grandTotalAtPayment: parsed.grandTotal,
+          totalPaidAtPayment: parsed.advancePaid,
+          balanceAfterPayment: Math.max(0, parsed.grandTotal - parsed.advancePaid),
+        },
+      } : undefined,
       
       services: {
         create: parsed.services.map(s => ({
@@ -222,6 +232,8 @@ export async function createJobCard(data: JobCardFormValues) {
   })
   
   revalidatePath('/jobcards')
+  revalidatePath('/payments')
+  revalidatePath('/')
   revalidatePath('/vehicles')
   revalidatePath('/customers')
   revalidatePath(`/customers/${parsed.customerId}`)

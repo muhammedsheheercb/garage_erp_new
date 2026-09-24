@@ -199,6 +199,7 @@ model Quotation {
   serviceTotal Float              @default(0)
   partsTotal   Float              @default(0)
   grandTotal   Float              @default(0)
+  hideServicePartsAmounts Boolean @default(false)
   createdBy    String?
   customerId   String
   customer     Customer           @relation(fields: [customerId], references: [id])
@@ -273,7 +274,11 @@ model Invoice {
 model Payment {
   id        String   @id @default(uuid())
   amount    Float
+  grandTotalAtPayment Float?
+  totalPaidAtPayment  Float?
+  balanceAfterPayment Float?
   method    String // CASH, CARD, TRANSFER
+  paymentDate DateTime @default(now())
   createdBy String?
   // Kept for payments created before Job Cards became directly payable.
   invoiceId String?

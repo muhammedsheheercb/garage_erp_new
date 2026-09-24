@@ -193,7 +193,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="purchase-form min-w-0 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="space-y-2">
           <Label>{t.purchases.purchaseNumber}</Label>
@@ -513,12 +513,12 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
           </div>
         </div>
 
-        <div className="border rounded-md overflow-x-auto bg-card">
-          <Table className="min-w-[760px]">
+        <div className="purchase-items-scroll max-w-full overflow-x-auto rounded-md border bg-card">
+          <Table className="purchase-items-table min-w-[760px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[22%]">{t.purchases.itemPart}</TableHead>
-                <TableHead className="w-[8%]">{t.invoicesMod.qty}</TableHead>
+                <TableHead className="sticky left-0 z-20 w-[180px] min-w-[180px] bg-muted sm:static sm:w-[22%] sm:min-w-0">{t.purchases.itemPart}</TableHead>
+                <TableHead className="sticky left-[180px] z-20 w-[72px] min-w-[72px] bg-muted sm:static sm:w-[8%] sm:min-w-0">{t.invoicesMod.qty}</TableHead>
                 <TableHead className="w-[12%]">{t.purchases.purchasePrice} (OMR)</TableHead>
                 <TableHead className="w-[12%]">{t.purchases.sellingPrice} (OMR)</TableHead>
                 <TableHead className="w-[11%] text-right">{t.purchases.productAmount || "Amount"}</TableHead>
@@ -539,7 +539,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
 
                 return (
                   <TableRow key={field.id}>
-                    <TableCell>
+                    <TableCell className="sticky left-0 z-10 min-w-[180px] bg-card sm:static sm:min-w-0">
                       <Controller
                         control={control}
                         name={`items.${index}.inventoryId`}
@@ -640,7 +640,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                       {errors.items?.[index]?.inventoryId && <p className="mt-1 text-xs text-destructive">{errors.items[index]?.inventoryId?.message}</p>}
                     </TableCell>
 
-                    <TableCell>
+                    <TableCell className="sticky left-[180px] z-10 min-w-[72px] bg-card sm:static sm:min-w-0">
                       <Input
                         type="number"
                         min="1"
@@ -712,7 +712,6 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="discount">{t.jobcards.discountAmount}</Label>
               <Input
@@ -723,25 +722,6 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                 {...register("discount", { valueAsNumber: true })}
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="paidAmount">{t.purchases.paidAmount} (OMR) <span className="text-destructive">*</span></Label>
-              <Input
-                id="paidAmount"
-                type="number"
-                step="any"
-                min="0"
-                max={grandTotal}
-                className={isPaidExceeded || errors.paidAmount ? "border-destructive focus-visible:ring-destructive" : ""}
-                {...register("paidAmount", { valueAsNumber: true })}
-              />
-              {(errors.paidAmount || isPaidExceeded) && (
-                <p className="text-sm text-destructive">
-                  {errors.paidAmount?.message || t.purchases?.paidExceedsGrand || "Paid amount cannot exceed Grand Total"}
-                </p>
-              )}
-            </div>
-          </div>
         </div>
 
         <div className="bg-muted/30 p-4 rounded-lg space-y-3">
@@ -767,9 +747,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
             <span className="text-primary">{(grandTotal)} OMR</span>
           </div>
 
-          <div className="flex justify-between text-sm pt-1">
-            <span className="text-muted-foreground font-semibold">{t.purchases.paidAmount}:</span>
-            <span className="text-green-600 font-semibold">{(paidVal)} OMR</span>
+          <div className="space-y-2 border-t pt-3">
+            <div className="flex items-center justify-between"><Label htmlFor="paidAmount">{t.purchases.paidAmount} (OMR) <span className="text-destructive">*</span></Label><Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setValue("paidAmount", grandTotal, { shouldValidate: true })}>Pay full amount</Button></div>
+            <Input id="paidAmount" type="number" step="any" min="0" max={grandTotal} className={isPaidExceeded || errors.paidAmount ? "border-destructive focus-visible:ring-destructive" : ""} {...register("paidAmount", { valueAsNumber: true })} />
+            <div className="flex justify-between text-xs"><span className="text-muted-foreground">Paid now</span><span className="font-semibold text-green-600">{paidVal.toFixed(3)} OMR</span></div>
+            {(errors.paidAmount || isPaidExceeded) && <p className="text-sm text-destructive">{errors.paidAmount?.message || t.purchases?.paidExceedsGrand || "Paid amount cannot exceed Grand Total"}</p>}
           </div>
 
           <div className="flex justify-between text-sm border-t border-dashed pt-2 font-bold text-destructive">
@@ -779,7 +761,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 pt-4">
+      <div className="flex flex-col-reverse justify-end gap-2 pt-4 sm:flex-row">
         <Button type="button" variant="outline" onClick={onSuccess}>{t.common.cancel}</Button>
         <Button type="submit" disabled={mutation.isPending || isPaidExceeded}>
           {mutation.isPending ? t.common.saving : t.purchases.savePurchase}

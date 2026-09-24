@@ -86,7 +86,7 @@ export function PurchaseList() {
           <DialogTrigger render={
             <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> {t.purchases.registerPurchase}</Button>
           } />
-          <DialogContent className="max-w-[95vw] sm:max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-none overflow-y-auto p-3 sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-7xl sm:p-6">
             <DialogHeader>
               <DialogTitle>{t.purchases.registerNewPurchase}</DialogTitle>
             </DialogHeader>
@@ -333,7 +333,7 @@ export function PurchaseList() {
       {/* Edit Modal */}
       {editingPurchase && (
         <Dialog open={!!editingPurchase} onOpenChange={(open) => !open && setEditingPurchase(null)}>
-          <DialogContent className="max-w-[95vw] sm:max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-none overflow-y-auto p-3 sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-7xl sm:p-6">
             <DialogHeader>
               <DialogTitle>{t.common.edit}: {editingPurchase.purchaseNumber}</DialogTitle>
             </DialogHeader>

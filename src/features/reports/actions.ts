@@ -95,7 +95,9 @@ export async function getDashboardStats() {
   const dailyPurchase = todayPurchasesQuery._sum.grandTotal || 0
   const dailyExpense = todayExpensesQuery._sum.amount || 0
   const dailyPaymeterPaid = (todayPaymeterExpensesQuery._sum.amount || 0) + (todayPaymeterPaymentsQuery._sum.amount || 0)
-  const dailyProfit = dailyRevenue - dailyPurchase - dailyExpense - dailyPaymeterPaid
+  // A Paymeter entry identifies who paid; it is not another business cost.
+  // Purchases and expenses already contain the cost and are deducted once.
+  const dailyProfit = dailyRevenue - dailyPurchase - dailyExpense
 
   const monthlyRevenue = (monthlyPaymentsQuery._sum.amount || 0) + (monthlyDirectSales._sum.grandTotal || 0)
   const monthlyExpenses = monthlyExpensesQuery._sum.amount || 0
@@ -107,7 +109,7 @@ export async function getDashboardStats() {
   const totalCustomers = totalCustomersCount
   const totalVehicles = totalVehiclesCount
 
-  const profit = monthlyRevenue - monthlyPurchaseTotal - monthlyExpenses - monthlyPaymeterPaid
+  const profit = monthlyRevenue - monthlyPurchaseTotal - monthlyExpenses
 
   return {
     dailyRevenue,
@@ -133,7 +135,7 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     const startDate = subDays(now, 14)
     const interval = eachDayOfInterval({ start: startDate, end: now })
     
-    const [payments, directSales, expenses, paymeterExpenses, paymeterPayments] = await Promise.all([
+    const [payments, directSales, expenses, paymeterExpenses] = await Promise.all([
       prisma.payment.findMany({
         where: { createdAt: { gte: startOfDay(startDate), lte: endOfDay(now) } },
         select: { amount: true, createdAt: true }
@@ -145,10 +147,6 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
       }),
       prisma.expense.findMany({
         where: { date: { gte: startOfDay(startDate), lte: endOfDay(now) }, paymeterId: { not: null } },
-        select: { amount: true, date: true }
-      }),
-      prisma.purchasePayment.findMany({
-        where: { date: { gte: startOfDay(startDate), lte: endOfDay(now) } },
         select: { amount: true, date: true }
       })
     ])
@@ -164,10 +162,9 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
       
       const paymeterExpense = paymeterExpenses.filter(e => formatDisplayDate(e.date) === dateString)
         .reduce((sum, e) => sum + e.amount, 0)
-      const paymeterPayment = paymeterPayments.filter(p => formatDisplayDate(p.date) === dateString)
-        .reduce((sum, p) => sum + p.amount, 0)
-      
-      const expense = regularExpense + paymeterExpense + paymeterPayment
+      // Supplier repayments only settle the Paymeter balance, so they are
+      // not included as a second cost in the revenue calculation.
+      const expense = regularExpense + paymeterExpense
       
       return { name: dateString, revenue, expense, profit: revenue - expense }
     })
@@ -175,7 +172,7 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     const startDate = subMonths(now, 5)
     const interval = eachMonthOfInterval({ start: startDate, end: now })
 
-    const [payments, directSales, expenses, paymeterExpenses, paymeterPayments] = await Promise.all([
+    const [payments, directSales, expenses, paymeterExpenses] = await Promise.all([
       prisma.payment.findMany({
         where: { createdAt: { gte: startOfMonth(startDate), lte: endOfMonth(now) } },
         select: { amount: true, createdAt: true }
@@ -187,10 +184,6 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
       }),
       prisma.expense.findMany({
         where: { date: { gte: startOfMonth(startDate), lte: endOfMonth(now) }, paymeterId: { not: null } },
-        select: { amount: true, date: true }
-      }),
-      prisma.purchasePayment.findMany({
-        where: { date: { gte: startOfMonth(startDate), lte: endOfMonth(now) } },
         select: { amount: true, date: true }
       })
     ])
@@ -206,10 +199,9 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
       
       const paymeterExpense = paymeterExpenses.filter(e => format(e.date, 'MM/yyyy') === dateString)
         .reduce((sum, e) => sum + e.amount, 0)
-      const paymeterPayment = paymeterPayments.filter(p => format(p.date, 'MM/yyyy') === dateString)
-        .reduce((sum, p) => sum + p.amount, 0)
-      
-      const expense = regularExpense + paymeterExpense + paymeterPayment
+      // Supplier repayments only settle the Paymeter balance, so they are
+      // not included as a second cost in the revenue calculation.
+      const expense = regularExpense + paymeterExpense
       
       return { name: dateString, revenue, expense, profit: revenue - expense }
     })
@@ -389,6 +381,7 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
   prisma.jobCard.findMany({
     where: { status: { not: "CANCELLED" }, date: dateFilter },
     select: {
+      discount: true,
       services: { select: { price: true } },
       parts: {
         select: {
@@ -409,16 +402,19 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
   totalIncome += directSaleIncome
   if (directSaleIncome) incomeByMethod["Direct Sale"] = directSaleIncome
 
-  // Service price is the Labour Charge. Parts, discounts, and other charges are excluded.
-  const totalLabourCharges = completedJobCards.reduce(
-    (sum, jobCard) => sum + jobCard.services.reduce((serviceSum, service) => serviceSum + service.price, 0),
-    0,
-  )
+  // A payment discount reduces labour first. If it is larger than the
+  // labour value, only the remainder reduces parts sales and parts profit.
+  const totalLabourCharges = completedJobCards.reduce((sum, jobCard) => {
+    const labour = jobCard.services.reduce((serviceSum, service) => serviceSum + service.price, 0)
+    return sum + Math.max(0, labour - jobCard.discount)
+  }, 0)
 
-  const jobCardPartsSales = completedJobCards.reduce(
-    (sum, jobCard) => sum + jobCard.parts.reduce((partSum, part) => partSum + part.price * part.quantity, 0),
-    0,
-  )
+  const jobCardPartsSales = completedJobCards.reduce((sum, jobCard) => {
+    const labour = jobCard.services.reduce((serviceSum, service) => serviceSum + service.price, 0)
+    const partsSales = jobCard.parts.reduce((partSum, part) => partSum + part.price * part.quantity, 0)
+    const remainingDiscount = Math.max(0, jobCard.discount - labour)
+    return sum + Math.max(0, partsSales - remainingDiscount)
+  }, 0)
   const jobCardPartsCost = completedJobCards.reduce(
     (sum, jobCard) => sum + jobCard.parts.reduce((partSum, part) => partSum + (part.batch?.purchasePrice || 0) * part.quantity, 0),
     0,
@@ -497,8 +493,9 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
     purchaseByMethod[method] = (purchaseByMethod[method] || 0) + p.grandTotal;
   }
 
-  // 4. Total Revenue (Profit)
-  const totalRevenue = totalIncome - totalPurchase - totalExpense - totalPaymeterPaid;
+  // 4. Total Revenue (Profit). Paymeter payments only settle amounts owed
+  // to staff and are already represented by the related purchase or expense.
+  const totalRevenue = totalIncome - totalPurchase - totalExpense;
 
   return {
     totalIncome,

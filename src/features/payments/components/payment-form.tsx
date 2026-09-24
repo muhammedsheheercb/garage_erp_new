@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useEffect, useState } from "react"
+import { format } from "date-fns"
 import { createPortal } from "react-dom"
 import { Check, Search, X } from "lucide-react"
 import { useTranslation } from "@/i18n"
@@ -36,6 +37,7 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       jobCardId: initialJobCardId || "",
+      paymentDate: format(new Date(), "yyyy-MM-dd"),
       amount: 0,
       discountAmount: 0,
       method: "CASH"
@@ -52,6 +54,8 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
   const remainingBalance = Math.max(0, currentBalance - combinedAmount)
   const exceedsBalance = combinedAmount > currentBalance
   const hasNegativeAmount = Number(watchedPaymentAmount) < 0 || Number(watchedDiscountAmount) < 0
+  const hasPendingParts = Boolean(selectedJobCard?.hasPendingParts)
+  const pendingPartsPaymentMessage = "Payment cannot be completed because this Job Card has pending parts. Please purchase all pending parts before making the payment."
 
   useEffect(() => {
     if (watchJobCardId && jobCards) {
@@ -79,6 +83,10 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
   })
 
   const onSubmit = (data: PaymentFormValues) => {
+    if (hasPendingParts) {
+      toast.error(pendingPartsPaymentMessage)
+      return
+    }
     if (watchJobCardId && jobCards) {
       const inv = jobCards.find(i => i.id === watchJobCardId)
       if (inv && data.amount + (data.discountAmount || 0) > inv.dueAmount) {
@@ -156,6 +164,12 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
           }}
         />
         {errors.jobCardId && <p className="text-sm text-destructive">{errors.jobCardId.message}</p>}
+      </div>
+
+      <div className="max-w-sm space-y-2">
+        <Label htmlFor="paymentDate">Payment Date <span className="text-destructive">*</span></Label>
+        <Input id="paymentDate" type="date" max={format(new Date(), "yyyy-MM-dd")} {...register("paymentDate")} />
+        {errors.paymentDate && <p className="text-sm text-destructive">{errors.paymentDate.message}</p>}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">

@@ -262,6 +262,9 @@ export async function createPurchase(data: PurchaseFormValues) {
           orderBy: { createdAt: "asc" },
         })
         if (!pendingPart) throw new Error("Select a pending part from the selected Job Card.")
+        if (item.quantity !== pendingPart.quantity) {
+          throw new Error("Pending part quantity must be exactly " + pendingPart.quantity + ".")
+        }
         await tx.jobCardPart.update({
           where: { id: pendingPart.id },
           data: { batchId: batch.id, inventoryId: item.inventoryId, isPending: false, quantity: item.quantity, price: item.sellingPrice },

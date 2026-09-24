@@ -18,10 +18,11 @@ import { Check, Search, X } from "lucide-react"
 interface VehicleFormProps {
   initialData?: VehicleFormValues & { id?: string }
   initialCustomerId?: string
+  defaultFuelType?: string
   onSuccess?: (vehicle?: any) => void
 }
 
-export function VehicleForm({ initialData, initialCustomerId, onSuccess }: VehicleFormProps) {
+export function VehicleForm({ initialData, initialCustomerId, defaultFuelType, onSuccess }: VehicleFormProps) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const [brandSearch, setBrandSearch] = useState("")
@@ -43,7 +44,7 @@ export function VehicleForm({ initialData, initialCustomerId, onSuccess }: Vehic
       plateNumber: initialData?.plateNumber || "",
       brand: initialData?.brand || "",
       model: initialData?.model || "",
-      fuelType: initialData?.fuelType || "",
+      fuelType: initialData?.fuelType || defaultFuelType || "",
       year: initialData?.year || new Date().getFullYear(),
       customerId: initialData?.customerId || initialCustomerId || "",
     }

@@ -27,6 +27,7 @@ export const quotationSchema = z.object({
   serviceTotal: z.number().finite().min(0),
   partsTotal: z.number().finite().min(0),
   grandTotal: z.number().finite().min(0),
+  hideServicePartsAmounts: z.boolean(),
 }).refine((data) => data.validUntil >= data.date, { path: ["validUntil"], message: "Valid until date cannot be earlier than the quotation date" })
 
 export type QuotationFormValues = z.infer<typeof quotationSchema>

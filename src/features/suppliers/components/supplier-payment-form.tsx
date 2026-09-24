@@ -99,7 +99,7 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
             name="purchaseId"
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger id="purchaseId">
+                <SelectTrigger id="purchaseId" className="w-full">
                   <SelectValue placeholder={t.suppliers.refNo}>
                     {(value: string) => purchases.find((purchase) => purchase.id === value)?.purchaseNumber || null}
                   </SelectValue>
