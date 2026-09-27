@@ -148,7 +148,8 @@ export async function getCustomerFullDetails(id: string, fromDate?: string, toDa
               },
               invoice: {
                 include: { payments: true }
-              }
+              },
+              payments: true,
             }
           }
         }
@@ -166,29 +167,26 @@ export async function getCustomerFullDetails(id: string, fromDate?: string, toDa
     let vPending = 0;
 
     const jobCardsWithStats = vehicle.jobCards.map(jc => {
-      const invoice = jc.invoice;
-      if (invoice) {
-        const recordedAdvance = invoice.payments
-          .filter((payment: any) => payment.method === "ADVANCE")
-          .reduce((sum: number, payment: any) => sum + payment.amount, 0);
-        const laterPayments = invoice.payments
-          .filter((payment: any) => payment.method !== "ADVANCE")
-          .reduce((sum: number, payment: any) => sum + payment.amount, 0);
+      // Payments created before job cards became directly payable can belong to
+      // the invoice, while current payments belong to the job card. Combine the
+      // two sets (without counting a linked payment twice) for this ledger row.
+      const payments = Array.from(
+        new Map(
+          [...jc.payments, ...(jc.invoice?.payments ?? [])].map((payment) => [payment.id, payment])
+        ).values()
+      );
+      const recordedAdvance = payments
+        .filter((payment) => payment.method === "ADVANCE")
+        .reduce((sum, payment) => sum + payment.amount, 0);
+      const laterPayments = payments
+        .filter((payment) => payment.method !== "ADVANCE")
+        .reduce((sum, payment) => sum + payment.amount, 0);
 
-        // Keep the full job-card advance as customer credit, including when it
-        // exceeds the invoice total. The maximum also supports invoices created
-        // before advances were stored directly on job cards.
-        const advance = Math.max(jc.advancePaid ?? 0, recordedAdvance);
-        const paid = advance + laterPayments;
-        const pending = Math.max(0, invoice.grandTotal - paid);
-        vPaid += paid;
-        vPending += pending;
-        return { ...jc, paidAmount: paid, pendingAmount: pending };
-      }
-
-      // An advance is customer credit even if there is no work total yet.
-      const total = jc.grandTotal ?? 0;
-      const paid = jc.advancePaid ?? 0;
+      // Keep the full job-card advance as customer credit, including for legacy
+      // job cards where it was saved on the card without a payment record.
+      const advance = Math.max(jc.advancePaid ?? 0, recordedAdvance);
+      const paid = advance + laterPayments;
+      const total = jc.invoice?.grandTotal ?? jc.grandTotal ?? 0;
       const pending = Math.max(0, total - paid);
       vPaid += paid;
       vPending += pending;

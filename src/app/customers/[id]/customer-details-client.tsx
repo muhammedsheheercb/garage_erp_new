@@ -11,9 +11,10 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
 import { formatDisplayDate } from "@/lib/date-format"
-import { ArrowLeft, Eye, Settings, Wrench } from "lucide-react"
+import { ArrowLeft, CreditCard, Eye, Settings, Wrench } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { PaymentForm } from "@/features/payments/components/payment-form"
 
 function getOtherChargesTotal(otherCharges: string | null | undefined) {
   if (!otherCharges) return 0
@@ -45,6 +46,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
   })
 
   const [selectedJobCard, setSelectedJobCard] = useState<any>(null)
+  const [payingJobCard, setPayingJobCard] = useState<any>(null)
   const [jobPages, setJobPages] = useState<Record<string, number>>({})
   const [vehiclePage, setVehiclePage] = useState(1)
 
@@ -173,9 +175,16 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                           {formatCurrency(jc.invoice?.grandTotal ?? jc.grandTotal ?? 0)}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedJobCard(jc)}>
-                            <Eye className="h-4 w-4 mr-1" /> View
-                          </Button>
+                          <div className="flex justify-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedJobCard(jc)}>
+                              <Eye className="h-4 w-4 mr-1" /> View
+                            </Button>
+                            {jc.pendingAmount > 0 && (
+                              <Button size="sm" onClick={() => setPayingJobCard(jc)}>
+                                <CreditCard className="h-4 w-4 mr-1" /> Pay Balance
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -340,6 +349,33 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!payingJobCard} onOpenChange={(open) => !open && setPayingJobCard(null)}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto sm:w-[min(94vw,720px)] sm:max-w-[min(94vw,720px)] sm:p-6">
+          <DialogHeader>
+            <DialogTitle>
+              Pay Balance — JOB-{payingJobCard?.id.split("-")[0].toUpperCase()}
+            </DialogTitle>
+          </DialogHeader>
+          {payingJobCard && (
+            <>
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">Outstanding balance</span>
+                  <span className="font-semibold text-destructive">{formatCurrency(payingJobCard.pendingAmount)}</span>
+                </div>
+              </div>
+              <PaymentForm
+                initialJobCardId={payingJobCard.id}
+                onSuccess={() => {
+                  setPayingJobCard(null)
+                  router.refresh()
+                }}
+              />
+            </>
           )}
         </DialogContent>
       </Dialog>

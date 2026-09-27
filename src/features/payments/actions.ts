@@ -128,6 +128,7 @@ export async function getPendingInvoicesDropdown() {
 export async function createPayment(data: PaymentFormValues) {
   const parsed = paymentSchema.parse(data)
   const discountAmount = parsed.discountAmount || 0
+  let affectedCustomerId: string | null = null
   
   const result = await prisma.$transaction(async (tx) => {
     const invoiceBeforePayment = await tx.jobCard.findUnique({
@@ -138,6 +139,8 @@ export async function createPayment(data: PaymentFormValues) {
     if (!invoiceBeforePayment) {
       throw new Error("The selected Job Card no longer exists.")
     }
+
+    affectedCustomerId = invoiceBeforePayment.customerId
 
     if (invoiceBeforePayment.parts.length > 0) {
       throw new Error("Payment cannot be completed because this Job Card has pending parts. Please purchase all pending parts before making the payment.")
@@ -188,6 +191,9 @@ export async function createPayment(data: PaymentFormValues) {
   revalidatePath('/jobcards')
   revalidatePath('/')
   revalidatePath('/reports')
+  if (affectedCustomerId) {
+    revalidatePath(`/customers/${affectedCustomerId}`)
+  }
   return result
 }
 
