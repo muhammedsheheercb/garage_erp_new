@@ -125,13 +125,24 @@ export async function deleteCustomer(id: string) {
 
 export async function getCustomerFullDetails(id: string, fromDate?: string, toDate?: string) {
   const jobCardWhere: any = {};
+  const paymentWhere: any = {
+    OR: [
+      { jobCard: { customerId: id } },
+      { invoice: { customerId: id } },
+    ],
+  };
   if (fromDate || toDate) {
     jobCardWhere.createdAt = {};
     if (fromDate) jobCardWhere.createdAt.gte = new Date(fromDate);
     if (toDate) jobCardWhere.createdAt.lte = new Date(toDate);
+
+    paymentWhere.paymentDate = {};
+    if (fromDate) paymentWhere.paymentDate.gte = new Date(fromDate);
+    if (toDate) paymentWhere.paymentDate.lte = new Date(toDate);
   }
 
-  const customer = await prisma.customer.findUnique({
+  const [customer, payments] = await Promise.all([
+    prisma.customer.findUnique({
     where: { id },
     include: {
       vehicles: {
@@ -155,7 +166,16 @@ export async function getCustomerFullDetails(id: string, fromDate?: string, toDa
         }
       }
     }
-  });
+  }),
+    prisma.payment.findMany({
+      where: paymentWhere,
+      orderBy: [{ paymentDate: "desc" }, { createdAt: "desc" }],
+      include: {
+        jobCard: { select: { id: true, vehicle: { select: { id: true, plateNumber: true } } } },
+        invoice: { select: { jobCard: { select: { id: true, vehicle: { select: { id: true, plateNumber: true } } } } } },
+      },
+    }),
+  ]);
 
   if (!customer) return null;
 
@@ -209,5 +229,22 @@ export async function getCustomerFullDetails(id: string, fromDate?: string, toDa
     vehicles: vehiclesWithStats,
     overallTotalPaid: totalPaid,
     overallTotalPending: totalPending,
+    // Current payments link to a job card; older records can link through its
+    // invoice. Normalize both forms for a single complete ledger history.
+    paymentHistory: payments.map((payment) => {
+      const jobCard = payment.jobCard ?? payment.invoice?.jobCard;
+
+      return {
+        id: payment.id,
+        amount: payment.amount,
+        method: payment.method,
+        paymentDate: payment.paymentDate,
+        createdAt: payment.createdAt,
+        createdBy: payment.createdBy,
+        jobCardId: jobCard?.id ?? null,
+        vehicleId: jobCard?.vehicle.id ?? null,
+        vehiclePlateNumber: jobCard?.vehicle.plateNumber ?? null,
+      };
+    }),
   };
 }

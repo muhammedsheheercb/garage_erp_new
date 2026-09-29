@@ -33,6 +33,46 @@ function getOtherChargesTotal(otherCharges: string | null | undefined) {
   }
 }
 
+function formatPaymentMethod(method: string) {
+  if (method === "ADVANCE") return "Advance"
+  return method.charAt(0) + method.slice(1).toLowerCase()
+}
+
+function PaymentHistoryTable({ payments, showVehicle = false }: { payments: any[], showVehicle?: boolean }) {
+  if (payments.length === 0) {
+    return <p className="py-8 text-center text-sm text-muted-foreground">No payment history found.</p>
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            {showVehicle && <TableHead>Vehicle</TableHead>}
+            <TableHead>Job Card</TableHead>
+            <TableHead>Method</TableHead>
+            <TableHead>Created By</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {payments.map((payment) => (
+            <TableRow key={payment.id}>
+              <TableCell>{formatDisplayDate(payment.paymentDate)}</TableCell>
+              {showVehicle && <TableCell>{payment.vehiclePlateNumber || "—"}</TableCell>}
+              <TableCell>{payment.jobCardId ? `JOB-${payment.jobCardId.split("-")[0].toUpperCase()}` : "Legacy payment"}</TableCell>
+              <TableCell>{formatPaymentMethod(payment.method)}</TableCell>
+              <TableCell>{payment.createdBy || "Admin"}</TableCell>
+              <TableCell className="text-right font-medium text-green-600">{payment.amount.toFixed(3)} OMR</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
 export function CustomerDetailsClient({ customer }: { customer: any }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -47,6 +87,8 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
 
   const [selectedJobCard, setSelectedJobCard] = useState<any>(null)
   const [payingJobCard, setPayingJobCard] = useState<any>(null)
+  const [isCustomerPaymentHistoryOpen, setIsCustomerPaymentHistoryOpen] = useState(false)
+  const [selectedVehicleForPaymentHistory, setSelectedVehicleForPaymentHistory] = useState<any>(null)
   const [jobPages, setJobPages] = useState<Record<string, number>>({})
   const [vehiclePage, setVehiclePage] = useState(1)
 
@@ -91,8 +133,11 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
             <p className="text-muted-foreground">{customer.phone || 'No phone'} | {customer.email || 'No email'}</p>
           </div>
         </div>
-        <div>
+        <div className="flex items-center gap-2">
           <DatePickerWithRange date={dateRange} setDate={handleDateChange} />
+          <Button variant="outline" onClick={() => setIsCustomerPaymentHistoryOpen(true)}>
+            <CreditCard className="mr-2 h-4 w-4" /> Payment History
+          </Button>
         </div>
       </div>
 
@@ -135,13 +180,18 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                   <CardTitle className="text-lg">{vehicle.plateNumber}</CardTitle>
                   <CardDescription>{vehicle.brand} {vehicle.model} {vehicle.year ? `(${vehicle.year})` : ''}</CardDescription>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm text-muted-foreground">Vehicle Totals</div>
-                  <div className="text-sm">
-                    <span className="text-green-600 font-medium">Paid: {formatCurrency(vehicle.totalPaid)}</span>
-                    {' | '}
-                    <span className="text-red-600 font-medium">Pending: {formatCurrency(vehicle.totalPending)}</span>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground">Vehicle Totals</div>
+                    <div className="text-sm">
+                      <span className="text-green-600 font-medium">Paid: {formatCurrency(vehicle.totalPaid)}</span>
+                      {' | '}
+                      <span className="text-red-600 font-medium">Pending: {formatCurrency(vehicle.totalPending)}</span>
+                    </div>
                   </div>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedVehicleForPaymentHistory(vehicle)}>
+                    <CreditCard className="mr-1 h-4 w-4" /> Payment History
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -209,6 +259,29 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
           </div>
         )}
       </div>
+
+      <Dialog open={isCustomerPaymentHistoryOpen} onOpenChange={setIsCustomerPaymentHistoryOpen}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[90vh] overflow-y-auto sm:w-[min(96vw,1400px)] sm:max-w-[min(96vw,1400px)]">
+          <DialogHeader>
+            <DialogTitle>Payment History — {customer.name}</DialogTitle>
+            <CardDescription>All payments recorded for this customer{dateRange?.from ? " in the selected period" : ""}.</CardDescription>
+          </DialogHeader>
+          <PaymentHistoryTable payments={customer.paymentHistory} showVehicle />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedVehicleForPaymentHistory} onOpenChange={(open) => !open && setSelectedVehicleForPaymentHistory(null)}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[90vh] overflow-y-auto sm:w-[min(96vw,1400px)] sm:max-w-[min(96vw,1400px)]">
+          <DialogHeader>
+            <DialogTitle>Payment History — {selectedVehicleForPaymentHistory?.plateNumber}</DialogTitle>
+          </DialogHeader>
+          {selectedVehicleForPaymentHistory && (
+            <PaymentHistoryTable
+              payments={customer.paymentHistory.filter((payment: any) => payment.vehicleId === selectedVehicleForPaymentHistory.id)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!selectedJobCard} onOpenChange={(open) => !open && setSelectedJobCard(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
