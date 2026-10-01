@@ -38,6 +38,14 @@ function formatPaymentMethod(method: string) {
   return method.charAt(0) + method.slice(1).toLowerCase()
 }
 
+function getLedgerDiscount(jobCard: any) {
+  return Math.max(0, Number(jobCard.invoice?.discount ?? jobCard.discount) || 0)
+}
+
+function getLedgerAfterDiscountTotal(jobCard: any) {
+  return Math.max(0, Number(jobCard.invoice?.grandTotal ?? jobCard.grandTotal) || 0)
+}
+
 function PaymentHistoryTable({ payments, showVehicle = false }: { payments: any[], showVehicle?: boolean }) {
   if (payments.length === 0) {
     return <p className="py-8 text-center text-sm text-muted-foreground">No payment history found.</p>
@@ -118,6 +126,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
       </span>
     )
   }
+  const selectedFinancialRecord = selectedJobCard?.invoice ?? selectedJobCard
 
   return (
     <div className="space-y-6">
@@ -207,6 +216,8 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                       <TableHead className="text-right">Paid</TableHead>
                       <TableHead className="text-right">Pending</TableHead>
                       <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-right">Discount</TableHead>
+                      <TableHead className="text-right">After Discount Total</TableHead>
                       <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -222,7 +233,15 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                         <TableCell className="text-right text-green-600">{formatCurrency(jc.paidAmount)}</TableCell>
                         <TableCell className="text-right text-red-600">{formatCurrency(jc.pendingAmount)}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(jc.invoice?.grandTotal ?? jc.grandTotal ?? 0)}
+                          {formatCurrency(getLedgerAfterDiscountTotal(jc) + getLedgerDiscount(jc))}
+                        </TableCell>
+                        <TableCell className="text-right text-green-600">
+                          {getLedgerDiscount(jc) > 0
+                            ? <>-{formatCurrency(getLedgerDiscount(jc))}</>
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(getLedgerAfterDiscountTotal(jc))}
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex justify-center gap-2">
@@ -284,7 +303,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
       </Dialog>
 
       <Dialog open={!!selectedJobCard} onOpenChange={(open) => !open && setSelectedJobCard(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[90vh] overflow-y-auto sm:w-[min(96vw,1200px)] sm:max-w-[min(96vw,1200px)]">
           <DialogHeader>
             <DialogTitle>Job Card Details</DialogTitle>
           </DialogHeader>
@@ -374,41 +393,37 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                 )}
               </div>
               
-              {selectedJobCard.invoice && (
+              {selectedFinancialRecord && (
                 <div className="bg-muted p-4 rounded-md">
                   <h4 className="text-md font-semibold mb-2">Financial Summary</h4>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span>Services Total:</span>
-                      <span>{formatCurrency(selectedJobCard.invoice.serviceCharge)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Labour Charge:</span>
-                      <span>{formatCurrency(selectedJobCard.invoice.labourCharge)}</span>
+                      <span>{formatCurrency(selectedFinancialRecord.serviceCharge ?? selectedFinancialRecord.serviceTotal ?? 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Parts Total:</span>
-                      <span>{formatCurrency(selectedJobCard.invoice.partsCost)}</span>
+                      <span>{formatCurrency(selectedFinancialRecord.partsCost ?? selectedFinancialRecord.partsTotal ?? 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Other Charges:</span>
-                      <span>{formatCurrency(getOtherChargesTotal(selectedJobCard.invoice.otherCharges))}</span>
+                      <span>{formatCurrency(getOtherChargesTotal(selectedFinancialRecord.otherCharges))}</span>
                     </div>
-                    {selectedJobCard.invoice.discount > 0 && (
+                    {(Number(selectedFinancialRecord.discount) || 0) > 0 && (
                       <div className="flex justify-between text-green-600">
                         <span>Discount:</span>
-                        <span>-{formatCurrency(selectedJobCard.invoice.discount)}</span>
+                        <span>-{formatCurrency(Number(selectedFinancialRecord.discount) || 0)}</span>
                       </div>
                     )}
-                    {selectedJobCard.invoice.tax > 0 && (
+                    {(Number(selectedFinancialRecord.tax) || 0) > 0 && (
                       <div className="flex justify-between">
                         <span>Tax:</span>
-                        <span>{formatCurrency(selectedJobCard.invoice.tax)}</span>
+                        <span>{formatCurrency(Number(selectedFinancialRecord.tax) || 0)}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold pt-2 border-t mt-2">
                       <span>Grand Total:</span>
-                      <span>{formatCurrency(selectedJobCard.invoice.grandTotal)}</span>
+                      <span>{formatCurrency(selectedFinancialRecord.grandTotal ?? 0)}</span>
                     </div>
                     <div className="flex justify-between text-green-600 font-semibold">
                       <span>Paid Amount:</span>
