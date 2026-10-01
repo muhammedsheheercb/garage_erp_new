@@ -13,7 +13,6 @@ import { SupplierForm } from "./supplier-form"
 import { SupplierPaymentForm } from "./supplier-payment-form"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTranslation } from "@/i18n"
 import { usePermissions } from "@/lib/use-permissions"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
@@ -39,23 +38,6 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue
 }
 
-// Using a custom Tabs implementation since we don't have the shadcn tabs component installed yet.
-function SimpleTabs({ tabs, active, onChange }: { tabs: { id: string, label: string }[], active: string, onChange: (id: string) => void }) {
-  return (
-    <div className="flex border-b mb-4">
-      {tabs.map(tab => (
-        <button
-          key={tab.id}
-          className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${active === tab.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}
-          onClick={() => onChange(tab.id)}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 function DetailPagination({ page, setPage, total }: { page: number; setPage: (page: number) => void; total: number }) {
   const totalPages = Math.ceil(total / 5)
   if (totalPages <= 1) return null
@@ -67,8 +49,6 @@ function DetailPagination({ page, setPage, total }: { page: number; setPage: (pa
 }
 
 function SupplierDetails({ supplierId }: { supplierId: string }) {
-  const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState("inventory")
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
   const [purchasePage, setPurchasePage] = useState(1)
   const [paymentPage, setPaymentPage] = useState(1)
@@ -77,6 +57,9 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
     "Direct Cash": t.payments.cash,
     "Direct Bank Transfer": t.payments.bankTransfer,
     "Direct Card": t.payments.card,
+    CASH: t.payments.cash,
+    BANK_TRANSFER: t.payments.bankTransfer,
+    CARD: t.payments.card,
   }[name] || name)
 
   const { data: details, isLoading } = useQuery({
@@ -88,38 +71,51 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
   if (!details) return <div className="p-8 text-center text-destructive">{t.suppliers.supplierNotFound}</div>
 
   const totalPaid = details.purchases.reduce((acc: number, purchase: any) => acc + purchase.paidAmount, 0)
-  const totalPurchaseCost = details.purchases.reduce((acc: number, p: any) => acc + p.grandTotal, 0)
   const pendingAmount = details.purchases.reduce((acc: number, purchase: any) => acc + purchase.pendingAmount, 0)
-  const purchasePayments = details.purchases.flatMap((purchase: any) =>
-    purchase.purchasePayments.map((payment: any) => ({ ...payment, purchase }))
-  )
-  
-  // Quick overview stats
+  const paymentHistory = [
+    ...details.purchases.flatMap((purchase: any) =>
+      purchase.purchasePayments.map((payment: any) => ({
+        ...payment,
+        purchaseNumber: purchase.purchaseNumber,
+        method: payment.paymeter ? getPaymentMethodLabel(payment.paymeter.name) : '-',
+      }))
+    ),
+    ...details.payments.map((payment: any) => ({
+      ...payment,
+      purchaseNumber: payment.reference || '—',
+      method: getPaymentMethodLabel(payment.method),
+    })),
+  ].sort((a: any, b: any) => {
+    const dateDifference = new Date(b.date).getTime() - new Date(a.date).getTime()
+    return dateDifference || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground mb-1 flex items-center"><Package className="h-4 w-4 mr-1" /> {t.suppliers.purchases}</div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-lg bg-muted/50 p-4">
+          <div className="mb-1 flex text-sm text-muted-foreground"><Package className="mr-1 h-4 w-4" /> {t.suppliers.purchases}</div>
           <div className="text-xl font-bold">{details.purchases.length}</div>
         </div>
-        <div className="bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground mb-1 flex items-center"><img src="/Omr_symbol.svg" alt="OMR" className="h-4 w-4 mr-1 object-contain" /> {t.suppliers.totalPaid}</div>
-          <div className="text-xl font-bold text-green-600">{(totalPaid)} OMR</div>
+        <div className="rounded-lg bg-muted/50 p-4">
+          <div className="mb-1 flex text-sm text-muted-foreground"><img src="/Omr_symbol.svg" alt="OMR" className="mr-1 h-4 w-4 object-contain" /> {t.suppliers.totalPaid}</div>
+          <div className="text-xl font-bold text-green-600">{totalPaid} OMR</div>
         </div>
-        <div className="bg-muted/50 p-4 rounded-lg">
-          <div className="text-sm text-muted-foreground mb-1 flex items-center"><img src="/Omr_symbol.svg" alt="OMR" className="h-4 w-4 mr-1 object-contain" /> {t.suppliers.pendingAmount}</div>
-          <div className="text-xl font-bold text-destructive">{(pendingAmount)} OMR</div>
+        <div className="rounded-lg bg-muted/50 p-4">
+          <div className="mb-1 flex text-sm text-muted-foreground"><img src="/Omr_symbol.svg" alt="OMR" className="mr-1 h-4 w-4 object-contain" /> {t.suppliers.pendingAmount}</div>
+          <div className="text-xl font-bold text-destructive">{pendingAmount} OMR</div>
         </div>
       </div>
 
-      <SimpleTabs 
-        tabs={[{ id: 'purchases', label: t.suppliers.purchases }, { id: 'payments', label: t.suppliers.paymentHistory }]} 
-        active={activeTab} 
-        onChange={setActiveTab} 
-      />
+      <div className="grid gap-3 rounded-md border p-4 text-sm sm:grid-cols-2">
+        <div><span className="text-muted-foreground">{t.suppliers.contact}: </span>{details.contact || '—'}</div>
+        <div><span className="text-muted-foreground">Email: </span>{details.email || '—'}</div>
+        <div className="sm:col-span-2"><span className="text-muted-foreground">Address: </span>{details.address || '—'}</div>
+      </div>
 
-      {activeTab === 'purchases' && (
-        <div className="border rounded-md max-h-80 overflow-y-auto">
+      <section className="space-y-3">
+        <h3 className="font-medium">Purchase History</h3>
+        <div className="max-h-80 overflow-y-auto rounded-md border">
           <Table>
             <TableHeader className="sticky top-0 bg-background">
               <TableRow>
@@ -131,14 +127,14 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
             </TableHeader>
             <TableBody>
               {details.purchases.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t.suppliers.noPurchases}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">{t.suppliers.noPurchases}</TableCell></TableRow>
               ) : (
                 details.purchases.slice((purchasePage - 1) * 5, purchasePage * 5).map((purchase: any) => (
                   <TableRow key={purchase.id}>
                     <TableCell>{formatDisplayDate(purchase.purchaseDate)}</TableCell>
                     <TableCell className="font-medium">{purchase.purchaseNumber}</TableCell>
                     <TableCell>{purchase.items.length} {t.suppliers.items}</TableCell>
-                    <TableCell className="text-right font-medium">{(purchase.grandTotal)} OMR</TableCell>
+                    <TableCell className="text-right font-medium">{purchase.grandTotal} OMR</TableCell>
                   </TableRow>
                 ))
               )}
@@ -146,52 +142,49 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
           </Table>
           <DetailPagination page={purchasePage} setPage={setPurchasePage} total={details.purchases.length} />
         </div>
-      )}
+      </section>
 
-      {activeTab === 'payments' && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-medium">{t.suppliers.paymentHistory}</h3>
-            {details.purchases.some((purchase: any) => purchase.pendingAmount > 0) && (
-              <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
-                <DialogTrigger render={<Button size="sm"><Plus className="h-4 w-4 mr-2" /> {t.suppliers.addPayment}</Button>} />
-                <DialogContent className="sm:max-w-4xl">
-                  <DialogHeader><DialogTitle>{t.suppliers.recordPayment} {details.name}</DialogTitle></DialogHeader>
-                  <SupplierPaymentForm supplierId={details.id} purchases={details.purchases} paymentMethods={details.paymentMethods} onSuccess={() => setIsPaymentOpen(false)} />
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-          
-          <div className="border rounded-md max-h-80 overflow-y-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-background">
-                <TableRow>
-                  <TableHead>{t.expensesMod.date}</TableHead>
-                  <TableHead>{t.suppliers.reference}</TableHead>
-                  <TableHead>{t.suppliers.method}</TableHead>
-                  <TableHead className="text-right">{t.expensesMod.amount}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {purchasePayments.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t.suppliers.noPayments}</TableCell></TableRow>
-                ) : (
-                  purchasePayments.slice((paymentPage - 1) * 5, paymentPage * 5).map((payment: any) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>{formatDisplayDate(payment.date)}</TableCell>
-                      <TableCell className="font-medium">{payment.purchase.purchaseNumber}</TableCell>
-                      <TableCell>{payment.paymeter ? getPaymentMethodLabel(payment.paymeter.name) : '-'}</TableCell>
-                      <TableCell className="text-right font-medium text-green-600">{(payment.amount)}</TableCell>
-                    </TableRow>
-                  ))
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="font-medium">{t.suppliers.paymentHistory}</h3>
+          {details.purchases.some((purchase: any) => purchase.pendingAmount > 0) && (
+            <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
+              <DialogTrigger render={<Button size="sm"><Plus className="mr-2 h-4 w-4" /> {t.suppliers.addPayment}</Button>} />
+              <DialogContent className="sm:max-w-4xl">
+                <DialogHeader><DialogTitle>{t.suppliers.recordPayment} {details.name}</DialogTitle></DialogHeader>
+                <SupplierPaymentForm supplierId={details.id} purchases={details.purchases} paymentMethods={details.paymentMethods} onSuccess={() => setIsPaymentOpen(false)} />
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+        <div className="max-h-80 overflow-y-auto rounded-md border">
+          <Table>
+            <TableHeader className="sticky top-0 bg-background">
+              <TableRow>
+                <TableHead>{t.expensesMod.date}</TableHead>
+                <TableHead>{t.suppliers.reference}</TableHead>
+                <TableHead>{t.suppliers.method}</TableHead>
+                <TableHead className="text-right">{t.expensesMod.amount}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paymentHistory.length === 0 ? (
+                <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">{t.suppliers.noPayments}</TableCell></TableRow>
+              ) : (
+                paymentHistory.slice((paymentPage - 1) * 5, paymentPage * 5).map((payment: any) => (
+                  <TableRow key={payment.id}>
+                    <TableCell>{formatDisplayDate(payment.date)}</TableCell>
+                    <TableCell className="font-medium">{payment.purchaseNumber}</TableCell>
+                    <TableCell>{payment.method}</TableCell>
+                    <TableCell className="text-right font-medium text-green-600">{payment.amount}</TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
-          <DetailPagination page={paymentPage} setPage={setPaymentPage} total={purchasePayments.length} />
-          </div>
+          <DetailPagination page={paymentPage} setPage={setPaymentPage} total={paymentHistory.length} />
         </div>
-      )}
+      </section>
     </div>
   )
 }

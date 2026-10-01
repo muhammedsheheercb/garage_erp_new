@@ -73,17 +73,18 @@ export async function getSupplierDetails(id: string) {
     where: { id },
     include: {
       purchases: {
+        orderBy: [{ purchaseDate: 'desc' }, { createdAt: 'desc' }],
         include: {
           items: { include: { inventory: true } },
           paymentMethod: { select: { id: true, name: true } },
           purchasePayments: {
             include: { paymeter: { select: { id: true, name: true } } },
-            orderBy: { date: 'desc' },
+            orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
           },
         },
       },
       payments: {
-        orderBy: { date: 'desc' }
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
       }
     }
     }),
