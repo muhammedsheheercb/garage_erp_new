@@ -1089,6 +1089,11 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
               <span>{formatAmount(otherChargesTotal)} OMR</span>
             </div>
 
+            <div className="flex justify-between items-center pt-4 border-t font-bold text-lg">
+              <span>{t.invoicesMod.grandTotal}:</span>
+              <span>{formatAmount(grandTotal)} OMR</span>
+            </div>
+
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="advancePaid">{t.jobcards.advancePaid}</Label>
@@ -1116,17 +1121,10 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
               )}
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t font-bold text-lg">
-              <span>{t.invoicesMod.grandTotal}:</span>
-              <span>{formatAmount(grandTotal)} OMR</span>
+            <div className="flex justify-between items-center font-semibold text-base text-primary">
+              <span>{t.jobcards.balanceAmount}:</span>
+              <span>{formatAmount(balanceAmount)} OMR</span>
             </div>
-
-            {advancePaid > 0 && (
-              <div className="flex justify-between items-center font-semibold text-base text-primary">
-                <span>{t.jobcards.balanceAmount}:</span>
-                <span>{formatAmount(balanceAmount)} OMR</span>
-              </div>
-            )}
 
             <Button
               type="submit"
