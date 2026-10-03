@@ -38,32 +38,32 @@ export function JobCardPrintClient({ job }: { job: any }) {
         @page { size: A4 portrait; margin: 7mm; }
         * { box-sizing: border-box; }
         .jc-page-shell { padding:80px 0 24px; }
-        .jc-page { width:196mm; min-height:283mm; margin:0 auto; padding:4mm; color:#281315; background:#fff1f2; border:.55mm solid #551d25; font-family:Arial, "Noto Sans Arabic", sans-serif; font-size:9.4px; line-height:1.24; overflow-wrap:anywhere; }
+        .jc-page { width:196mm; min-height:283mm; margin:0 auto; padding:4mm; color:#281315; background:#fff1f2; border:.55mm solid #551d25; font-family:Arial, "Noto Sans Arabic", sans-serif; font-size:13.54px; line-height:1.24; overflow-wrap:anywhere; }
         .jc-page-one { display:flex; flex-direction:column; break-after:page; page-break-after:always; }
         .jc-page *, .jc-page *::before, .jc-page *::after { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
         .jc-header { display:flex; align-items:center; gap:4mm; padding:2.2mm 3mm; background:#8d2634; color:#fff; border: .35mm solid #551d25; }
         .jc-logo { width:29mm; height:15mm; object-fit:contain; background:#fff; padding:1.5mm; }
-        .jc-title { flex:1; text-align:center; font-size:20px; line-height:1; font-weight:900; letter-spacing:1px; }
-        .jc-title small { display:block; margin-top:.7mm; font-size:9px; letter-spacing:.5px; font-weight:700; }
-        .jc-number { min-width:37mm; border-left:.25mm solid #f7cbd0; padding-left:3mm; font-size:9px; }
-        .jc-number strong { display:block; font-size:11px; margin-top:.7mm; }
+        .jc-title { flex:1; text-align:center; font-size:28.80px; line-height:1; font-weight:900; letter-spacing:1px; }
+        .jc-title small { display:block; margin-top:.7mm; font-size:12.96px; letter-spacing:.5px; font-weight:700; }
+        .jc-number { min-width:37mm; border-left:.25mm solid #f7cbd0; padding-left:3mm; font-size:12.96px; }
+        .jc-number strong { display:block; font-size:15.84px; margin-top:.7mm; }
         .jc-section { margin-top:1.6mm; border:.3mm solid #6d2931; background:#fffafb; break-inside:avoid; page-break-inside:avoid; }
-        .jc-section-title { padding:1mm 2mm; color:#fff; background:#9d3543; font-size:9px; font-weight:800; letter-spacing:.35px; text-transform:uppercase; }
+        .jc-section-title { padding:1mm 2mm; color:#fff; background:#9d3543; font-size:12.96px; font-weight:800; letter-spacing:.35px; text-transform:uppercase; }
         .jc-grid { display:grid; grid-template-columns:repeat(4, 1fr); }
         .jc-vehicle-grid { display:grid; grid-template-columns:repeat(3, 1fr); }
         .jc-field { min-height:9.5mm; padding:1mm 2mm; border-right:.2mm solid #c58d94; border-top:.2mm solid #c58d94; overflow-wrap:anywhere; }
         .jc-grid .jc-field:nth-child(4n), .jc-vehicle-grid .jc-field:nth-child(3n) { border-right:0; }
-        .jc-field span { display:block; margin-bottom:.5mm; color:#762c35; font-size:7.5px; font-weight:800; text-transform:uppercase; }
-        .jc-field strong { display:block; font-size:9.8px; font-weight:700; }
-        .jc-text { padding:1.1mm 2mm; min-height:9.5mm; white-space:pre-wrap; overflow-wrap:anywhere; font-size:9.2px; border-top:.2mm solid #c58d94; }
-        .jc-text b { color:#762c35; font-size:8px; text-transform:uppercase; }
+        .jc-field span { display:block; margin-bottom:.5mm; color:#762c35; font-size:10.80px; font-weight:800; text-transform:uppercase; }
+        .jc-field strong { display:block; font-size:14.11px; font-weight:700; }
+        .jc-text { padding:1.1mm 2mm; min-height:9.5mm; white-space:pre-wrap; overflow-wrap:anywhere; font-size:13.25px; border-top:.2mm solid #c58d94; }
+        .jc-text b { color:#762c35; font-size:11.52px; text-transform:uppercase; }
         .jc-items { width:100%; border-collapse:collapse; table-layout:fixed; }
-        .jc-items th { padding:1.1mm; background:#f4c9cf; color:#4c1720; border:.2mm solid #8e4751; font-size:8px; text-transform:uppercase; }
-        .jc-items td { padding:1mm 1.3mm; border:.2mm solid #c58d94; vertical-align:top; font-size:8.8px; overflow-wrap:anywhere; }.jc-items tr { break-inside:avoid; page-break-inside:avoid; }
+        .jc-items th { padding:1.1mm; background:#f4c9cf; color:#4c1720; border:.2mm solid #8e4751; font-size:11.52px; text-transform:uppercase; }
+        .jc-items td { padding:1mm 1.3mm; border:.2mm solid #c58d94; vertical-align:top; font-size:12.67px; overflow-wrap:anywhere; }.jc-items tr { break-inside:avoid; page-break-inside:avoid; }
         .jc-items .number { text-align:center; width:7mm; }.jc-items .type { width:25mm; }.jc-items .qty { width:12mm; text-align:center; }.jc-items .money { width:23mm; text-align:right; white-space:nowrap; }
-        .jc-totals { display:grid; grid-template-columns:1fr 51mm; border-top:.25mm solid #6d2931; }.jc-totals-note { padding:1.5mm 2mm; color:#6a3037; font-size:8px; }.jc-totals-values { border-left:.25mm solid #6d2931; }.jc-total { display:flex; justify-content:space-between; padding:1.1mm 2mm; font-size:8.7px; border-bottom:.2mm solid #c58d94; }.jc-total:last-child { border-bottom:0; background:#f1b8c0; font-weight:900; font-size:10px; }
-        .jc-terms { padding:1.6mm 2mm; }.jc-ar { direction:rtl; text-align:right; font-weight:700; }.jc-notice { padding-bottom:1.1mm; margin-bottom:1.1mm; border-bottom:.2mm solid #d5a1a7; font-size:8.4px; }.jc-notice:last-of-type { border:0; }.jc-ack { padding:1.2mm; margin-top:1.1mm; background:#f8d9dd; border:.2mm solid #b35d68; font-size:8.3px; font-weight:700; }.jc-approval { margin-top:1.1mm; font-size:8.2px; }.jc-sign-line { display:inline-block; min-width:45mm; margin-left:2mm; border-bottom:.25mm solid #59212a; height:4mm; vertical-align:bottom; }
-        .jc-footer { margin-top:auto; }.jc-signatures { display:grid; grid-template-columns:repeat(3, 1fr); gap:4mm; padding:2.4mm 2mm 1.8mm; }.jc-signature { padding-top:6mm; text-align:center; border-top:.25mm solid #59212a; font-size:8.5px; font-weight:800; }.jc-signature-approval { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; gap:8mm; padding-bottom:1.8mm; font-size:8.4px; font-weight:800; }.jc-signature-field { min-height:11mm; padding-top:5mm; border-bottom:.25mm solid #59212a; }
+        .jc-totals { display:grid; grid-template-columns:1fr 51mm; border-top:.25mm solid #6d2931; }.jc-totals-note { padding:1.5mm 2mm; color:#6a3037; font-size:11.52px; }.jc-totals-values { border-left:.25mm solid #6d2931; }.jc-total { display:flex; justify-content:space-between; padding:1.1mm 2mm; font-size:12.53px; border-bottom:.2mm solid #c58d94; }.jc-total:last-child { border-bottom:0; background:#f1b8c0; font-weight:900; font-size:14.40px; }
+        .jc-terms { padding:1.6mm 2mm; }.jc-ar { direction:rtl; text-align:right; font-weight:700; }.jc-notice { padding-bottom:1.1mm; margin-bottom:1.1mm; border-bottom:.2mm solid #d5a1a7; font-size:12.10px; }.jc-notice:last-of-type { border:0; }.jc-ack { padding:1.2mm; margin-top:1.1mm; background:#f8d9dd; border:.2mm solid #b35d68; font-size:11.95px; font-weight:700; }.jc-approval { margin-top:1.1mm; font-size:11.81px; }.jc-sign-line { display:inline-block; min-width:45mm; margin-left:2mm; border-bottom:.25mm solid #59212a; height:4mm; vertical-align:bottom; }
+        .jc-footer { margin-top:auto; }.jc-signatures { display:grid; grid-template-columns:repeat(3, 1fr); gap:4mm; padding:2.4mm 2mm 1.8mm; }.jc-signature { padding-top:6mm; text-align:center; border-top:.25mm solid #59212a; font-size:12.24px; font-weight:800; }.jc-signature-approval { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; gap:8mm; padding-bottom:1.8mm; font-size:12.10px; font-weight:800; }.jc-signature-field { min-height:11mm; padding-top:5mm; border-bottom:.25mm solid #59212a; }
         .jc-damage-page { height:283mm; display:flex; align-items:center; justify-content:center; break-inside:avoid; page-break-inside:avoid; }.jc-damage-page img { display:block; width:100%; height:auto; max-width:100%; max-height:100%; object-fit:contain; }
         @media screen and (max-width:768px) { .jc-page-shell { display:flex; flex-direction:column; align-items:center; overflow-x:hidden; } .jc-page { margin:0 !important; } }
         @media screen and (max-width:768px) and (min-width:601px) { .jc-page { zoom:.85; } }

@@ -26,29 +26,29 @@ export function DirectSalePrint({ sale }: { sale: any }) {
         .ds-header { display:flex; align-items:center; gap:18px; padding:18px 22px; background:#8d2634; color:#fff; border-bottom:4px solid #551d25; }
         .ds-logo { width:110px; height:54px; padding:6px; object-fit:contain; background:#fff; }
         .ds-heading { flex:1; min-width:0; }
-        .ds-heading h1 { margin:0; font-size:25px; line-height:1.05; letter-spacing:.7px; }
-        .ds-heading p { margin:5px 0 0; font-size:12px; font-weight:700; letter-spacing:1.2px; }
-        .ds-reference { min-width:155px; padding-left:18px; border-left:1px solid rgba(255,255,255,.55); font-size:13px; line-height:1.55; text-align:right; }
-        .ds-reference strong { display:block; font-size:15px; letter-spacing:.35px; }
+        .ds-heading h1 { margin:0; font-size:28px; line-height:1.05; letter-spacing:.7px; }
+        .ds-heading p { margin:5px 0 0; font-size:14px; font-weight:700; letter-spacing:1.2px; }
+        .ds-reference { min-width:155px; padding-left:18px; border-left:1px solid rgba(255,255,255,.55); font-size:15px; line-height:1.55; text-align:right; }
+        .ds-reference strong { display:block; font-size:17px; letter-spacing:.35px; }
         .ds-content { padding:18px 22px 22px; }
         .ds-customer { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); margin-bottom:18px; border:1px solid #c48d95; background:#fff7f8; }
         .ds-customer div { min-height:58px; padding:10px 12px; border-right:1px solid #d7abb1; }
         .ds-customer div:last-child { border-right:0; }
-        .ds-label { display:block; margin-bottom:5px; color:#772d38; font-size:11px; font-weight:800; letter-spacing:.45px; text-transform:uppercase; }
-        .ds-value { display:block; color:#251316; font-size:15px; font-weight:700; overflow-wrap:anywhere; }
+        .ds-label { display:block; margin-bottom:5px; color:#772d38; font-size:13px; font-weight:800; letter-spacing:.45px; text-transform:uppercase; }
+        .ds-value { display:block; color:#251316; font-size:17px; font-weight:700; overflow-wrap:anywhere; }
         .ds-table-wrap { width:100%; overflow:visible; border:1px solid #74313b; }
-        .ds-table { width:100%; min-width:0; table-layout:fixed; border-collapse:collapse; font-size:14px; }
-        .ds-table th { padding:10px 9px; border-right:1px solid #9d5963; background:#efc9ce; color:#4e1921; font-size:12px; font-weight:800; letter-spacing:.25px; text-align:left; }
+        .ds-table { width:100%; min-width:0; table-layout:fixed; border-collapse:collapse; font-size:16px; }
+        .ds-table th { padding:10px 9px; border-right:1px solid #9d5963; background:#efc9ce; color:#4e1921; font-size:14px; font-weight:800; letter-spacing:.25px; text-align:left; }
         .ds-table th:last-child, .ds-table td:last-child { border-right:0; }
         .ds-table td { padding:10px 9px; border-top:1px solid #e0b8bd; border-right:1px solid #e0b8bd; vertical-align:top; }
         .ds-table .ds-center { text-align:center; }.ds-table .ds-money { text-align:right; white-space:nowrap; }
         .ds-table th:nth-child(1) { width:39%; }.ds-table th:nth-child(2) { width:8%; }.ds-table th:nth-child(3) { width:14%; }.ds-table th:nth-child(4) { width:8%; }.ds-table th:nth-child(5) { width:14%; }.ds-table th:nth-child(6) { width:17%; }
-        .ds-item-name { display:block; font-weight:800; }.ds-item-meta { display:block; margin-top:3px; color:#774d53; font-size:12px; }
-        .ds-summary { width:100%; max-width:350px; margin:18px 0 0 auto; border:1px solid #74313b; background:#fffafa; font-size:14px; }
+        .ds-item-name { display:block; font-weight:800; }.ds-item-meta { display:block; margin-top:3px; color:#774d53; font-size:14px; }
+        .ds-summary { width:100%; max-width:350px; margin:18px 0 0 auto; border:1px solid #74313b; background:#fffafa; font-size:16px; }
         .ds-summary div { display:flex; justify-content:space-between; gap:20px; padding:9px 12px; border-bottom:1px solid #dfb3b9; }
-        .ds-summary div:last-child { border-bottom:0; background:#8d2634; color:#fff; font-size:17px; font-weight:900; }
+        .ds-summary div:last-child { border-bottom:0; background:#8d2634; color:#fff; font-size:19px; font-weight:900; }
         .ds-summary .ds-discount { color:#a52436; font-weight:700; }
-        @media (max-width:640px) { #direct-sale-bill-page { padding:12px; } .ds-header { align-items:flex-start; padding:14px; } .ds-logo { width:80px; height:44px; } .ds-heading h1 { font-size:19px; } .ds-reference { min-width:auto; padding-left:10px; font-size:11px; } .ds-reference strong { font-size:12px; } .ds-content { padding:14px; } .ds-customer { grid-template-columns:1fr; } .ds-customer div { border-right:0; border-bottom:1px solid #d7abb1; } .ds-customer div:last-child { border-bottom:0; } .ds-table-wrap { overflow-x:auto; } .ds-table { min-width:760px; table-layout:auto; } }
+        @media (max-width:640px) { #direct-sale-bill-page { padding:12px; } .ds-header { align-items:flex-start; padding:14px; } .ds-logo { width:80px; height:44px; } .ds-heading h1 { font-size:22px; } .ds-reference { min-width:auto; padding-left:10px; font-size:13px; } .ds-reference strong { font-size:14px; } .ds-content { padding:14px; } .ds-customer { grid-template-columns:1fr; } .ds-customer div { border-right:0; border-bottom:1px solid #d7abb1; } .ds-customer div:last-child { border-bottom:0; } .ds-table-wrap { overflow-x:auto; } .ds-table { min-width:760px; table-layout:auto; } }
         @media print {
           html, body { width:210mm; margin:0 !important; padding:0 !important; background:#fff !important; }
           #direct-sale-bill-page { min-height:0; padding:0; background:#fff; }
@@ -57,16 +57,16 @@ export function DirectSalePrint({ sale }: { sale: any }) {
           .ds-content { padding:14px 16px 16px; }
           .ds-header { padding:14px 16px; }
           .ds-table-wrap { overflow:visible; }
-          .ds-table { min-width:0; table-layout:fixed; font-size:11px; }
+          .ds-table { min-width:0; table-layout:fixed; font-size:13px; }
           .ds-table thead { display:table-header-group; }
           .ds-table tr, .ds-customer, .ds-summary { break-inside:avoid; page-break-inside:avoid; }
-          .ds-table th { padding:7px 5px; font-size:10px; }
+          .ds-table th { padding:7px 5px; font-size:12px; }
           .ds-table td { padding:7px 5px; overflow-wrap:anywhere; }
           .ds-table th:nth-child(1) { width:39%; }.ds-table th:nth-child(2) { width:8%; }.ds-table th:nth-child(3) { width:14%; }.ds-table th:nth-child(4) { width:8%; }.ds-table th:nth-child(5) { width:14%; }.ds-table th:nth-child(6) { width:17%; }
-          .ds-item-meta { font-size:10px; }
-          .ds-summary { margin-top:14px; font-size:12px; }
+          .ds-item-meta { font-size:12px; }
+          .ds-summary { margin-top:14px; font-size:14px; }
           .ds-summary div { padding:7px 10px; }
-          .ds-summary div:last-child { font-size:15px; }
+          .ds-summary div:last-child { font-size:17px; }
         }
       ` }} />
 
