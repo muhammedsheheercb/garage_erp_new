@@ -83,11 +83,15 @@ function BreakdownCard({
     <Card className="shadow-sm transition-all h-fit">
       <CardHeader
         className={`flex flex-row items-center justify-between pb-2 space-y-0 ${expandable ? "cursor-pointer hover:bg-muted/30" : ""}`}
-        onClick={() => expandable && setOpen(!open)}
+
       >
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1 select-none">
-          {title}
-          {expandable && (open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+          {expandable ? (
+            <button type="button" className="flex items-center gap-1 text-left" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} ${title} breakdown`}>
+              {title}
+              {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+          ) : title}
         </CardTitle>
         <Icon className={`h-4 w-4 ${color}`} />
       </CardHeader>
@@ -104,7 +108,7 @@ function BreakdownCard({
           <div className="mt-4 space-y-2 border-t pt-2">
             {Object.entries(breakdown).map(([method, amount]) => (
               <div key={method} className="flex justify-between text-sm">
-                <span className="text-muted-foreground capitalize">{method.toLowerCase()}</span>
+                <span className="text-muted-foreground">{method}</span>
                 <span className="font-medium">{formatMoney(amount)} OMR</span>
               </div>
             ))}
@@ -211,7 +215,7 @@ export function ReportsDashboard() {
           value={`${formatMoney(stats?.totalExpense ?? 0)} OMR`}
           icon={TrendingUp}
           color="text-red-500"
-          breakdown={stats?.expenseBySource}
+          breakdown={stats?.expenseByMethod}
           detailsHref={getDetailsUrl("/expenses")}
         />
         <BreakdownCard

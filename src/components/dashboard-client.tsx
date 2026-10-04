@@ -54,7 +54,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
 
   const stats = [
     { title: "Today Job Card Sales", value: <Currency amount={realStats.dailyJobCardSales} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Total job card sale value today" },
-    { title: "Today Income Received", value: <Currency amount={realStats.dailyIncome} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Customer payments and direct sales received today" },
+    { title: "Today Income Received", value: <Currency amount={realStats.dailyIncome} size={1.2} maximumFractionDigits={3} />, icon: () => <OmanIcon size={1.2} className="text-muted-foreground" />, description: "Payments for job cards dated today and today's direct sales" },
     { title: "Today Purchase", value: <Currency amount={realStats.dailyPurchase} size={1.2} maximumFractionDigits={3} />, icon: Package, description: "Total purchase bills created today" },
     { title: "Today Direct Purchase Paid", value: <Currency amount={realStats.dailyDirectPurchasePaid} size={1.2} maximumFractionDigits={3} />, icon: CreditCard, description: "Direct payment made with a new purchase today" },
     { title: "Today Direct Supplier Paid", value: <Currency amount={realStats.dailyDirectSupplierPaid} size={1.2} maximumFractionDigits={3} />, icon: Truck, description: "Direct payment made to suppliers today" },

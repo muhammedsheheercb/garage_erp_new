@@ -6,6 +6,7 @@ import { createDirectSale, updateDirectSale } from "../actions"
 import { DirectSalePartPicker } from "./direct-sale-part-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Trash } from "lucide-react"
 import { toast } from "sonner"
@@ -19,6 +20,7 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
   const [customer, setCustomer] = useState({ vehicleNumber: initialData?.vehicleNumber || "", customerName: initialData?.customerName || "", customerMobile: initialData?.customerMobile || "" })
   const [saleDate, setSaleDate] = useState(() => initialData?.saleDate ? new Date(initialData.saleDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10))
   const [rows, setRows] = useState<Row[]>(() => initialData?.items?.map((item: any) => ({ batchId: item.batchId, label: `${item.batch.inventory.itemName} — Batch ${item.batch.batchNumber}`, available: item.quantity, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat })) || [])
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">(initialData?.paymentMethod || "CASH")
   const [discount, setDiscount] = useState(initialData?.discount || 0)
   const [errors, setErrors] = useState<Errors>({})
   const subtotal = rows.reduce((sum, row) => sum + row.quantity * row.salesPrice, 0)
@@ -28,7 +30,7 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
   const updateRow = (index: number, patch: Partial<Row>) => setRows(current => current.map((row, rowIndex) => rowIndex !== index ? row : { ...row, ...patch, quantity: patch.quantity === undefined ? row.quantity : Math.min(Math.max(1, patch.quantity), row.available) }))
   const mutation = useMutation({
     mutationFn: async () => {
-      const data = { ...customer, saleDate, discount: billDiscount, items: rows.map(row => ({ batchId: row.batchId, quantity: row.quantity, purchasePrice: row.purchasePrice, salesPrice: row.salesPrice, vat: row.vat })) }
+      const data = { ...customer, saleDate, paymentMethod, discount: billDiscount, items: rows.map(row => ({ batchId: row.batchId, quantity: row.quantity, purchasePrice: row.purchasePrice, salesPrice: row.salesPrice, vat: row.vat })) }
       if (initialData) await updateDirectSale(initialData.id, data); else await createDirectSale(data)
       return { success: true }
     },
@@ -49,7 +51,7 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
     <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Products</h3><DirectSalePartPicker onSelect={addPart} /></div>
     {errors.items && <p className="text-sm text-destructive">{errors.items}</p>}
     {!rows.length ? <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">No products added yet. Select <b>Add Part</b> to begin the bill.</div> : <ProductRows rows={rows} updateRow={updateRow} removeRow={index => setRows(rows.filter((_, rowIndex) => rowIndex !== index))} />}
-    <div className="ml-auto w-full max-w-md space-y-2 rounded-lg bg-muted/50 p-4 text-sm"><div className="flex justify-between"><span>Subtotal</span><span>{money(subtotal)}</span></div><div className="flex items-center justify-between gap-3 text-destructive"><Label htmlFor="sale-discount">Discount</Label><Input id="sale-discount" className="h-9 w-32 text-right" type="number" min="0" max={subtotal} step="any" value={discount} onChange={event => setDiscount(Math.min(Math.max(0, Number(event.target.value)), subtotal))} /></div><div className="flex justify-between"><span>Total VAT</span><span>{money(vat)}</span></div><div className="flex justify-between border-t pt-2 text-base font-bold"><span>Grand Total</span><span>{money(total)}</span></div></div>
+    <div className="ml-auto w-full max-w-md space-y-2 rounded-lg bg-muted/50 p-4 text-sm"><div className="space-y-2 pb-2"><Label htmlFor="sale-payment-method">Payment Method</Label><Select value={paymentMethod} onValueChange={value => { if (value === "CASH" || value === "CARD" || value === "TRANSFER") setPaymentMethod(value) }}><SelectTrigger id="sale-payment-method" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CASH">Cash</SelectItem><SelectItem value="CARD">Card</SelectItem><SelectItem value="TRANSFER">Bank Transfer</SelectItem></SelectContent></Select></div><div className="flex justify-between"><span>Subtotal</span><span>{money(subtotal)}</span></div><div className="flex items-center justify-between gap-3 text-destructive"><Label htmlFor="sale-discount">Discount</Label><Input id="sale-discount" className="h-9 w-32 text-right" type="number" min="0" max={subtotal} step="any" value={discount} onChange={event => setDiscount(Math.min(Math.max(0, Number(event.target.value)), subtotal))} /></div><div className="flex justify-between"><span>Total VAT</span><span>{money(vat)}</span></div><div className="flex justify-between border-t pt-2 text-base font-bold"><span>Grand Total</span><span>{money(total)}</span></div></div>
     <div className="sticky bottom-0 -mx-4 flex justify-end border-t bg-popover px-4 pt-3"><Button className="min-h-11 w-full sm:w-auto" disabled={mutation.isPending} onClick={submit}>{mutation.isPending ? "Saving..." : initialData ? "Update Direct Sale" : "Complete Direct Sale"}</Button></div>
   </div>
 }

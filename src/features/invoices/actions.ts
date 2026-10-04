@@ -100,7 +100,6 @@ export async function createInvoice(data: InvoiceFormValues) {
       partsTotal: true,
       advancePaid: true,
       payments: {
-        where: { method: "ADVANCE" },
         select: { id: true },
       },
     },

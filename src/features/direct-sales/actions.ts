@@ -11,6 +11,7 @@ const saleSchema = z.object({
   customerName: z.string().trim().optional().default(""),
   customerMobile: z.string().trim().optional().default(""),
   saleDate: z.union([z.literal(""), z.string().date("Sale date is invalid.")]).optional().default(""),
+  paymentMethod: z.enum(["CASH", "CARD", "TRANSFER"]),
   discount: z.coerce.number().min(0, "Discount cannot be negative.").default(0),
   items: z.array(z.object({
     batchId: z.string().min(1), quantity: z.coerce.number().int().positive(),
@@ -103,7 +104,7 @@ export async function createDirectSale(data: SaleInput) {
   const { rows, ...summary } = totals
   const sale = await prisma.$transaction(async tx => {
     await assertAndDeduct(tx, rows)
-    return tx.directSale.create({ data: { vehicleNumber: parsed.vehicleNumber, customerName: parsed.customerName, customerMobile: parsed.customerMobile, saleDate, ...summary, createdBy, items: { create: rows.map(item => ({ batchId: item.batchId, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat, discount: item.discount, totalAmount: item.totalAmount })) } } })
+    return tx.directSale.create({ data: { vehicleNumber: parsed.vehicleNumber, customerName: parsed.customerName, customerMobile: parsed.customerMobile, saleDate, paymentMethod: parsed.paymentMethod, ...summary, createdBy, items: { create: rows.map(item => ({ batchId: item.batchId, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat, discount: item.discount, totalAmount: item.totalAmount })) } } })
   })
   revalidateDirectSalePaths(); return sale
 }
@@ -117,7 +118,7 @@ export async function updateDirectSale(id: string, data: SaleInput) {
     if (!existing) throw new Error("Direct sale not found.")
     for (const item of existing.items) await tx.inventoryBatch.update({ where: { id: item.batchId }, data: { quantity: { increment: item.quantity } } })
     await assertAndDeduct(tx, rows)
-    await tx.directSale.update({ where: { id }, data: { vehicleNumber: parsed.vehicleNumber, customerName: parsed.customerName, customerMobile: parsed.customerMobile, saleDate, ...summary, items: { deleteMany: {}, create: rows.map(item => ({ batchId: item.batchId, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat, discount: item.discount, totalAmount: item.totalAmount })) } } })
+    await tx.directSale.update({ where: { id }, data: { vehicleNumber: parsed.vehicleNumber, customerName: parsed.customerName, customerMobile: parsed.customerMobile, saleDate, paymentMethod: parsed.paymentMethod, ...summary, items: { deleteMany: {}, create: rows.map(item => ({ batchId: item.batchId, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat, discount: item.discount, totalAmount: item.totalAmount })) } } })
   })
   revalidateDirectSalePaths(); return { success: true }
 }

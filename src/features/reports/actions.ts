@@ -1,8 +1,19 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths, format, subDays, eachDayOfInterval, eachMonthOfInterval } from "date-fns"
+import { emptyPaymentBreakdown, paymentChannel, receiptMethod, receiptMethodLabel } from "@/lib/payment-method"
 import { formatDisplayDate } from "@/lib/date-format"
+
+// Income belongs to the saved payment date, including backdated receipts and advances.
+function paymentReportFilter(date: Prisma.DateTimeFilter): Prisma.PaymentWhereInput {
+  return { paymentDate: date }
+}
+
+function paymentReportDate(payment: { paymentDate: Date }) {
+  return payment.paymentDate
+}
 
 export async function getDashboardStats() {
   const now = new Date()
@@ -23,7 +34,10 @@ export async function getDashboardStats() {
     settlements,
     pendingJobs,
   ] = await Promise.all([
-    prisma.payment.aggregate({ where: { createdAt: today }, _sum: { amount: true } }),
+    prisma.payment.aggregate({
+      where: paymentReportFilter(today),
+      _sum: { amount: true },
+    }),
     prisma.jobCard.aggregate({
       where: { date: today, status: { not: "CANCELLED" } },
       _sum: { grandTotal: true },
@@ -100,8 +114,8 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     
     const [payments, directSales, expenses, paymeterExpenses] = await Promise.all([
       prisma.payment.findMany({
-        where: { createdAt: { gte: startOfDay(startDate), lte: endOfDay(now) } },
-        select: { amount: true, createdAt: true }
+        where: paymentReportFilter({ gte: startOfDay(startDate), lte: endOfDay(now) }),
+        select: { amount: true, paymentDate: true }
       }),
       prisma.directSale.findMany({ where: { saleDate: { gte: startOfDay(startDate), lte: endOfDay(now) } }, select: { grandTotal: true, saleDate: true } }),
       prisma.expense.findMany({
@@ -117,7 +131,7 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     return interval.map(date => {
       const dateString = formatDisplayDate(date)
       
-      const revenue = payments.filter(p => formatDisplayDate(p.createdAt) === dateString).reduce((sum, p) => sum + p.amount, 0)
+      const revenue = payments.filter(p => formatDisplayDate(paymentReportDate(p)) === dateString).reduce((sum, p) => sum + p.amount, 0)
         + directSales.filter(s => formatDisplayDate(s.saleDate) === dateString).reduce((sum, s) => sum + s.grandTotal, 0)
       
       const regularExpense = expenses.filter(e => formatDisplayDate(e.date) === dateString)
@@ -137,8 +151,8 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
 
     const [payments, directSales, expenses, paymeterExpenses] = await Promise.all([
       prisma.payment.findMany({
-        where: { createdAt: { gte: startOfMonth(startDate), lte: endOfMonth(now) } },
-        select: { amount: true, createdAt: true }
+        where: paymentReportFilter({ gte: startOfMonth(startDate), lte: endOfMonth(now) }),
+        select: { amount: true, paymentDate: true }
       }),
       prisma.directSale.findMany({ where: { saleDate: { gte: startOfMonth(startDate), lte: endOfMonth(now) } }, select: { grandTotal: true, saleDate: true } }),
       prisma.expense.findMany({
@@ -154,7 +168,7 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
     return interval.map(date => {
       const dateString = format(date, 'MM/yyyy')
       
-      const revenue = payments.filter(p => format(p.createdAt, 'MM/yyyy') === dateString).reduce((sum, p) => sum + p.amount, 0)
+      const revenue = payments.filter(p => format(paymentReportDate(p), 'MM/yyyy') === dateString).reduce((sum, p) => sum + p.amount, 0)
         + directSales.filter(s => format(s.saleDate, 'MM/yyyy') === dateString).reduce((sum, s) => sum + s.grandTotal, 0)
       
       const regularExpense = expenses.filter(e => format(e.date, 'MM/yyyy') === dateString)
@@ -178,20 +192,21 @@ export async function getDetailedReportData(type: 'revenue' | 'expenses' | 'jobs
   
   if (type === 'revenue') {
     const data = await prisma.payment.findMany({
-      where: { createdAt: { gte: startDate } },
+      where: paymentReportFilter({ gte: startDate }),
       include: {
+        jobCard: { include: { customer: true, vehicle: true } },
         invoice: {
           include: { customer: true, jobCard: { include: { vehicle: true } } }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { paymentDate: 'desc' }
     })
     
     return data.map((p: any) => ({
       id: p.id,
-      date: formatDisplayDate(p.createdAt, true),
+      date: formatDisplayDate(paymentReportDate(p), true),
       amount: p.amount,
-      method: p.method,
+      method: receiptMethodLabel(p),
       customer: p.invoice?.customer.name || p.jobCard?.customer.name || '-',
       vehicle: p.invoice?.jobCard.vehicle.plateNumber || p.jobCard?.vehicle.plateNumber || '-',
       invoice: p.invoice ? `INV-${p.invoice.id.split('-')[0].toUpperCase()}` : `JOB-${p.jobCard?.id.split('-')[0].toUpperCase() || '-'}`
@@ -332,8 +347,8 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
 
   // 1. Total Income & breakdown
   const [payments, directSales, completedJobCards] = await Promise.all([prisma.payment.findMany({
-    where: { createdAt: dateFilter },
-    select: { amount: true, method: true }
+    where: paymentReportFilter(dateFilter),
+    select: { amount: true, method: true, receivedMethod: true }
   }),
   prisma.directSale.findMany({
     where: { saleDate: dateFilter },
@@ -360,14 +375,16 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
     },
   })])
   let totalIncome = 0;
-  const incomeByMethod: Record<string, number> = {};
+  const incomeByMethod = emptyPaymentBreakdown();
   for (const p of payments) {
     totalIncome += p.amount;
-    incomeByMethod[p.method] = (incomeByMethod[p.method] || 0) + p.amount;
+    const channel = paymentChannel(receiptMethod(p));
+    incomeByMethod[channel] = (incomeByMethod[channel] || 0) + p.amount;
   }
   const directSaleIncome = directSales.reduce((sum, sale) => sum + sale.grandTotal, 0)
   totalIncome += directSaleIncome
-  if (directSaleIncome) incomeByMethod["Direct Sale"] = directSaleIncome
+  // Direct sales have no saved payment channel; do not infer Cash.
+  if (directSaleIncome) incomeByMethod["Other / Unspecified"] = (incomeByMethod["Other / Unspecified"] || 0) + directSaleIncome
 
   // A payment discount reduces labour first. If it is larger than the
   // labour value, only the remainder reduces parts sales and parts profit.
@@ -400,16 +417,16 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
   const directSalePartsProfit = directSalePartsSales - directSalePartsCost
   const totalPartsProfit = jobCardPartsProfit + directSalePartsProfit
 
-  // 2. Regular expenses. Paymeter-funded expenses are counted below as
-  // paymeter outflows, so they must not be counted twice.
+  // 2. Count each expense once. Paymeter outflows below are a separate KPI.
   const expenses = await prisma.expense.findMany({
     where: { date: dateFilter },
     select: { amount: true, paymentMethod: true, paymeterId: true }
   })
   const totalExpense = expenses.reduce((sum, expense) => sum + expense.amount, 0)
-  const expenseByMethod: Record<string, number> = {}
+  const expenseByMethod = emptyPaymentBreakdown()
   for (const expense of expenses) {
-    expenseByMethod[expense.paymentMethod] = (expenseByMethod[expense.paymentMethod] || 0) + expense.amount
+    const channel = paymentChannel(expense.paymentMethod)
+    expenseByMethod[channel] = (expenseByMethod[channel] || 0) + expense.amount
   }
   const allExpenses = await prisma.expense.findMany({
     where: { date: dateFilter },
@@ -458,16 +475,16 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
     paymeterByName[name] = (paymeterByName[name] || 0) + payment.amount
   }
 
-  // Kept for the existing purchase KPI and its breakdown.
+  // Total Purchase measures bill value, grouped by its selected funding method.
   const purchases = await prisma.purchase.findMany({
     where: { purchaseDate: dateFilter },
     include: { paymentMethod: true }
   })
   let totalPurchase = 0;
-  const purchaseByMethod: Record<string, number> = {};
+  const purchaseByMethod = emptyPaymentBreakdown();
   for (const p of purchases) {
     totalPurchase += p.grandTotal;
-    const method = p.paymentMethod?.name || 'Unknown';
+    const method = paymentChannel(p.paymentMethod?.name);
     purchaseByMethod[method] = (purchaseByMethod[method] || 0) + p.grandTotal;
   }
 
@@ -534,13 +551,14 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
 
   const [incomeList, directSaleList, expenseList, purchaseList, paymeterExpensesList, paymeterPaymentsList] = await Promise.all([
     prisma.payment.findMany({
-      where: { createdAt: dateFilter },
+      where: paymentReportFilter(dateFilter),
       include: {
+        jobCard: { include: { customer: true, vehicle: true } },
         invoice: {
           include: { customer: true, jobCard: { include: { vehicle: true } } }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { paymentDate: 'desc' }
     }),
     prisma.directSale.findMany({
       where: { saleDate: dateFilter },
@@ -571,9 +589,9 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
 
   const incomeDetails = [...incomeList.map((p: any) => ({
     id: p.id,
-    date: formatDisplayDate(p.createdAt, true),
+    date: formatDisplayDate(paymentReportDate(p), true),
     amount: p.amount,
-    method: p.method,
+    method: receiptMethodLabel(p),
     customer: p.invoice?.customer.name || p.jobCard?.customer.name || '-',
     vehicle: p.invoice?.jobCard?.vehicle?.plateNumber || p.jobCard?.vehicle?.plateNumber || '-',
     invoice: p.invoice ? `INV-${p.invoice.id.split('-')[0].toUpperCase()}` : `JOB-${p.jobCard?.id.split('-')[0].toUpperCase() || '-'}`,

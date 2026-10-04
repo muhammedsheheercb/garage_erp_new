@@ -75,6 +75,9 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
       queryClient.invalidateQueries({ queryKey: ['pending-jobcards'] })
       queryClient.invalidateQueries({ queryKey: ['pending-jobcards-dropdown'] })
       queryClient.invalidateQueries({ queryKey: ['jobcards'] })
+      queryClient.invalidateQueries({ queryKey: ['report-totals'] })
+      queryClient.invalidateQueries({ queryKey: ['report-details'] })
+      queryClient.invalidateQueries({ queryKey: ['report-chart'] })
       onSuccess?.()
     },
     onError: (error: any) => {

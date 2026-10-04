@@ -277,7 +277,8 @@ model Payment {
   grandTotalAtPayment Float?
   totalPaidAtPayment  Float?
   balanceAfterPayment Float?
-  method    String // CASH, CARD, TRANSFER
+  method    String // CASH, CARD, TRANSFER, ADVANCE
+  receivedMethod String? // Actual channel for ADVANCE receipts: CASH, CARD or TRANSFER
   paymentDate DateTime @default(now())
   createdBy String?
   // Kept for payments created before Job Cards became directly payable.
@@ -339,6 +340,7 @@ model InventoryBatch {
 }
 
 model DirectSale {
+  paymentMethod  String? // CASH, CARD, TRANSFER; null for historical sales
   id             String           @id @default(uuid())
   vehicleNumber  String
   customerName   String

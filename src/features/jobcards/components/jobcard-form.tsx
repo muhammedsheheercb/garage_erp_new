@@ -132,6 +132,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       tax: 0,
       grandTotal: initialData?.grandTotal || 0,
       advancePaid: initialData?.advancePaid || 0,
+      advancePaymentMethod: initialData?.payments?.[0]?.receivedMethod || "CASH",
     },
   });
 
@@ -216,6 +217,12 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
         initialData?.id ? t.jobcards.jobCardUpdated : t.jobcards.jobCardCreated,
       );
       queryClient.invalidateQueries({ queryKey: ["jobcards"] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-jobcards"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-jobcards-dropdown"] });
+      queryClient.invalidateQueries({ queryKey: ["report-totals"] });
+      queryClient.invalidateQueries({ queryKey: ["report-details"] });
+      queryClient.invalidateQueries({ queryKey: ["report-chart"] });
       queryClient.invalidateQueries({ queryKey: ["mechanics"] });
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
@@ -1120,6 +1127,29 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                 </p>
               )}
             </div>
+
+            {advancePaid > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="advancePaymentMethod">Payment Method</Label>
+                <Controller
+                  name="advancePaymentMethod"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || "CASH"} onValueChange={field.onChange}>
+                      <SelectTrigger id="advancePaymentMethod" className="w-full" aria-invalid={Boolean(errors.advancePaymentMethod)}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CASH">{t.payments.cash}</SelectItem>
+                        <SelectItem value="CARD">{t.payments.card}</SelectItem>
+                        <SelectItem value="TRANSFER">{t.payments.bankTransfer}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.advancePaymentMethod && <p className="text-xs text-destructive">{errors.advancePaymentMethod.message}</p>}
+              </div>
+            )}
 
             <div className="flex justify-between items-center font-semibold text-base text-primary">
               <span>{t.jobcards.balanceAmount}:</span>

@@ -78,6 +78,7 @@ export async function getJobCardById(id: string) {
       parts: {
         include: { batch: { include: { inventory: true } }, inventory: true }
       },
+      payments: { where: { method: "ADVANCE" }, select: { receivedMethod: true } },
       quotation: { select: { id: true, customerId: true, vehicleId: true } }
     }
   })
@@ -205,6 +206,7 @@ export async function createJobCard(data: JobCardFormValues) {
         create: {
           amount: parsed.advancePaid,
           method: "ADVANCE",
+          receivedMethod: parsed.advancePaymentMethod || "CASH",
           createdBy: creatorName,
           grandTotalAtPayment: parsed.grandTotal,
           totalPaidAtPayment: parsed.advancePaid,
@@ -271,11 +273,40 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
     }
   }
   
-  // First, delete existing services and parts
-  await prisma.$transaction([
-    prisma.jobCardService.deleteMany({ where: { jobCardId: id } }),
-    prisma.jobCardPart.deleteMany({ where: { jobCardId: id } }),
-    prisma.jobCard.update({
+  // Save the advance receipt together with the job card so reports cannot miss it.
+  const creatorName = await getCreatorName()
+  await prisma.$transaction(async (tx) => {
+    const advancePayments = await tx.payment.findMany({
+      where: { jobCardId: id, method: "ADVANCE" },
+      orderBy: { createdAt: "asc" },
+    })
+    if (advancePayments.length > 1) {
+      throw new Error("This job card has multiple advance receipts. Please review its payments before changing the advance.")
+    }
+    const advancePayment = advancePayments[0]
+    if (parsed.advancePaid > 0) {
+      const receipt = {
+        receivedMethod: parsed.advancePaymentMethod || "CASH",
+        amount: parsed.advancePaid,
+        grandTotalAtPayment: parsed.grandTotal,
+        totalPaidAtPayment: parsed.advancePaid,
+        balanceAfterPayment: Math.max(0, parsed.grandTotal - parsed.advancePaid),
+      }
+      if (advancePayment) {
+        if (advancePayment.amount !== parsed.advancePaid || advancePayment.receivedMethod !== parsed.advancePaymentMethod) {
+          await tx.payment.update({ where: { id: advancePayment.id }, data: receipt })
+        }
+      } else {
+        await tx.payment.create({
+          data: { ...receipt, jobCardId: id, method: "ADVANCE", createdBy: creatorName },
+        })
+      }
+    } else if (advancePayment) {
+      await tx.payment.delete({ where: { id: advancePayment.id } })
+    }
+    await tx.jobCardService.deleteMany({ where: { jobCardId: id } })
+    await tx.jobCardPart.deleteMany({ where: { jobCardId: id } })
+    await tx.jobCard.update({
       where: { id },
       data: {
         customerId: parsed.customerId,
@@ -315,8 +346,10 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
         }
       }
     })
-  ])
+  })
   
+  revalidatePath('/payments')
+  revalidatePath('/')
   revalidatePath('/jobcards')
   revalidatePath('/vehicles')
   revalidatePath('/customers')

@@ -51,6 +51,7 @@ export const jobCardSchema = z.object({
   discount: z.number().finite("Discount is required").min(0, "Discount cannot be negative"),
   tax: z.number().finite("Tax is required").min(0, "Tax cannot be negative"),
   grandTotal: z.number().finite().min(0, "Grand total cannot be negative"),
+  advancePaymentMethod: z.enum(["CASH", "CARD", "TRANSFER"]).optional(),
   advancePaid: z.number().finite("Advance paid is required").min(0, "Advance paid cannot be negative"),
 }).superRefine((data, ctx) => {
   // Date-only values sort lexicographically in ISO (yyyy-MM-dd) form.

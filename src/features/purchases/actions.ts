@@ -35,9 +35,9 @@ export async function getPurchases(page = 1, search = "", fromDate?: string, toD
   } : {};
 
   if (fromDate || toDate) {
-    where.createdAt = {};
-    if (fromDate) where.createdAt.gte = new Date(fromDate);
-    if (toDate) where.createdAt.lte = new Date(toDate);
+    where.purchaseDate = {};
+    if (fromDate) where.purchaseDate.gte = new Date(fromDate);
+    if (toDate) where.purchaseDate.lte = new Date(toDate);
   }
 
   const [data, total] = await Promise.all([

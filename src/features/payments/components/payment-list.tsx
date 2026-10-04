@@ -16,6 +16,7 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
 import { formatDisplayDate } from "@/lib/date-format"
+import { receiptMethod, receiptMethodLabel } from "@/lib/payment-method"
 import { toast } from "sonner"
 
 export function PaymentList() {
@@ -181,8 +182,8 @@ export function PaymentList() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
-                          {getMethodIcon(payment.method)}
-                          {paymentMethodLabels[payment.method] || payment.method}
+                          {getMethodIcon(receiptMethod(payment) || "")}
+                          {payment.method === "ADVANCE" ? receiptMethodLabel(payment) : paymentMethodLabels[payment.method] || payment.method}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm font-medium text-muted-foreground">
