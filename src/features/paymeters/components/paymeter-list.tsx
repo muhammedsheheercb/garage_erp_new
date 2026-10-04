@@ -16,7 +16,7 @@ import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
-import { endOfDay } from "date-fns"
+import { endOfDay, format } from "date-fns"
 import { formatDisplayDate } from "@/lib/date-format"
 
 import { useSearchParams } from "next/navigation"
@@ -46,6 +46,8 @@ export function PaymeterList() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingPaymeter, setEditingPaymeter] = useState<any>(null)
   const [settlingPaymeter, setSettlingPaymeter] = useState<any>(null)
+  const [settlementDates, setSettlementDates] = useState<Record<string, string>>({})
+  const todayDate = format(new Date(), "yyyy-MM-dd")
   const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({})
   const [paymeterPage, setPaymeterPage] = useState(1)
   const [search, setSearch] = useState("")
@@ -93,7 +95,7 @@ export function PaymeterList() {
   })
 
   const payPurchaseMutation = useMutation({
-    mutationFn: ({ purchaseId, amount }: { purchaseId: string, amount: number }) => payPurchase(purchaseId, amount),
+    mutationFn: ({ purchaseId, amount, date }: { purchaseId: string, amount: number, date: string }) => payPurchase(purchaseId, amount, date),
     onSuccess: (_data, variables) => {
       toast.success(t.purchases.purchasePaymentAdded)
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
@@ -106,7 +108,7 @@ export function PaymeterList() {
   })
 
   const payExpenseMutation = useMutation({
-    mutationFn: ({ expenseId, amount }: { expenseId: string, amount: number }) => payExpense(expenseId, amount),
+    mutationFn: ({ expenseId, amount, date }: { expenseId: string, amount: number, date: string }) => payExpense(expenseId, amount, date),
     onSuccess: (_data, variables) => {
       toast.success("Payment added")
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
@@ -119,7 +121,7 @@ export function PaymeterList() {
   })
 
   const paySupplierMutation = useMutation({
-    mutationFn: ({ paymentId, amount }: { paymentId: string, amount: number }) => payPurchasePayment(paymentId, amount),
+    mutationFn: ({ paymentId, amount, date }: { paymentId: string, amount: number, date: string }) => payPurchasePayment(paymentId, amount, date),
     onSuccess: (_data, variables) => {
       toast.success("Payment added")
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
@@ -239,7 +241,7 @@ export function PaymeterList() {
                                                 e.preventDefault()
                                                 const amount = parseFloat(settlementAmounts[purchase.id] || "0")
                                                 if (amount > 0 && amount <= ((purchase.paymeterAdvanceAmount || 0) - (purchase.paymeterReimbursed || 0))) {
-                                                  payPurchaseMutation.mutate({ purchaseId: purchase.id, amount })
+                                                  payPurchaseMutation.mutate({ purchaseId: purchase.id, amount, date: settlementDates[purchase.id] ?? todayDate })
                                                 }
                                               }} className="flex items-center gap-2 justify-end">
                                                 <Input
@@ -254,7 +256,17 @@ export function PaymeterList() {
                                                   value={settlementAmounts[purchase.id] ?? ""}
                                                   onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [purchase.id]: event.target.value }))}
                                                 />
-                                                <Button type="submit" size="sm" disabled={payPurchaseMutation.isPending}>{t.payments.pay}</Button>
+                                                <Input
+                                                    name="settlementDate"
+                                                    aria-label="Payment date"
+                                                    type="date"
+                                                    required
+                                                    max={todayDate}
+                                                    className="w-36 h-8"
+                                                    value={settlementDates[purchase.id] ?? todayDate}
+                                                    onChange={(event) => setSettlementDates((dates) => ({ ...dates, [purchase.id]: event.target.value }))}
+                                                  />
+                                                  <Button type="submit" size="sm" disabled={payPurchaseMutation.isPending}>{t.payments.pay}</Button>
                                               </form>
                                             </TableCell>
                                           </TableRow>
@@ -308,7 +320,7 @@ export function PaymeterList() {
                                                   e.preventDefault()
                                                   const amount = parseFloat(settlementAmounts[expense.id] || "0")
                                                   if (amount > 0 && amount <= expense.pendingAmount) {
-                                                    payExpenseMutation.mutate({ expenseId: expense.id, amount })
+                                                    payExpenseMutation.mutate({ expenseId: expense.id, amount, date: settlementDates[expense.id] ?? todayDate })
                                                   }
                                                 }} className="flex items-center gap-2 justify-end">
                                                   <Input
@@ -322,6 +334,16 @@ export function PaymeterList() {
                                                     placeholder="0"
                                                     value={settlementAmounts[expense.id] ?? ""}
                                                     onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [expense.id]: event.target.value }))}
+                                                  />
+                                                  <Input
+                                                    name="settlementDate"
+                                                    aria-label="Payment date"
+                                                    type="date"
+                                                    required
+                                                    max={todayDate}
+                                                    className="w-36 h-8"
+                                                    value={settlementDates[expense.id] ?? todayDate}
+                                                    onChange={(event) => setSettlementDates((dates) => ({ ...dates, [expense.id]: event.target.value }))}
                                                   />
                                                   <Button type="submit" size="sm" disabled={payExpenseMutation.isPending}>{t.payments.pay}</Button>
                                                 </form>
@@ -378,7 +400,7 @@ export function PaymeterList() {
                                                   e.preventDefault()
                                                   const amount = parseFloat(settlementAmounts[payment.id] || "0")
                                                   if (amount > 0 && amount <= payment.pendingAmount) {
-                                                    paySupplierMutation.mutate({ paymentId: payment.id, amount })
+                                                    paySupplierMutation.mutate({ paymentId: payment.id, amount, date: settlementDates[payment.id] ?? todayDate })
                                                   }
                                                 }} className="flex items-center gap-2 justify-end">
                                                   <Input
@@ -392,6 +414,16 @@ export function PaymeterList() {
                                                     placeholder="0"
                                                     value={settlementAmounts[payment.id] ?? ""}
                                                     onChange={(event) => setSettlementAmounts((amounts) => ({ ...amounts, [payment.id]: event.target.value }))}
+                                                  />
+                                                  <Input
+                                                    name="settlementDate"
+                                                    aria-label="Payment date"
+                                                    type="date"
+                                                    required
+                                                    max={todayDate}
+                                                    className="w-36 h-8"
+                                                    value={settlementDates[payment.id] ?? todayDate}
+                                                    onChange={(event) => setSettlementDates((dates) => ({ ...dates, [payment.id]: event.target.value }))}
                                                   />
                                                   <Button type="submit" size="sm" disabled={paySupplierMutation.isPending}>{t.payments.pay}</Button>
                                                 </form>

@@ -44,7 +44,7 @@ export function VehicleForm({ initialData, initialCustomerId, defaultFuelType, o
       plateNumber: initialData?.plateNumber || "",
       brand: initialData?.brand || "",
       model: initialData?.model || "",
-      fuelType: initialData?.fuelType || defaultFuelType || "",
+      fuelType: initialData?.fuelType || defaultFuelType || "Petrol",
       year: initialData?.year || new Date().getFullYear(),
       customerId: initialData?.customerId || initialCustomerId || "",
     }
@@ -203,9 +203,9 @@ export function VehicleForm({ initialData, initialCustomerId, defaultFuelType, o
             name="fuelType"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t.vehicles.selectFuelType}>
-                    {(value: string) => fuelTypeLabels[value] || value}
+                <SelectTrigger id="fuelType" className="w-full">
+                  <SelectValue>
+                    {fuelTypeLabels[field.value] || field.value || t.vehicles.selectFuelType}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>

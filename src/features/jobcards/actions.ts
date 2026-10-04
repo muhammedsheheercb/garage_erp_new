@@ -179,6 +179,7 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
 export async function createJobCard(data: JobCardFormValues) {
   await requirePagePermission("jobcards")
   const parsed = jobCardSchema.parse(data)
+  const jobCardDate = new Date(parsed.date + "T12:00:00")
   const creatorName = await getCreatorName()
   
   const jobCard = await prisma.jobCard.create({
@@ -191,7 +192,7 @@ export async function createJobCard(data: JobCardFormValues) {
       workDone: parsed.workDone || null,
       notes: parsed.notes || null,
       createdBy: creatorName,
-      date: parsed.date ? new Date(parsed.date) : new Date(),
+      date: jobCardDate,
       expectedFinishDate: parsed.expectedFinishDate ? new Date(parsed.expectedFinishDate) : null,
       serviceTotal: parsed.serviceTotal,
       partsTotal: parsed.partsTotal,
@@ -204,6 +205,7 @@ export async function createJobCard(data: JobCardFormValues) {
       vehicleKm: parsed.vehicleKm,
       payments: parsed.advancePaid > 0 ? {
         create: {
+          paymentDate: jobCardDate,
           amount: parsed.advancePaid,
           method: "ADVANCE",
           receivedMethod: parsed.advancePaymentMethod || "CASH",
@@ -248,6 +250,7 @@ export async function createJobCard(data: JobCardFormValues) {
 export async function updateJobCard(id: string, data: JobCardFormValues) {
   await requirePagePermission("jobcards")
   const parsed = jobCardSchema.parse(data)
+  const jobCardDate = new Date(parsed.date + "T12:00:00")
   
   // Update inventory stock ONLY if status changes to COMPLETED
   const existingJobCard = await prisma.jobCard.findUnique({
@@ -286,6 +289,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
     const advancePayment = advancePayments[0]
     if (parsed.advancePaid > 0) {
       const receipt = {
+        paymentDate: jobCardDate,
         receivedMethod: parsed.advancePaymentMethod || "CASH",
         amount: parsed.advancePaid,
         grandTotalAtPayment: parsed.grandTotal,
@@ -293,7 +297,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
         balanceAfterPayment: Math.max(0, parsed.grandTotal - parsed.advancePaid),
       }
       if (advancePayment) {
-        if (advancePayment.amount !== parsed.advancePaid || advancePayment.receivedMethod !== parsed.advancePaymentMethod) {
+        if (advancePayment.amount !== parsed.advancePaid || advancePayment.receivedMethod !== receipt.receivedMethod || advancePayment.paymentDate.getTime() !== jobCardDate.getTime()) {
           await tx.payment.update({ where: { id: advancePayment.id }, data: receipt })
         }
       } else {
@@ -316,7 +320,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
         complaint: parsed.complaint,
         workDone: parsed.workDone || null,
         notes: parsed.notes || null,
-        date: parsed.date ? new Date(parsed.date) : new Date(),
+        date: jobCardDate,
         expectedFinishDate: parsed.expectedFinishDate ? new Date(parsed.expectedFinishDate) : null,
         serviceTotal: parsed.serviceTotal,
         partsTotal: parsed.partsTotal,

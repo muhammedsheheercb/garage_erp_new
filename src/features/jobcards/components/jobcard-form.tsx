@@ -750,7 +750,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
               <Label htmlFor="date">
                 {t.jobcards.date || "Date"} <span className="text-destructive">*</span>
               </Label>
-              <Input id="date" type="date" {...register("date")} />
+              <Input id="date" type="date" max={format(new Date(), "yyyy-MM-dd")} {...register("date")} />
               {errors.date && (
                 <p className="text-sm text-destructive">
                   {errors.date.message}

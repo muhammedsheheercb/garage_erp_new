@@ -1,6 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { parseSettlementDate } from "@/lib/settlement-date"
 import { PaymeterFormValues, paymeterSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { userPaymeterWhere } from "@/lib/paymeter"
@@ -249,7 +250,8 @@ export async function settlePaymeter(id: string, amount: number) {
   return paymeter
 }
 
-export async function payPurchasePayment(paymentId: string, amount: number) {
+export async function payPurchasePayment(paymentId: string, amount: number, paymentDate: string) {
+  const date = parseSettlementDate(paymentDate)
   if (amount <= 0) throw new Error("Amount must be greater than 0")
   
   const payment = await prisma.purchasePayment.findUnique({
@@ -278,10 +280,12 @@ export async function payPurchasePayment(paymentId: string, amount: number) {
       data: { spentAmount: { decrement: amount } }
     })
     await tx.paymeterSettlement.create({
-      data: { paymeterId: payment.paymeterId, amount, type: "SUPPLIER_REIMBURSEMENT" }
+      data: { paymeterId: payment.paymeterId, amount, date, type: "SUPPLIER_REIMBURSEMENT" }
     })
   })
 
   revalidatePath('/paymeters')
+  revalidatePath('/')
+  revalidatePath('/reports')
   return { success: true }
 }

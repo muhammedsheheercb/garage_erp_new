@@ -1,6 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { parseSettlementDate } from "@/lib/settlement-date"
 import { ExpenseFormValues, expenseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { getCreatorName } from "@/lib/authorization"
@@ -173,7 +174,8 @@ export async function deleteExpense(id: string) {
   return { success: true }
 }
 
-export async function payExpense(expenseId: string, amount: number) {
+export async function payExpense(expenseId: string, amount: number, paymentDate: string) {
+  const date = parseSettlementDate(paymentDate)
   if (amount <= 0) throw new Error("Amount must be greater than 0")
 
   const expense = await prisma.expense.findUnique({ where: { id: expenseId } })
@@ -204,7 +206,7 @@ export async function payExpense(expenseId: string, amount: number) {
     })
 
     await tx.paymeterSettlement.create({
-      data: { paymeterId: expense.paymeterId!, amount, type: "EXPENSE_REIMBURSEMENT" }
+      data: { paymeterId: expense.paymeterId!, amount, date, type: "EXPENSE_REIMBURSEMENT" }
     })
 
     return updatedExpense
@@ -212,5 +214,7 @@ export async function payExpense(expenseId: string, amount: number) {
 
   revalidatePath('/expenses')
   revalidatePath('/paymeters')
+  revalidatePath('/')
+  revalidatePath('/reports')
   return result
 }

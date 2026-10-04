@@ -6,7 +6,7 @@ import { getMechanics, deleteMechanic } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Briefcase, Eye, Calendar, Car, User, Wrench } from "lucide-react"
+import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Eye, Calendar, Car, User, Wrench } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { MechanicForm } from "./mechanic-form"
@@ -19,13 +19,15 @@ import { DateRange } from "react-day-picker"
 import { endOfDay } from "date-fns"
 import { formatDisplayDate } from "@/lib/date-format"
 
+type Mechanic = Awaited<ReturnType<typeof getMechanics>>["data"][number]
+
 export function MechanicList() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [editingMechanic, setEditingMechanic] = useState<any>(null)
-  const [viewingJobs, setViewingJobs] = useState<any>(null)
+  const [editingMechanic, setEditingMechanic] = useState<Mechanic | null>(null)
+  const [viewingJobs, setViewingJobs] = useState<Mechanic | null>(null)
   const [jobPage, setJobPage] = useState(1)
   const { t } = useTranslation()
   const { can } = usePermissions()
@@ -45,7 +47,7 @@ export function MechanicList() {
       toast.success(t.mechanics.mechanicDeleted)
       queryClient.invalidateQueries({ queryKey: ['mechanics'] })
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || t.mechanics.cannotDelete)
     }
   })
@@ -125,32 +127,35 @@ export function MechanicList() {
                   </TableCell>
                   <TableCell className="text-right space-x-1 whitespace-nowrap">
                     
-                    {mechanic.jobCards.length > 0 && (
                       <Dialog open={viewingJobs?.id === mechanic.id} onOpenChange={(open) => !open && setViewingJobs(null)}>
                         <DialogTrigger render={
-                          <Button variant="ghost" size="icon" onClick={() => setViewingJobs(mechanic)} title="View Active Jobs">
+                          <Button variant="ghost" size="icon" onClick={() => { setJobPage(1); setViewingJobs(mechanic) }} title={t.mechanics.viewAssignedWork} aria-label={`${t.mechanics.viewAssignedWork}: ${mechanic.name}`}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         } />
                         {viewingJobs?.id === mechanic.id && (
                           <DialogContent className="sm:max-w-[70vw] max-h-[85vh] overflow-y-auto">
                             <DialogHeader>
-                              <DialogTitle>{mechanic.name}'s Active Jobs</DialogTitle>
+                              <DialogTitle>{mechanic.name} — {t.mechanics.assignedWork}</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 mt-4">
-                              {mechanic.jobCards.slice((jobPage - 1) * 5, jobPage * 5).map((job: any) => (
+                              {mechanic.jobCards.length === 0 && (
+                                <p className="py-8 text-center text-muted-foreground">{t.mechanics.noAssignedWork}</p>
+                              )}
+                              {mechanic.jobCards.slice((jobPage - 1) * 5, jobPage * 5).map((job) => (
                                 <div key={job.id} className="border rounded-lg p-4 space-y-3 bg-muted/30">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                       <Car className="h-4 w-4 text-muted-foreground" />
                                       <span className="font-bold tracking-widest">{job.vehicle.plateNumber}</span>
-                                      <Badge variant="outline" className="ml-2">{job.status}</Badge>
+                                      <Badge variant="outline" className="ml-2">{job.status === "PENDING" ? t.jobcards.statusPending : job.status === "IN_PROGRESS" ? t.jobcards.statusInProgress : job.status}</Badge>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                       <Calendar className="h-4 w-4" />
-                                      {job.expectedFinishDate ? formatDisplayDate(job.expectedFinishDate) : "No date set"}
+                                      {job.expectedFinishDate ? formatDisplayDate(job.expectedFinishDate) : t.mechanics.noFinishDate}
                                     </div>
                                   </div>
+                                  <p className="text-sm text-muted-foreground">{job.vehicle.brand} {job.vehicle.model}</p>
                                   <div className="flex items-center gap-2 text-sm">
                                     <User className="h-4 w-4 text-muted-foreground" />
                                     <span>{job.customer.name}</span>
@@ -158,10 +163,26 @@ export function MechanicList() {
                                   <div className="flex items-start gap-2 text-sm mt-2">
                                     <Wrench className="h-4 w-4 text-muted-foreground mt-0.5" />
                                     <div className="flex-1">
-                                      <p className="font-medium">Complaint / Work:</p>
-                                      <p className="text-muted-foreground whitespace-pre-wrap">{job.complaint || "No description provided."}</p>
+                                      <p className="font-medium">{t.jobcards.complaintIssue}</p>
+                                      <p className="text-muted-foreground whitespace-pre-wrap">{job.complaint || t.mechanics.noDescription}</p>
                                     </div>
                                   </div>
+                                  {job.services.length > 0 && (
+                                    <div className="text-sm">
+                                      <p className="font-medium">{t.jobcards.services}</p>
+                                      <ul className="list-disc ps-5 text-muted-foreground">
+                                        {job.services.map((item: { id: string; quantity: number; service: { name: string } }) => (
+                                          <li key={item.id}>{item.service.name} × {item.quantity}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  {job.workDone && (
+                                    <div className="text-sm">
+                                      <p className="font-medium">{t.jobcards.workDone}</p>
+                                      <p className="whitespace-pre-wrap text-muted-foreground">{job.workDone}</p>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                               {mechanic.jobCards.length > 5 && (
@@ -175,7 +196,6 @@ export function MechanicList() {
                           </DialogContent>
                         )}
                       </Dialog>
-                    )}
 
                     {can("mechanics", "edit") && (
                       <Dialog open={editingMechanic?.id === mechanic.id} onOpenChange={(open) => !open && setEditingMechanic(null)}>
@@ -190,7 +210,7 @@ export function MechanicList() {
                               <DialogTitle>{t.mechanics.editMechanic}</DialogTitle>
                             </DialogHeader>
                             <MechanicForm 
-                              initialData={editingMechanic} 
+                              initialData={{ ...editingMechanic, email: editingMechanic.email ?? "", phone: editingMechanic.phone ?? "" }}
                               onSuccess={() => setEditingMechanic(null)} 
                             />
                           </DialogContent>

@@ -1,6 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { parseSettlementDate } from "@/lib/settlement-date"
 import type { Prisma } from "@prisma/client"
 import { PurchaseFormValues, purchaseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
@@ -351,7 +352,8 @@ export async function deletePurchase(id: string) {
   return result
 }
 
-export async function payPurchase(purchaseId: string, amount: number) {
+export async function payPurchase(purchaseId: string, amount: number, paymentDate: string) {
+  const date = parseSettlementDate(paymentDate)
   if (amount <= 0) throw new Error("Amount must be greater than 0")
 
   const purchase = await prisma.purchase.findUnique({
@@ -387,7 +389,7 @@ export async function payPurchase(purchaseId: string, amount: number) {
     })
 
     await tx.paymeterSettlement.create({
-      data: { paymeterId: purchase.paymentMethodId, amount, type: "PURCHASE_REIMBURSEMENT" }
+      data: { paymeterId: purchase.paymentMethodId, amount, date, type: "PURCHASE_REIMBURSEMENT" }
     })
 
     return updatedPurchase
@@ -395,6 +397,8 @@ export async function payPurchase(purchaseId: string, amount: number) {
 
   revalidatePath('/purchases')
   revalidatePath('/paymeters')
+  revalidatePath('/')
+  revalidatePath('/reports')
   return result
 }
 

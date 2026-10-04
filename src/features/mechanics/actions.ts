@@ -1,6 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import type { Prisma } from "@prisma/client"
 import { MechanicFormValues, mechanicSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
@@ -8,7 +9,7 @@ export async function getMechanics(page = 1, search = "", fromDate?: string, toD
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = {
+  const where: Prisma.MechanicWhereInput = {
     OR: [
       { name: { contains: search, mode: "insensitive" } },
       { email: { contains: search, mode: "insensitive" } },
@@ -35,10 +36,12 @@ export async function getMechanics(page = 1, search = "", fromDate?: string, toD
             expectedFinishDate: true,
             complaint: true,
             workDone: true,
-            vehicle: { select: { plateNumber: true, brand: true } },
+            services: { select: { id: true, quantity: true, service: { select: { name: true } } } },
+            vehicle: { select: { plateNumber: true, brand: true, model: true } },
             customer: { select: { name: true } }
           },
-          where: { status: { not: 'COMPLETED' } } // only fetch active assigned jobs
+          where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+          orderBy: { createdAt: 'desc' }
         }
       },
       orderBy: { createdAt: 'desc' }
