@@ -134,4 +134,4 @@ export async function deleteDirectSale(id: string) {
   revalidateDirectSalePaths(); return { success: true }
 }
 
-function revalidateDirectSalePaths() { ["/direct-sales", "/inventory", "/", "/reports"].forEach(path => revalidatePath(path)) }
+function revalidateDirectSalePaths() { ["/direct-sales", "/payments", "/inventory", "/", "/reports"].forEach(path => revalidatePath(path)) }

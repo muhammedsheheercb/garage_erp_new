@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { format } from "date-fns"
 
 export const supplierSchema = z.object({
   name: z.string().trim().min(2, "Supplier name is required"),
@@ -10,7 +11,10 @@ export const supplierSchema = z.object({
 export type SupplierFormValues = z.infer<typeof supplierSchema>
 
 export const supplierPaymentSchema = z.object({
-  paymentDate: z.iso.date("A valid payment date is required"),
+  paymentDate: z.iso.date("A valid payment date is required").refine(
+    (value) => value <= format(new Date(), "yyyy-MM-dd"),
+    "Payment date cannot be in the future",
+  ),
   purchaseId: z.string().trim().min(1, "Purchase bill is required"),
   paymentSource: z.enum(["PAYMETER", "DIRECT"]),
   paymeterId: z.string().trim().optional(),

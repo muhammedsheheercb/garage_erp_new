@@ -34,7 +34,7 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
       if (initialData) await updateDirectSale(initialData.id, data); else await createDirectSale(data)
       return { success: true }
     },
-    onSuccess: () => { toast.success(initialData ? "Direct sale updated." : "Direct sale created successfully."); queryClient.invalidateQueries({ queryKey: ["direct-sales"] }); queryClient.invalidateQueries({ queryKey: ["direct-sale-stock"] }); onSuccess() },
+    onSuccess: () => { toast.success(initialData ? "Direct sale updated." : "Direct sale created successfully."); queryClient.invalidateQueries({ queryKey: ["direct-sales"] }); queryClient.invalidateQueries({ queryKey: ["payments"] }); queryClient.invalidateQueries({ queryKey: ["direct-sale-stock"] }); onSuccess() },
     onError: (error: Error) => { const message = error.message || "Direct sale could not be created."; setErrors({ items: message }); toast.error(message) },
   })
   const submit = () => {

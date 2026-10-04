@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { SupplierForm } from "../../suppliers/components/supplier-form"
 import { InventoryForm } from "../../inventory/components/inventory-form"
 import { useTranslation } from "@/i18n"
+import { format } from "date-fns"
 
 interface PurchaseFormProps {
   onSuccess?: () => void
@@ -66,7 +67,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
         taxRate: item.taxRate ?? (activeTaxRate || 0)
       }))
     } : {
-      purchaseDate: new Date().toISOString().split('T')[0],
+      purchaseDate: format(new Date(), "yyyy-MM-dd"),
       purchaseType: "STOCK",
       jobCardId: null,
       supplierId: "",
@@ -224,7 +225,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="purchaseDate">{t.purchases.purchaseDate} <span className="text-destructive">*</span></Label>
-          <Input id="purchaseDate" type="date" {...register("purchaseDate")} />
+          <Input id="purchaseDate" type="date" max={format(new Date(), "yyyy-MM-dd")} {...register("purchaseDate")} />
           {errors.purchaseDate && <p className="text-sm text-destructive">{errors.purchaseDate.message}</p>}
         </div>
       </div>

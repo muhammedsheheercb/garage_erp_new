@@ -98,7 +98,7 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="paymentDate">Payment Date <span className="text-destructive">*</span></Label>
-          <Input id="paymentDate" type="date" {...register("paymentDate")} />
+          <Input id="paymentDate" type="date" max={format(new Date(), "yyyy-MM-dd")} {...register("paymentDate")} />
           {errors.paymentDate && <p className="text-sm text-destructive">{errors.paymentDate.message}</p>}
         </div>
         <div className="space-y-2 md:col-span-2">

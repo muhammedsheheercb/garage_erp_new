@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { format } from "date-fns"
 
 export const quotationServiceSchema = z.object({
   serviceId: z.string().min(1),
@@ -19,7 +20,10 @@ export const quotationSchema = z.object({
   vehicleId: z.string().min(1, "Vehicle is required"),
   complaint: z.string().trim().min(3, "Complaint description is required"),
   notes: z.string().trim().optional(),
-  date: z.string().min(1, "Date is required"),
+  date: z.string().min(1, "Date is required").pipe(z.iso.date("A valid quotation date is required")).refine(
+    (value) => value <= format(new Date(), "yyyy-MM-dd"),
+    "Quotation date cannot be in the future",
+  ),
   validUntil: z.string().min(1, "Valid until date is required"),
   vehicleKm: z.number().finite().min(0),
   services: z.array(quotationServiceSchema),

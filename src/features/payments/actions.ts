@@ -3,9 +3,11 @@
 import prisma from "@/lib/prisma"
 import { PaymentFormValues, paymentSchema } from "./schema"
 import { revalidatePath } from "next/cache"
-import { getCreatorName } from "@/lib/authorization"
+import { Prisma } from "@prisma/client"
+import { getCreatorName, requirePagePermission } from "@/lib/authorization"
 
 export async function getPayments(page = 1, search = "", fromDate?: string, toDate?: string) {
+  await requirePagePermission("payments")
   const limit = 5;
   const skip = (page - 1) * limit;
 
@@ -22,11 +24,23 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
     if (toDate) where.paymentDate.lte = new Date(toDate);
   }
 
-  const [data, total] = await Promise.all([
+  const saleWhere: Prisma.DirectSaleWhereInput = {
+    ...(search ? { OR: [
+      { customerName: { contains: search, mode: "insensitive" } },
+      { vehicleNumber: { contains: search, mode: "insensitive" } },
+      { customerMobile: { contains: search, mode: "insensitive" } },
+    ] } : {}),
+    ...((fromDate || toDate) ? { saleDate: {
+      ...(fromDate ? { gte: new Date(fromDate) } : {}),
+      ...(toDate ? { lte: new Date(toDate) } : {}),
+    } } : {}),
+  }
+
+  // Each source supplies enough rows to build the requested combined page.
+  const [data, paymentTotal, sales, saleTotal] = await Promise.all([
     prisma.payment.findMany({
       where,
-      skip,
-      take: limit,
+      take: skip + limit,
       include: {
         jobCard: {
           include: {
@@ -37,9 +51,15 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
     }),
-    prisma.payment.count({ where })
+    prisma.payment.count({ where }),
+    prisma.directSale.findMany({
+      where: saleWhere,
+      take: skip + limit,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    }),
+    prisma.directSale.count({ where: saleWhere }),
   ]);
 
   const paymentsWithBalances = data.map((payment) => {
@@ -53,6 +73,9 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
 
     return {
       ...payment,
+      source: "jobCard" as const,
+      customerName: payment.jobCard?.customer.name ?? "—",
+      vehicleNumber: payment.jobCard?.vehicle.plateNumber ?? "—",
       paymentAmount: payment.amount,
       totalPaid,
       balanceAmount,
@@ -61,8 +84,30 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
     }
   })
 
+  const salePayments = sales.map((sale) => ({
+    id: sale.id,
+    source: "directSale" as const,
+    paymentDate: sale.saleDate,
+    createdAt: sale.createdAt,
+    createdBy: sale.createdBy,
+    customerName: sale.customerName,
+    vehicleNumber: sale.vehicleNumber,
+    method: sale.paymentMethod ?? "Unspecified",
+    receivedMethod: null,
+    jobCard: null,
+    paymentAmount: sale.grandTotal,
+    totalPaid: sale.grandTotal,
+    balanceAmount: 0,
+    isLatestTransaction: true,
+    hasPendingParts: false,
+  }))
+  const history = [...paymentsWithBalances, ...salePayments].sort((a, b) =>
+    b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id) || b.source.localeCompare(a.source),
+  )
+  const total = paymentTotal + saleTotal
+
   return {
-    data: paymentsWithBalances,
+    data: history.slice(skip, skip + limit),
     meta: {
       total,
       page,

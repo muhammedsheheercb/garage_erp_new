@@ -8,6 +8,10 @@ import { revalidatePath } from "next/cache"
 import { getCreatorName } from "@/lib/authorization"
 import { userPaymeterWhere } from "@/lib/paymeter"
 
+// Purchases write multiple items, stock batches, ledger entries and job card parts.
+// Allow these atomic operations more time than Prisma's five-second default.
+const purchaseTransactionOptions = { timeout: 30_000 }
+
 const directPaymentNames = {
   CASH: "Direct Cash",
   BANK_TRANSFER: "Direct Bank Transfer",
@@ -296,7 +300,7 @@ export async function createPurchase(data: PurchaseFormValues) {
     }
 
     return purchase
-  })
+  }, purchaseTransactionOptions)
 
   revalidatePath('/purchases')
   revalidatePath('/inventory')
@@ -577,7 +581,7 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
     }
 
     return purchase
-  })
+  }, purchaseTransactionOptions)
 
   revalidatePath('/purchases')
   revalidatePath('/inventory')

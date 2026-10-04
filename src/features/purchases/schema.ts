@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { format } from "date-fns"
 
 export const purchaseItemSchema = z.object({
   inventoryId: z.string().trim().min(1, "Item is required"),
@@ -10,7 +11,10 @@ export const purchaseItemSchema = z.object({
 
 export const purchaseSchema = z.object({
   id: z.string().optional(),
-  purchaseDate: z.string().or(z.date()),
+  purchaseDate: z.iso.date("A valid purchase date is required").or(z.date()).refine(
+    (value) => (typeof value === "string" ? value : format(value, "yyyy-MM-dd")) <= format(new Date(), "yyyy-MM-dd"),
+    "Purchase date cannot be in the future",
+  ),
   supplierId: z.string().trim().min(1, "Supplier is required"),
   purchaseType: z.enum(["STOCK", "VEHICLE", "PENDING_PARTS"]),
   jobCardId: z.string().optional().nullable(),

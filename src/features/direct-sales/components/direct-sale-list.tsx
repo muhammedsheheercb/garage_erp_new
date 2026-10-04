@@ -29,7 +29,7 @@ export function DirectSaleList() {
   const { data, isLoading } = useQuery({ queryKey: ["direct-sales", search, fromDate, toDate], queryFn: () => getDirectSales(1, search, fromDate, toDate) })
   const { data: editing } = useQuery({ queryKey: ["direct-sale", editingId], queryFn: () => getDirectSaleById(editingId!), enabled: !!editingId })
   const { data: viewing } = useQuery({ queryKey: ["direct-sale", viewingId], queryFn: () => getDirectSaleById(viewingId!), enabled: !!viewingId })
-  const deletion = useMutation({ mutationFn: deleteDirectSale, onSuccess: () => { toast.success("Direct sale deleted and stock restored."); client.invalidateQueries({ queryKey: ["direct-sales"] }) }, onError: (error: Error) => toast.error(error.message) })
+  const deletion = useMutation({ mutationFn: deleteDirectSale, onSuccess: () => { toast.success("Direct sale deleted and stock restored."); client.invalidateQueries({ queryKey: ["direct-sales"] }); client.invalidateQueries({ queryKey: ["payments"] }) }, onError: (error: Error) => toast.error(error.message) })
   const resetFilters = () => { setSearch(""); setDateRange(undefined) }
   const openBill = (id: string) => router.push(`/direct-sales/${id}/print`)
   return <div className="space-y-5">
