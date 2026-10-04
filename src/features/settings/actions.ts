@@ -3,11 +3,10 @@
 import prisma from "@/lib/prisma"
 import { SettingsFormValues } from "./schema"
 import { revalidatePath } from "next/cache"
-import fs from "fs/promises"
-import path from "path"
-import { format } from "date-fns"
+import { availableBackups, snapshotDatabase, restoreSnapshot, deleteSnapshot } from "./database-backup"
 import { getSession } from "@/lib/session"
 import bcrypt from "bcryptjs"
+import { isBackupAdmin } from './backup-auth'
 
 export async function getSettings() {
   const settings = await prisma.setting.findMany()
@@ -42,69 +41,34 @@ export async function updateSettings(data: SettingsFormValues) {
   return { success: true }
 }
 
-export async function createDatabaseBackup() {
-  try {
-    const dbPath = path.join(process.cwd(), 'prisma', 'dev.db')
-    const backupDir = path.join(process.cwd(), 'prisma', 'backups')
-    
-    // Ensure backups directory exists
-    try {
-      await fs.access(backupDir)
-    } catch {
-      await fs.mkdir(backupDir, { recursive: true })
-    }
-    
-    const timestamp = format(new Date(), 'yyyyMMdd_HHmmss')
-    const backupPath = path.join(backupDir, `dev_backup_${timestamp}.db`)
-    
-    await fs.copyFile(dbPath, backupPath)
-    
-    return { success: true, message: `Database backed up successfully as dev_backup_${timestamp}.db` }
-  } catch (error: any) {
-    throw new Error(`Backup failed: ${error.message}`)
+async function requireBackupAdmin() {
+  if (!await isBackupAdmin()) {
+    throw new Error("Administrator access required")
   }
+}
+
+export async function createDatabaseBackup() {
+  await requireBackupAdmin()
+  const filename = await snapshotDatabase(prisma)
+  return { success: true, filename, message: `Database backed up successfully as ${filename}` }
 }
 
 export async function listBackups() {
-  try {
-    const backupDir = path.join(process.cwd(), 'prisma', 'backups')
-    
-    try {
-      await fs.access(backupDir)
-    } catch {
-      return []
-    }
-    
-    const files = await fs.readdir(backupDir)
-    return files
-      .filter(file => file.endsWith('.db'))
-      .sort()
-      .reverse() // Newest first
-  } catch (error: any) {
-    return []
-  }
+  await requireBackupAdmin()
+  return availableBackups()
+}
+
+export async function deleteDatabaseBackup(filename: string) {
+  await requireBackupAdmin()
+  await deleteSnapshot(filename)
+  return { success: true }
 }
 
 export async function restoreDatabase(filename: string) {
-  try {
-    const dbPath = path.join(process.cwd(), 'prisma', 'dev.db')
-    const backupPath = path.join(process.cwd(), 'prisma', 'backups', filename)
-    
-    // Check if backup exists
-    await fs.access(backupPath)
-    
-    // Make a safety backup of current state before restoring
-    const timestamp = format(new Date(), 'yyyyMMdd_HHmmss')
-    const safetyBackupPath = path.join(process.cwd(), 'prisma', 'backups', `safety_before_restore_${timestamp}.db`)
-    await fs.copyFile(dbPath, safetyBackupPath)
-    
-    // Replace current db with backup
-    await fs.copyFile(backupPath, dbPath)
-    
-    return { success: true, message: "Database restored successfully. Please restart the application." }
-  } catch (error: any) {
-    throw new Error(`Restore failed: ${error.message}`)
-  }
+  await requireBackupAdmin()
+  const safety = await restoreSnapshot(prisma, filename)
+  revalidatePath('/', 'layout')
+  return { success: true, message: `Database restored successfully. Safety backup: ${safety}` }
 }
 
 export async function updateAdminCredentials(currentPassword: string, newEmail: string, newPassword?: string) {

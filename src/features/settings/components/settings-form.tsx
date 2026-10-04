@@ -8,7 +8,8 @@ import {
   getSettings, 
   updateSettings, 
   createDatabaseBackup, 
-  listBackups, 
+  listBackups,
+  deleteDatabaseBackup,
   restoreDatabase, 
   updateAdminCredentials,
   getTaxSettings,
@@ -17,6 +18,7 @@ import {
   activateTaxSetting,
   deleteTaxSetting
 } from "../actions"
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -33,7 +35,7 @@ import { useTranslation } from "@/i18n"
 
 export function SettingsForm() {
   const queryClient = useQueryClient()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   
   // Security Form State
   const [currentPassword, setCurrentPassword] = useState("")
@@ -100,7 +102,7 @@ export function SettingsForm() {
     queryFn: () => getSettings()
   })
 
-  const { data: backups, isLoading: backupsLoading } = useQuery({
+  const { data: backups, isLoading: backupsLoading, error: backupsError } = useQuery({
     queryKey: ['backups'],
     queryFn: () => listBackups()
   })
@@ -138,6 +140,15 @@ export function SettingsForm() {
     onError: (error: any) => toast.error(error.message)
   })
 
+  const deleteBackupMutation = useMutation({
+    mutationFn: deleteDatabaseBackup,
+    onSuccess: () => {
+      toast.success(t.settings.backupDeleted)
+      queryClient.invalidateQueries({ queryKey: ['backups'] })
+    },
+    onError: (error: Error) => toast.error(error.message)
+  })
+
   const restoreMutation = useMutation({
     mutationFn: restoreDatabase,
     onSuccess: (res) => {
@@ -161,12 +172,6 @@ export function SettingsForm() {
 
   const onSubmit = (data: SettingsFormValues) => {
     mutation.mutate(data)
-  }
-
-  const handleRestore = (filename: string) => {
-    if (window.confirm(t.settings.restoreWarning)) {
-      restoreMutation.mutate(filename)
-    }
   }
 
   if (isLoading) {
@@ -383,39 +388,111 @@ export function SettingsForm() {
                   <h4 className="font-medium">{t.settings.createBackup}</h4>
                   <p className="text-sm text-muted-foreground mt-1">{t.settings.createBackupDescription}</p>
                 </div>
-                <Button 
-                  onClick={() => backupMutation.mutate()} 
-                  disabled={backupMutation.isPending}
-                  className="w-full sm:w-auto"
-                >
-                  {backupMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                  {t.settings.backupNow}
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger render={
+                    <Button
+                      disabled={backupMutation.isPending || restoreMutation.isPending || deleteBackupMutation.isPending}
+                      className="w-full sm:w-auto"
+                    >
+                      {backupMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                      {t.settings.backupNow}
+                    </Button>
+                  } />
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t.settings.confirmBackupTitle}</AlertDialogTitle>
+                      <AlertDialogDescription>{t.settings.confirmBackupDescription}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                      <AlertDialogAction
+                        disabled={backupMutation.isPending || restoreMutation.isPending || deleteBackupMutation.isPending}
+                        onClick={() => backupMutation.mutate()}
+                      >
+                        {t.settings.backupNow}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
 
               <div className="space-y-4">
                 <h4 className="font-medium">{t.settings.availableBackups}</h4>
                 {backupsLoading ? (
                   <div className="flex items-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t.settings.loadingBackups}</div>
+                ) : backupsError ? (
+                  <div role="alert" className="text-sm text-destructive">{backupsError.message}</div>
                 ) : !backups || backups.length === 0 ? (
                   <div className="text-sm border p-4 text-center rounded-md text-muted-foreground">{t.settings.noBackups}</div>
                 ) : (
                   <div className="border rounded-md overflow-hidden">
                     {backups.map((filename: string, index: number) => (
-                      <div key={filename} className={`flex items-center justify-between p-3 sm:p-4 ${index !== backups.length - 1 ? 'border-b' : ''}`}>
+                      <div key={filename} className={`flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 ${index !== backups.length - 1 ? 'border-b' : ''}`}>
                         <div className="flex items-center gap-3 overflow-hidden">
                           <Database className="h-4 w-4 text-primary shrink-0" />
-                          <span className="text-sm font-medium truncate">{filename}</span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium break-all">{filename}</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {t.settings.backupCreatedAt}: <time dateTime={new Date(Number(filename.split('_')[1])).toISOString()}>
+                                {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(Number(filename.split('_')[1])))}
+                              </time>
+                            </p>
+                          </div>
                         </div>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleRestore(filename)}
-                          disabled={restoreMutation.isPending}
-                          className="shrink-0 ml-4"
-                        >
-                          <RotateCcw className="mr-2 h-4 w-4 hidden sm:inline" /> {t.common.restore}
+                        <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <Button variant="outline" size="sm" nativeButton={false} render={<a href={`/api/backups?filename=${encodeURIComponent(filename)}`} download />}>
+                          <Download className="h-4 w-4" /> {t.settings.downloadBackup}
                         </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger render={
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={restoreMutation.isPending || backupMutation.isPending || deleteBackupMutation.isPending}
+                              className="shrink-0"
+                            >
+                              <RotateCcw className="mr-2 h-4 w-4 hidden sm:inline" /> {t.common.restore}
+                            </Button>
+                          } />
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t.settings.confirmRestoreTitle}</AlertDialogTitle>
+                              <AlertDialogDescription>{t.settings.restoreWarning}</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <p className="break-all rounded-md border bg-muted/40 p-3 text-sm">{filename}</p>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                              <AlertDialogAction
+                                variant="destructive"
+                                disabled={restoreMutation.isPending || backupMutation.isPending || deleteBackupMutation.isPending}
+                                onClick={() => restoreMutation.mutate(filename)}
+                              >
+                                {t.common.restore}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        <AlertDialog>
+                          <AlertDialogTrigger render={
+                            <Button variant="outline" size="sm" disabled={deleteBackupMutation.isPending || backupMutation.isPending || restoreMutation.isPending}>
+                              <Trash2 className="h-4 w-4" /> {t.common.delete}
+                            </Button>
+                          } />
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t.settings.confirmDeleteBackupTitle}</AlertDialogTitle>
+                              <AlertDialogDescription>{t.settings.confirmDeleteBackupDescription}</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <p className="break-all rounded-md border bg-muted/40 p-3 text-sm">{filename}</p>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                              <AlertDialogAction variant="destructive" disabled={deleteBackupMutation.isPending || backupMutation.isPending || restoreMutation.isPending} onClick={() => deleteBackupMutation.mutate(filename)}>
+                                {t.common.delete}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        </div>
                       </div>
                     ))}
                   </div>

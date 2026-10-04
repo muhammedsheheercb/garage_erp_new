@@ -656,14 +656,22 @@ export const en = {
 
     // Database
     databaseDescription:
-      "Backup and restore your local SQLite database. Please be careful as restoring a database is irreversible.",
+      "Create, download, and restore PostgreSQL backups. Restoring replaces current data and first saves a safety backup.",
     createBackup: "Create Backup",
     createBackupDescription:
-      "Create a snapshot of your current database state.",
+      "Create a snapshot of your current database state. Only the latest 5 backups, including restore safety backups, are kept; older backups are automatically deleted.",
     backupNow: "Backup Now",
+    downloadBackup: "Download",
+    backupCreatedAt: "Created",
+    backupDeleted: "Backup deleted",
+    confirmDeleteBackupTitle: "Delete this backup?",
+    confirmDeleteBackupDescription: "This permanently deletes this backup file. Your current database data will remain unchanged.",
     availableBackups: "Available Backups",
     loadingBackups: "Loading backups...",
     noBackups: "No backups found",
+    confirmBackupTitle: "Create database backup?",
+    confirmBackupDescription: "Save a snapshot of all current application data? Your current data will remain unchanged.",
+    confirmRestoreTitle: "Restore database backup?",
     restoreWarning:
       "WARNING: This will overwrite your current database with the backup. Any changes made since this backup will be lost. Continue?",
 
