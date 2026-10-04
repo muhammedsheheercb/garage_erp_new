@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 import { SupplierFormValues, supplierSchema, SupplierPaymentFormValues, supplierPaymentSchema } from "./schema"
 import { revalidatePath } from "next/cache"
+import { userPaymeterWhere } from "@/lib/paymeter"
 
 const directPaymentNames = {
   CASH: "Direct Cash",
@@ -89,6 +90,7 @@ export async function getSupplierDetails(id: string) {
     }
     }),
     prisma.paymeter.findMany({
+      where: userPaymeterWhere,
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
@@ -217,6 +219,7 @@ export async function createSupplierPayment(supplierId: string, data: SupplierPa
         paymeterId: selectedPaymeterId,
         amount: parsed.amount,
         pendingAmount: parsed.amount,
+        date: new Date(parsed.paymentDate),
       },
     })
 
@@ -239,6 +242,8 @@ export async function createSupplierPayment(supplierId: string, data: SupplierPa
   revalidatePath('/suppliers')
   revalidatePath('/purchases')
   revalidatePath('/paymeters')
+  revalidatePath('/')
+  revalidatePath('/reports')
   return payment
 }
 

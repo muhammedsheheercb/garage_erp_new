@@ -17,7 +17,7 @@ import { useTranslation } from "@/i18n"
 import { usePermissions } from "@/lib/use-permissions"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
-import { endOfDay } from "date-fns"
+import { endOfDay, format } from "date-fns"
 import { formatDisplayDate } from "@/lib/date-format"
 import { useEffect } from "react"
 
@@ -52,6 +52,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
   const [purchasePage, setPurchasePage] = useState(1)
   const [paymentPage, setPaymentPage] = useState(1)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const { t } = useTranslation()
   const getPaymentMethodLabel = (name: string) => ({
     "Direct Cash": t.payments.cash,
@@ -72,6 +73,14 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
 
   const totalPaid = details.purchases.reduce((acc: number, purchase: any) => acc + purchase.paidAmount, 0)
   const pendingAmount = details.purchases.reduce((acc: number, purchase: any) => acc + purchase.pendingAmount, 0)
+  // Compare calendar dates, including both endpoints and single-day selections.
+  const matchesDateRange = (value: Date | string) => {
+    if (!dateRange?.from) return true
+    const date = format(new Date(value), "yyyy-MM-dd")
+    return date >= format(dateRange.from, "yyyy-MM-dd")
+      && date <= format(dateRange.to ?? dateRange.from, "yyyy-MM-dd")
+  }
+  const purchaseHistory = details.purchases.filter((purchase) => matchesDateRange(purchase.purchaseDate))
   const paymentHistory = [
     ...details.purchases.flatMap((purchase: any) =>
       purchase.purchasePayments.map((payment: any) => ({
@@ -85,7 +94,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
       purchaseNumber: payment.reference || '—',
       method: getPaymentMethodLabel(payment.method),
     })),
-  ].sort((a: any, b: any) => {
+  ].filter((payment) => matchesDateRange(payment.date)).sort((a: any, b: any) => {
     const dateDifference = new Date(b.date).getTime() - new Date(a.date).getTime()
     return dateDifference || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   })
@@ -114,6 +123,17 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
       </div>
 
       <section className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium">Date Filter</span>
+          <DatePickerWithRange
+            date={dateRange}
+            setDate={(range) => {
+              setDateRange(range)
+              setPurchasePage(1)
+              setPaymentPage(1)
+            }}
+          />
+        </div>
         <h3 className="font-medium">Purchase History</h3>
         <div className="max-h-80 overflow-y-auto rounded-md border">
           <Table>
@@ -126,10 +146,10 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {details.purchases.length === 0 ? (
+              {purchaseHistory.length === 0 ? (
                 <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">{t.suppliers.noPurchases}</TableCell></TableRow>
               ) : (
-                details.purchases.slice((purchasePage - 1) * 5, purchasePage * 5).map((purchase: any) => (
+                purchaseHistory.slice((purchasePage - 1) * 5, purchasePage * 5).map((purchase: any) => (
                   <TableRow key={purchase.id}>
                     <TableCell>{formatDisplayDate(purchase.purchaseDate)}</TableCell>
                     <TableCell className="font-medium">{purchase.purchaseNumber}</TableCell>
@@ -140,7 +160,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
               )}
             </TableBody>
           </Table>
-          <DetailPagination page={purchasePage} setPage={setPurchasePage} total={details.purchases.length} />
+          <DetailPagination page={purchasePage} setPage={setPurchasePage} total={purchaseHistory.length} />
         </div>
       </section>
 

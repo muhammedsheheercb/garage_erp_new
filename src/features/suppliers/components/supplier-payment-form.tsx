@@ -14,6 +14,7 @@ import { useTranslation } from "@/i18n"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { useEffect } from "react"
+import { format } from "date-fns"
 
 interface SupplierPaymentFormProps {
   supplierId: string
@@ -34,6 +35,7 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
   const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<SupplierPaymentFormValues>({
     resolver: zodResolver(supplierPaymentSchema),
     defaultValues: {
+      paymentDate: format(new Date(), "yyyy-MM-dd"),
       purchaseId: "",
       paymentSource: "PAYMETER",
       paymeterId: "",
@@ -58,6 +60,8 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
       queryClient.invalidateQueries({ queryKey: ['supplier', supplierId] })
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
+      queryClient.invalidateQueries({ queryKey: ['report-totals'] })
+      queryClient.invalidateQueries({ queryKey: ['report-details'] })
       onSuccess?.()
     },
     onError: (error: any) => {
@@ -92,6 +96,11 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="paymentDate">Payment Date <span className="text-destructive">*</span></Label>
+          <Input id="paymentDate" type="date" {...register("paymentDate")} />
+          {errors.paymentDate && <p className="text-sm text-destructive">{errors.paymentDate.message}</p>}
+        </div>
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="purchaseId">{t.purchases.purchaseNo} <span className="text-destructive">*</span></Label>
           <Controller

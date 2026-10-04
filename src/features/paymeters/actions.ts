@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma"
 import { PaymeterFormValues, paymeterSchema } from "./schema"
 import { revalidatePath } from "next/cache"
+import { userPaymeterWhere } from "@/lib/paymeter"
 
 export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: string, search = "") {
   const limit = 5
@@ -27,7 +28,7 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
   }
 
   const nameWhere = search.trim() ? { contains: search.trim(), mode: "insensitive" as const } : undefined
-  const where: any = nameWhere ? { name: nameWhere } : {}
+  const where: any = { ...userPaymeterWhere, ...(nameWhere ? { name: nameWhere } : {}) }
 
   // When a date range is selected, return only paymeters that had a
   // transaction during that range. The nested relation filters below keep
@@ -124,6 +125,7 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
 
 export async function getPaymetersDropdown() {
   return prisma.paymeter.findMany({
+    where: userPaymeterWhere,
     select: { id: true, name: true },
     orderBy: { name: 'asc' }
   })

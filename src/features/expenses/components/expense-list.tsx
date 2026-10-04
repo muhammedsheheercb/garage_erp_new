@@ -164,7 +164,7 @@ export function ExpenseList() {
                 </Button>
               }
             />
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[640px]">
               <DialogHeader>
                 <DialogTitle>{t.dashboard.todaysExpense}</DialogTitle>
               </DialogHeader>
@@ -273,7 +273,7 @@ export function ExpenseList() {
                                 </Button>
                               }
                             />
-                            <DialogContent className="sm:max-w-[500px]">
+                            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[640px]">
                               <DialogHeader>
                                 <DialogTitle>{t.common.edit}</DialogTitle>
                               </DialogHeader>

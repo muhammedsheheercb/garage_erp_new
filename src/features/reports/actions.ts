@@ -15,6 +15,12 @@ function paymentReportDate(payment: { paymentDate: Date }) {
   return payment.paymentDate
 }
 
+// Supplier Record Payment saves the selected Payment Date in PurchasePayment.date.
+// Keep dashboard totals, report totals, and report details on that transaction date.
+function supplierPaymentReportFilter(date: Prisma.DateTimeFilter): Prisma.PurchasePaymentWhereInput {
+  return { date }
+}
+
 export async function getDashboardStats() {
   const now = new Date()
   const todayStart = startOfDay(now)
@@ -46,7 +52,7 @@ export async function getDashboardStats() {
     prisma.purchase.aggregate({ where: { purchaseDate: today }, _sum: { grandTotal: true } }),
     prisma.expense.findMany({ where: { date: today }, select: { amount: true, paymeterId: true } }),
     prisma.purchasePayment.findMany({
-      where: { date: today },
+      where: supplierPaymentReportFilter(today),
       select: { amount: true, paidAmount: true, pendingAmount: true, paymeter: { select: { name: true } } },
     }),
     prisma.expense.findMany({
@@ -447,7 +453,7 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
       orderBy: { date: "desc" }
     }),
     prisma.purchasePayment.findMany({
-      where: { date: dateFilter },
+      where: supplierPaymentReportFilter(dateFilter),
       include: { paymeter: true, purchase: { select: { purchaseNumber: true } } },
       orderBy: { date: "desc" }
     }),
@@ -571,9 +577,9 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
       orderBy: { date: 'desc' }
     }),
     prisma.purchase.findMany({
-      where: { createdAt: dateFilter },
+      where: { purchaseDate: dateFilter },
       include: { supplier: true, paymentMethod: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { purchaseDate: 'desc' }
     }),
     prisma.expense.findMany({
       where: { date: dateFilter, paymeterId: { not: null } },
@@ -581,7 +587,7 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
       orderBy: { date: 'desc' }
     }),
     prisma.purchasePayment.findMany({
-      where: { date: dateFilter },
+      where: supplierPaymentReportFilter(dateFilter),
       include: { paymeter: true, purchase: { select: { purchaseNumber: true } } },
       orderBy: { date: 'desc' }
     })
@@ -620,7 +626,7 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
   const purchaseDetails = purchaseList.map(p => ({
     id: p.id,
     purchaseNumber: p.purchaseNumber,
-    date: formatDisplayDate(p.createdAt),
+    date: formatDisplayDate(p.purchaseDate),
     supplier: p.supplier.name,
     method: p.paymentMethod?.name || 'Unknown',
     grandTotal: p.grandTotal,
@@ -673,7 +679,7 @@ export async function getPaymeterReportTransactions(fromDate?: string, toDate?: 
       orderBy: { date: "desc" }
     }),
     prisma.purchasePayment.findMany({
-      where: { date: dateFilter },
+      where: supplierPaymentReportFilter(dateFilter),
       include: { paymeter: true, purchase: { select: { purchaseNumber: true } } },
       orderBy: { date: "desc" }
     })

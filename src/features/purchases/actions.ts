@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client"
 import { PurchaseFormValues, purchaseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { getCreatorName } from "@/lib/authorization"
+import { userPaymeterWhere } from "@/lib/paymeter"
 
 const directPaymentNames = {
   CASH: "Direct Cash",
@@ -106,7 +107,7 @@ export async function getPurchaseById(id: string) {
 export async function getPurchaseDropdownData() {
   const [suppliers, paymeters, inventoryRaw, jobCards] = await Promise.all([
     prisma.supplier.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
-    prisma.paymeter.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    prisma.paymeter.findMany({ where: userPaymeterWhere, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
     prisma.inventory.findMany({ 
       include: { batches: { orderBy: { createdAt: 'desc' }, take: 1 } },
       orderBy: { itemName: 'asc' } 

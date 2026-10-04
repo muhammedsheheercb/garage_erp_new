@@ -57,7 +57,7 @@ export function ExpenseForm({
           paymentType: initialData.paymentMethod === "PAYMETER" ? "PAYMETER" : "DIRECT",
         }
       : {
-          category: undefined,
+          category: "Other Expenses",
           amount: 0,
           description: "",
           date: format(new Date(), "yyyy-MM-dd") as unknown as Date,
@@ -110,9 +110,9 @@ export function ExpenseForm({
             name="category"
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value || ""}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder={t.expensesMod.expenseCategory}>
-                    {(value: string) => translateCategory(value)}
+                    {field.value ? translateCategory(field.value) : t.expensesMod.expenseCategory}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -157,6 +157,7 @@ export function ExpenseForm({
           <Input
             id="date"
             type="date"
+            max={format(new Date(), "yyyy-MM-dd")}
             {...register("date")}
           />
           {errors.date && (

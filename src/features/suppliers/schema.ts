@@ -10,6 +10,7 @@ export const supplierSchema = z.object({
 export type SupplierFormValues = z.infer<typeof supplierSchema>
 
 export const supplierPaymentSchema = z.object({
+  paymentDate: z.iso.date("A valid payment date is required"),
   purchaseId: z.string().trim().min(1, "Purchase bill is required"),
   paymentSource: z.enum(["PAYMETER", "DIRECT"]),
   paymeterId: z.string().trim().optional(),
