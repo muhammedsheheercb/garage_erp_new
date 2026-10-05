@@ -306,42 +306,27 @@ export async function createPurchase(data: PurchaseFormValues) {
 
 export async function deletePurchase(id: string) {
   await requirePagePermission("purchases", "delete")
-  const purchase = await prisma.purchase.findUnique({
-    where: { id },
-    include: { items: true }
-  })
-
-  if (!purchase) {
-    throw new Error("Purchase not found")
-  }
-
-  if (purchase.pendingAmount > 0) {
-    throw new Error("Cannot delete this purchase because it has a pending balance.")
-  }
-
-  const result = await prisma.$transaction(async (tx) => {
-    // 1. Detach InventoryBatches so the items remain in inventory even if the purchase is deleted.
-    // This also naturally bypasses the JobCardPart RESTRICT constraint since the batches aren't deleted.
-    await tx.inventoryBatch.updateMany({
-      where: { purchaseId: id },
-      data: { purchaseId: null }
-    })
-
-    // 2. Revert Paymeter spentAmount by paidAmount (since only paidAmount was added)
-    if (purchase.paidAmount > 0) {
-      await tx.paymeter.update({
-        where: { id: purchase.paymentMethodId },
-        data: { spentAmount: { decrement: purchase.paidAmount } }
-      })
+  const result = await prisma.$transaction(async tx => {
+    const purchase = await tx.purchase.findUnique({ where: { id }, include: { purchasePayments: true } })
+    if (!purchase) throw new Error("Purchase not found")
+    if (purchase.pendingAmount > 0) throw new Error("Cannot delete a purchase with a pending balance.")
+    if (purchase.paymeterReimbursed > 0 || purchase.purchasePayments.some(payment => payment.paidAmount > 0)) {
+      throw new Error("Cannot delete a purchase with reimbursements. Its settlement history must be retained.")
     }
-
-    // 3. Delete the purchase (cascades items and payments, but batches are now safe)
-    await tx.purchase.delete({
-      where: { id }
-    })
-
+    const supplierPayments = purchase.purchasePayments.filter(payment => payment.pendingAmount > 0 || payment.paidAmount > 0)
+    const reversals = new Map<string, number>()
+    const initialAmount = Math.max(0, purchase.paidAmount - supplierPayments.reduce((sum, payment) => sum + payment.amount, 0))
+    reversals.set(purchase.paymentMethodId, initialAmount)
+    for (const payment of supplierPayments) reversals.set(payment.paymeterId, (reversals.get(payment.paymeterId) || 0) + payment.amount)
+    for (const [paymeterId, amount] of [...reversals].sort(([a], [b]) => a.localeCompare(b))) {
+      if (amount <= 0) continue
+      const reversed = await tx.paymeter.updateMany({ where: { id: paymeterId, spentAmount: { gte: amount } }, data: { spentAmount: { decrement: amount } } })
+      if (reversed.count !== 1) throw new Error("Cannot delete this purchase because its paymeter balance has already been settled.")
+    }
+    await tx.inventoryBatch.updateMany({ where: { purchaseId: id }, data: { purchaseId: null } })
+    await tx.purchase.delete({ where: { id } })
     return { success: true }
-  })
+  }, { timeout: 30_000, isolationLevel: "Serializable" })
 
   revalidatePath('/purchases')
   revalidatePath('/inventory')

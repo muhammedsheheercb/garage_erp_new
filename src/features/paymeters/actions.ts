@@ -184,58 +184,18 @@ export async function updatePaymeter(id: string, data: PaymeterFormValues) {
 
 export async function deletePaymeter(id: string) {
   await requirePagePermission("paymeters", "delete")
-  const paymeter = await prisma.paymeter.findUnique({
-    where: { id },
-    select: { spentAmount: true },
-  })
-
-  if (!paymeter) {
-    return { success: false, message: "Paymeter not found." }
-  }
-
-  const purchases = await prisma.purchase.findMany({
-    where: { paymentMethodId: id },
-    include: {
-      batches: {
-        include: {
-          jobCardParts: true
-        }
-      }
+  const result = await prisma.$transaction(async tx => {
+    const paymeter = await tx.paymeter.findUnique({ where: { id }, include: { _count: { select: { purchases: true, purchasePayments: true, expenses: true, settlements: true } } } })
+    if (!paymeter) return { success: false, message: "Paymeter not found." }
+    if (paymeter.spentAmount !== 0 || paymeter.initialSpentAmount !== 0 || Object.values(paymeter._count).some(count => count > 0)) {
+      return { success: false, message: "Cannot delete a paymeter with a balance or transaction history." }
     }
-  })
-  
-  const hasPending = purchases.some(p => p.pendingAmount > 0)
-  if (paymeter.spentAmount > 0 && hasPending) {
-    return {
-      success: false,
-      message: "Cannot delete this Paymeter because there are purchases with pending amounts.",
-    }
-  }
+    await tx.paymeter.delete({ where: { id } })
+    return { success: true }
+  }, { timeout: 30_000, isolationLevel: "Serializable" })
 
-  if (purchases.length > 0) {
-    const purchaseIds = purchases.map(p => p.id)
-    
-    // Detach batches so inventory isn't lost
-    await prisma.inventoryBatch.updateMany({
-      where: { purchaseId: { in: purchaseIds } },
-      data: { purchaseId: null }
-    })
-
-    await prisma.purchase.deleteMany({
-      where: { paymentMethodId: id }
-    })
-  }
-
-  await prisma.purchasePayment.deleteMany({
-    where: { paymeterId: id }
-  })
-  
-  await prisma.paymeter.delete({
-    where: { id }
-  })
-  
   revalidatePath('/paymeters')
-  return { success: true }
+  return result
 }
 
 export async function settlePaymeter(id: string, amount: number) {

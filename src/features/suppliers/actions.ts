@@ -254,27 +254,16 @@ export async function createSupplierPayment(supplierId: string, data: SupplierPa
 
 export async function deletePurchasePayment(paymentId: string) {
   await requirePagePermission("suppliers", "delete")
-  const payment = await prisma.purchasePayment.findUnique({
-    where: { id: paymentId },
-    include: { purchase: { select: { paymentMethodId: true } } },
-  })
-
-  if (!payment) throw new Error("Payment not found.")
-
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async tx => {
+    const payment = await tx.purchasePayment.findUnique({ where: { id: paymentId } })
+    if (!payment) throw new Error("Payment not found.")
+    if (payment.paidAmount > 0) throw new Error("Cannot delete a reimbursed supplier payment. Its settlement history must be retained.")
+    if (payment.pendingAmount <= 0) throw new Error("Initial purchase payments must be managed through the purchase.")
+    const reversed = await tx.paymeter.updateMany({ where: { id: payment.paymeterId, spentAmount: { gte: payment.amount } }, data: { spentAmount: { decrement: payment.amount } } })
+    if (reversed.count !== 1) throw new Error("Cannot delete this payment because its paymeter balance has already been settled.")
     await tx.purchasePayment.delete({ where: { id: paymentId } })
-    await tx.purchase.update({
-      where: { id: payment.purchaseId },
-      data: {
-        paidAmount: { decrement: payment.amount },
-        pendingAmount: { increment: payment.amount },
-      },
-    })
-    await tx.paymeter.update({
-      where: { id: payment.paymeterId },
-      data: { spentAmount: { decrement: payment.amount } },
-    })
-  })
+    await tx.purchase.update({ where: { id: payment.purchaseId }, data: { paidAmount: { decrement: payment.amount }, pendingAmount: { increment: payment.amount } } })
+  }, { timeout: 30_000, isolationLevel: "Serializable" })
 
   revalidatePath('/suppliers')
   revalidatePath('/purchases')

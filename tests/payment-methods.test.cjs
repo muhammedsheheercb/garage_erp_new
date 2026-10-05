@@ -501,11 +501,12 @@ test('invoice creation does not recreate advances when any receipt already exist
     const prisma = {
       jobCard: { findUnique: async (args) => {
         assert.equal(args.select.payments.where, undefined)
-        return { ...form, payments: [{ id: 'existing', method: existingMethod }] }
+        return { ...form, payments: [{ id: 'existing', method: existingMethod, amount: 50 }] }
       } },
       invoice: { create: async () => ({ id: 'invoice' }) },
       payment: { create: async () => { extraReceipts++ } },
     }
+    prisma.$transaction = async callback => callback(prisma)
     const { createInvoice } = loadSource('src/features/invoices/actions.ts', { ...commonMocks, '@/lib/prisma': prisma })
     await createInvoice({ jobCardId: 'job', customerId: 'customer', serviceCharge: 100, labourCharge: 0,
       partsCost: 0, discount: 0, tax: 0, status: 'PARTIAL' })
@@ -736,4 +737,109 @@ test('invoice edits use current charges even when the stored invoice was previou
   assert.equal(saved.partsCost, 50)
   assert.equal(saved.grandTotal, 260)
   assert.equal(saved.status, 'PARTIAL')
+})
+
+test('expense reimbursement rechecks its balance and rolls back if receipt creation fails', async () => {
+  let pending = 100, balance = 100, paid = 0, failReceipt = true
+  const tx = {
+    expense: {
+      findUnique: async () => ({ paymeterId: 'ledger' }),
+      updateMany: async args => {
+        if (pending < args.where.pendingAmount.gte) return { count: 0 }
+        pending -= args.data.pendingAmount.decrement; paid += args.data.paidAmount.increment
+        return { count: 1 }
+      },
+      findUniqueOrThrow: async () => ({ pendingAmount: pending }),
+    },
+    paymeter: { updateMany: async args => {
+      if (balance < args.where.spentAmount.gte) return { count: 0 }
+      balance -= args.data.spentAmount.decrement; return { count: 1 }
+    } },
+    paymeterSettlement: { create: async () => { if (failReceipt) throw Error('Receipt failed') } },
+  }
+  const { payExpense } = loadSource('src/features/expenses/actions.ts', { ...commonMocks, '@/lib/prisma': {
+    $transaction: async callback => {
+      const snapshot = [pending, balance, paid]
+      try { return await callback(tx) } catch (error) { [pending, balance, paid] = snapshot; throw error }
+    },
+  } })
+  await assert.rejects(payExpense('expense', 80, '2026-01-01'), /Receipt failed/)
+  assert.deepEqual([pending, balance, paid], [100, 100, 0])
+  failReceipt = false
+  await payExpense('expense', 80, '2026-01-01')
+  await assert.rejects(payExpense('expense', 80, '2026-01-01'), /remaining expense balance/)
+  assert.deepEqual([pending, balance, paid], [20, 20, 80])
+})
+
+test('reimbursed expenses cannot be deleted or have financial details changed', async () => {
+  const oldExpense = { amount: 100, paidAmount: 40, pendingAmount: 60, paymeterId: 'ledger', paymentMethod: 'PAYMETER' }
+  const actions = loadSource('src/features/expenses/actions.ts', { ...commonMocks, '@/lib/prisma': {
+    $transaction: async callback => callback({ expense: { findUnique: async () => oldExpense },
+      paymeter: { update: async () => assert.fail('Balance must not change') } }),
+  } })
+  await assert.rejects(actions.deleteExpense('expense'), /settlement history/)
+  const schema = loadSource('src/features/expenses/schema.ts')
+  const input = { category: 'Other Expenses', title: 'Expense', description: '', amount: 120, date: '2026-01-01', paymentType: 'PAYMETER', paymeterId: 'ledger', paymentMethod: 'PAYMETER' }
+  const parsed = schema.expenseSchema.safeParse(input)
+  assert.equal(parsed.success, true, JSON.stringify(parsed.error))
+  await assert.rejects(actions.updateExpense('expense', input), /has reimbursements/)
+})
+
+test('purchase deletion reverses each contributing ledger and protects reimbursed history', async () => {
+  const purchase = { paidAmount: 100, pendingAmount: 0, paymentMethodId: 'A', paymeterReimbursed: 0,
+    purchasePayments: [{ amount: 20, paidAmount: 0, pendingAmount: 0, paymeterId: 'A' }, { amount: 80, paidAmount: 0, pendingAmount: 80, paymeterId: 'B' }] }
+  const reversed = [], deleted = []
+  const { deletePurchase } = loadSource('src/features/purchases/actions.ts', { ...commonMocks, '@/lib/prisma': {
+    $transaction: async callback => callback({ purchase: { findUnique: async () => purchase, delete: async () => deleted.push(true) },
+      inventoryBatch: { updateMany: async () => {} },
+      paymeter: { updateMany: async args => { reversed.push([args.where.id, args.data.spentAmount.decrement]); return { count: 1 } } },
+    }),
+  } })
+  await deletePurchase('purchase')
+  assert.deepEqual(reversed, [['A', 20], ['B', 80]])
+  purchase.paymeterReimbursed = 10
+  await assert.rejects(deletePurchase('purchase'), /settlement history/)
+  assert.equal(deleted.length, 1)
+})
+
+test('supplier payment deletion preserves reimbursed receipts', async () => {
+  const { deletePurchasePayment } = loadSource('src/features/suppliers/actions.ts', { ...commonMocks, '@/lib/prisma': {
+    $transaction: async callback => callback({ purchasePayment: { findUnique: async () => ({ paidAmount: 50, amount: 50, pendingAmount: 0 }),
+      delete: async () => assert.fail('Reimbursed history must survive') } }),
+  } })
+  await assert.rejects(deletePurchasePayment('receipt'), /settlement history/)
+})
+
+test('paymeter deletion refuses history and only deletes an unused zero-balance ledger', async () => {
+  const ledger = { spentAmount: 0, initialSpentAmount: 0, _count: { purchases: 1, purchasePayments: 0, expenses: 0, settlements: 0 } }
+  let deleted = 0
+  const { deletePaymeter } = loadSource('src/features/paymeters/actions.ts', { ...commonMocks, '@/lib/prisma': {
+    $transaction: async callback => callback({ paymeter: { findUnique: async () => ledger, delete: async () => { deleted++ } } }),
+  } })
+  assert.equal((await deletePaymeter('ledger')).success, false)
+  assert.equal(deleted, 0)
+  ledger._count.purchases = 0
+  assert.equal((await deletePaymeter('ledger')).success, true)
+  assert.equal(deleted, 1)
+})
+
+test('invoice and missing advance save together or roll back together', async () => {
+  let invoices = 0, receipts = 0, failReceipt = true
+  const { createInvoice } = loadSource('src/features/invoices/actions.ts', { ...commonMocks, '@/lib/prisma': {
+    $transaction: async (callback, options) => {
+      assert.equal(options.isolationLevel, 'Serializable')
+      const snapshot = [invoices, receipts]
+      try { return await callback({
+        jobCard: { findUnique: async () => ({ customerId: 'customer', serviceTotal: 200, partsTotal: 0, advancePaid: 50, payments: [] }) },
+        invoice: { create: async args => { invoices++; return { id: 'invoice', ...args.data } } },
+        payment: { create: async args => { if (failReceipt) throw Error('Receipt failed'); assert.equal(args.data.amount, 50); receipts++ } },
+      }) } catch (error) { [invoices, receipts] = snapshot; throw error }
+    },
+  } })
+  const input = { jobCardId: 'job', customerId: 'customer', serviceCharge: 200, labourCharge: 0, partsCost: 0, discount: 0, tax: 0, status: 'PARTIAL' }
+  await assert.rejects(createInvoice(input), /Receipt failed/)
+  assert.deepEqual([invoices, receipts], [0, 0])
+  failReceipt = false
+  await createInvoice(input)
+  assert.deepEqual([invoices, receipts], [1, 1])
 })

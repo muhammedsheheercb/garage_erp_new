@@ -103,87 +103,93 @@ export async function getDropdownData() {
 export async function createInvoice(data: InvoiceFormValues) {
   await requirePagePermission("invoices", "create")
   const parsed = invoiceSchema.parse(data)
-  const jobCard = await prisma.jobCard.findUnique({
-    where: { id: parsed.jobCardId },
-    select: {
-      customerId: true,
-      serviceTotal: true,
-      partsTotal: true,
-      advancePaid: true,
-      payments: {
-        select: { id: true },
-      },
-    },
-  })
-
-  if (!jobCard) {
-    throw new Error("The selected job card no longer exists.")
-  }
-
-  const serviceCharge = jobCard.serviceTotal ?? 0
-  const partsCost = jobCard.partsTotal ?? 0
-  const advancePaid = jobCard.advancePaid ?? 0
-
-  let otherAmountSum = 0
-  if (parsed.otherCharges) {
-    try {
-      const parsedCharges = JSON.parse(parsed.otherCharges)
-      if (Array.isArray(parsedCharges)) {
-        otherAmountSum = parsedCharges.reduce((acc, c: any) => acc + Math.max(0, Number(c.amount) || 0), 0)
-      }
-    } catch (e) {
-      console.error("Failed to parse otherCharges", e)
-    }
-  }
-
-  const subTotal = serviceCharge + parsed.labourCharge + partsCost + otherAmountSum;
-  const grandTotal = Math.max(0, subTotal + parsed.tax - parsed.discount);
-
-  const initialStatus = advancePaid >= grandTotal ? "PAID" : advancePaid > 0 ? "PARTIAL" : "UNPAID";
   const creatorName = await getCreatorName()
-
-  const invoice = await prisma.invoice.create({
-    data: {
-      jobCardId: parsed.jobCardId,
-      customerId: jobCard.customerId,
-      serviceCharge,
-      labourCharge: parsed.labourCharge,
-      partsCost,
-      discount: parsed.discount,
-      tax: parsed.tax,
-      subTotal,
-      amount: grandTotal, // for backwards compatibility
-      grandTotal,
-      servicesDetails: parsed.servicesDetails,
-      partsDetails: parsed.partsDetails,
-      otherCharges: parsed.otherCharges,
-      status: initialStatus,
-      createdBy: creatorName,
-    }
-  })
-
-  // Auto-record initial payment if advancePaid is present
-  if (advancePaid > 0 && jobCard.payments.length === 0) {
-    await prisma.payment.create({
-      data: {
-        invoiceId: invoice.id,
-        jobCardId: parsed.jobCardId,
-        // Retain the full customer credit even when the current invoice total is
-        // zero or lower than the advance. It will offset charges added later.
-        amount: advancePaid,
-        method: "ADVANCE",
-         createdBy: creatorName,
-        grandTotalAtPayment: grandTotal,
-        totalPaidAtPayment: advancePaid,
-        balanceAfterPayment: Math.max(0, grandTotal - advancePaid),
+  const invoice = await prisma.$transaction(async tx => {
+    const jobCard = await tx.jobCard.findUnique({
+      where: { id: parsed.jobCardId },
+      select: {
+        customerId: true,
+        serviceTotal: true,
+        partsTotal: true,
+        advancePaid: true,
+        payments: {
+          select: { id: true, amount: true },
+        },
       },
     })
-  }
+
+    if (!jobCard) {
+      throw new Error("The selected job card no longer exists.")
+    }
+
+    const serviceCharge = jobCard.serviceTotal ?? 0
+    const partsCost = jobCard.partsTotal ?? 0
+    const advancePaid = jobCard.advancePaid ?? 0
+
+    let otherAmountSum = 0
+    if (parsed.otherCharges) {
+      try {
+        const parsedCharges = JSON.parse(parsed.otherCharges)
+        if (Array.isArray(parsedCharges)) {
+          otherAmountSum = parsedCharges.reduce((acc, c: any) => acc + Math.max(0, Number(c.amount) || 0), 0)
+        }
+      } catch (e) {
+        console.error("Failed to parse otherCharges", e)
+      }
+    }
+
+    const subTotal = serviceCharge + parsed.labourCharge + partsCost + otherAmountSum;
+    const grandTotal = Math.max(0, subTotal + parsed.tax - parsed.discount);
+
+    const totalPaid = jobCard.payments.length > 0 ? jobCard.payments.reduce((sum, payment) => sum + payment.amount, 0) : advancePaid
+    const initialStatus = totalPaid >= grandTotal ? "PAID" : totalPaid > 0 ? "PARTIAL" : "UNPAID";
+
+    const invoice = await tx.invoice.create({
+      data: {
+        jobCardId: parsed.jobCardId,
+        customerId: jobCard.customerId,
+        serviceCharge,
+        labourCharge: parsed.labourCharge,
+        partsCost,
+        discount: parsed.discount,
+        tax: parsed.tax,
+        subTotal,
+        amount: grandTotal, // for backwards compatibility
+        grandTotal,
+        servicesDetails: parsed.servicesDetails,
+        partsDetails: parsed.partsDetails,
+        otherCharges: parsed.otherCharges,
+        status: initialStatus,
+        createdBy: creatorName,
+      }
+    })
+
+    // Auto-record initial payment if advancePaid is present
+    if (advancePaid > 0 && jobCard.payments.length === 0) {
+      await tx.payment.create({
+        data: {
+          invoiceId: invoice.id,
+          jobCardId: parsed.jobCardId,
+          // Retain the full customer credit even when the current invoice total is
+          // zero or lower than the advance. It will offset charges added later.
+          amount: advancePaid,
+          method: "ADVANCE",
+           createdBy: creatorName,
+          grandTotalAtPayment: grandTotal,
+          totalPaidAtPayment: advancePaid,
+          balanceAfterPayment: Math.max(0, grandTotal - advancePaid),
+        },
+      })
+    }
+
+    return invoice
+  }, { timeout: 30_000, isolationLevel: "Serializable" })
 
   revalidatePath('/invoices')
-  revalidatePath(`/customers/${jobCard.customerId}`)
+  revalidatePath(`/customers/${invoice.customerId}`)
   return invoice
 }
+
 
 export async function updateInvoice(id: string, data: InvoiceFormValues) {
   await requirePagePermission("invoices", "edit")

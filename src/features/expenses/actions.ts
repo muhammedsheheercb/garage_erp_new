@@ -125,12 +125,20 @@ export async function updateExpense(id: string, data: ExpenseFormValues) {
   const expense = await prisma.$transaction(async (tx) => {
     const oldExpense = await tx.expense.findUnique({ where: { id } })
     if (!oldExpense) throw new Error("Expense not found")
+    if (oldExpense.paidAmount > 0 && (oldExpense.amount !== dbData.amount || oldExpense.paymeterId !== dbData.paymeterId || oldExpense.paymentMethod !== dbData.paymentMethod)) {
+      throw new Error("This expense has reimbursements. Keep its amount and payment method unchanged to preserve settlement history.")
+    }
 
-    if (oldExpense.paymeterId) {
-      await tx.paymeter.update({
-        where: { id: oldExpense.paymeterId },
-        data: { spentAmount: { decrement: oldExpense.amount } }
-      })
+    const adjustments = new Map<string, number>()
+    if (oldExpense.paymeterId) adjustments.set(oldExpense.paymeterId, -oldExpense.amount)
+    if (dbData.paymeterId) adjustments.set(dbData.paymeterId, (adjustments.get(dbData.paymeterId) || 0) + dbData.amount)
+    for (const [paymeterId, delta] of [...adjustments].sort(([a], [b]) => a.localeCompare(b))) {
+      if (delta < 0) {
+        const adjusted = await tx.paymeter.updateMany({ where: { id: paymeterId, spentAmount: { gte: -delta } }, data: { spentAmount: { decrement: -delta } } })
+        if (adjusted.count !== 1) throw new Error("Cannot change this expense because its paymeter balance has already been settled.")
+      } else if (delta > 0) {
+        await tx.paymeter.update({ where: { id: paymeterId }, data: { spentAmount: { increment: delta } } })
+      }
     }
 
     const newPendingAmount = paymentType === "PAYMETER"
@@ -145,15 +153,8 @@ export async function updateExpense(id: string, data: ExpenseFormValues) {
       }
     })
 
-    if (dbData.paymeterId) {
-      await tx.paymeter.update({
-        where: { id: dbData.paymeterId },
-        data: { spentAmount: { increment: dbData.amount } }
-      })
-    }
-    
     return newExpense
-  })
+  }, { timeout: 30_000, isolationLevel: "Serializable" })
   
   revalidatePath('/expenses')
   revalidatePath('/reports')
@@ -167,16 +168,15 @@ export async function deleteExpense(id: string) {
   await prisma.$transaction(async (tx) => {
     const oldExpense = await tx.expense.findUnique({ where: { id } })
     if (!oldExpense) return
+    if (oldExpense.paidAmount > 0) throw new Error("Cannot delete an expense with reimbursements. Its settlement history must be retained.")
 
     if (oldExpense.paymeterId) {
-      await tx.paymeter.update({
-        where: { id: oldExpense.paymeterId },
-        data: { spentAmount: { decrement: oldExpense.amount } }
-      })
+      const reversed = await tx.paymeter.updateMany({ where: { id: oldExpense.paymeterId, spentAmount: { gte: oldExpense.amount } }, data: { spentAmount: { decrement: oldExpense.amount } } })
+      if (reversed.count !== 1) throw new Error("Cannot delete this expense because its paymeter balance has already been settled.")
     }
 
     await tx.expense.delete({ where: { id } })
-  })
+  }, { timeout: 30_000, isolationLevel: "Serializable" })
   
   revalidatePath('/expenses')
   revalidatePath('/reports')
@@ -188,41 +188,27 @@ export async function deleteExpense(id: string) {
 export async function payExpense(expenseId: string, amount: number, paymentDate: string) {
   await requirePagePermission("expenses", "edit")
   const date = parseSettlementDate(paymentDate)
-  if (amount <= 0) throw new Error("Amount must be greater than 0")
-
-  const expense = await prisma.expense.findUnique({ where: { id: expenseId } })
-  if (!expense) throw new Error("Expense not found")
-
-  if (amount > expense.pendingAmount) {
-    throw new Error("Payment cannot exceed pending amount")
-  }
-
-  if (!expense.paymeterId) {
-    throw new Error("Expense is not associated with a paymeter")
-  }
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Amount must be greater than 0")
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Update Expense amounts
-    const updatedExpense = await tx.expense.update({
-      where: { id: expenseId },
-      data: {
-        paidAmount: { increment: amount },
-        pendingAmount: { decrement: amount }
-      }
+    const expense = await tx.expense.findUnique({ where: { id: expenseId } })
+    if (!expense?.paymeterId) throw new Error("Expense not found or is not associated with a paymeter")
+    const settled = await tx.expense.updateMany({
+      where: { id: expenseId, paymeterId: expense.paymeterId, pendingAmount: { gte: amount } },
+      data: { paidAmount: { increment: amount }, pendingAmount: { decrement: amount } },
     })
-
-    // 2. Update Paymeter spent amount (settling the expense reduces what's owed)
-    await tx.paymeter.update({
-      where: { id: expense.paymeterId! },
-      data: { spentAmount: { decrement: amount } }
+    if (settled.count !== 1) throw new Error("Payment exceeds the remaining expense balance. Refresh and try again.")
+    const reimbursed = await tx.paymeter.updateMany({
+      where: { id: expense.paymeterId, spentAmount: { gte: amount } },
+      data: { spentAmount: { decrement: amount } },
     })
-
+    if (reimbursed.count !== 1) throw new Error("Reimbursement exceeds the current paymeter balance.")
     await tx.paymeterSettlement.create({
       data: { paymeterId: expense.paymeterId!, amount, date, type: "EXPENSE_REIMBURSEMENT" }
     })
 
-    return updatedExpense
-  })
+    return tx.expense.findUniqueOrThrow({ where: { id: expenseId } })
+  }, { timeout: 30_000, isolationLevel: "Serializable" })
 
   revalidatePath('/expenses')
   revalidatePath('/reports')
