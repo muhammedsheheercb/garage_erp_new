@@ -119,7 +119,6 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
 
 export async function getPendingInvoices(page = 1, search = "") {
   const limit = 5
-  const skip = (page - 1) * limit
   const where: any = {}
   if (search.trim()) {
     where.OR = [
@@ -128,11 +127,8 @@ export async function getPendingInvoices(page = 1, search = "") {
     ]
   }
 
-  const [data, total] = await Promise.all([
-    prisma.jobCard.findMany({
+  const invoices = await prisma.jobCard.findMany({
       where,
-      skip,
-      take: limit,
       include: {
         customer: true,
         payments: true,
@@ -140,11 +136,19 @@ export async function getPendingInvoices(page = 1, search = "") {
         parts: { where: { isPending: true }, select: { id: true } },
       },
       orderBy: { createdAt: 'desc' }
-    }),
-    prisma.jobCard.count({ where })
-  ])
+    })
 
-  return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } }
+  // Filter before pagination so settled cards do not occupy pages or inflate the count.
+  const payableInvoices = invoices.filter(invoice =>
+    invoice.grandTotal > invoice.payments.reduce((total, payment) => total + payment.amount, 0)
+  )
+  const total = payableInvoices.length
+  const totalPages = Math.ceil(total / limit)
+  const currentPage = Math.max(1, Math.min(page, totalPages || 1))
+  const skip = (currentPage - 1) * limit
+  const data = payableInvoices.slice(skip, skip + limit)
+
+  return { data, meta: { total, page: currentPage, limit, totalPages } }
 }
 
 export async function getPendingInvoicesDropdown() {

@@ -314,13 +314,13 @@ export function PaymentList() {
       )}
       {activeTab === "pending" && pendingData?.meta && pendingData.meta.totalPages > 1 && (
         <div className="flex items-center justify-end space-x-2 py-4">
-          <Button variant="outline" size="sm" onClick={() => setPendingPage((page) => Math.max(1, page - 1))} disabled={pendingPage === 1}>
+          <Button variant="outline" size="sm" onClick={() => setPendingPage(Math.max(1, pendingData.meta.page - 1))} disabled={pendingData.meta.page === 1}>
             <ChevronLeft className="h-4 w-4 mr-1" /> {t.common.previous}
           </Button>
           <div className="text-sm text-muted-foreground">
-            {t.common.page} {pendingPage} {t.common.of} {pendingData.meta.totalPages}
+            {t.common.page} {pendingData.meta.page} {t.common.of} {pendingData.meta.totalPages}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setPendingPage((page) => Math.min(pendingData.meta.totalPages, page + 1))} disabled={pendingPage === pendingData.meta.totalPages}>
+          <Button variant="outline" size="sm" onClick={() => setPendingPage(Math.min(pendingData.meta.totalPages, pendingData.meta.page + 1))} disabled={pendingData.meta.page === pendingData.meta.totalPages}>
             {t.common.next} <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
