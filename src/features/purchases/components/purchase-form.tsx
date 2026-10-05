@@ -1,5 +1,8 @@
 "use client"
 
+import { refreshQueries } from "@/lib/refresh-queries"
+import { formatDateInput } from "@/lib/date-format"
+import { getPurchasePaymentSelection } from "../payment-selection"
 import { useForm, Controller, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -50,13 +53,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = useForm<PurchaseFormValues>({
     resolver: zodResolver(purchaseSchema),
     defaultValues: initialData ? {
-      purchaseDate: new Date(initialData.purchaseDate).toISOString().split('T')[0],
+      purchaseDate: formatDateInput(initialData.purchaseDate),
       purchaseType: initialData.purchaseType || "STOCK",
       jobCardId: initialData.jobCardId || null,
       supplierId: initialData.supplierId,
-      paymentSource: "PAYMETER",
-      paymentMethodId: initialData.paymentMethodId,
-      directPaymentMethod: undefined,
+      ...getPurchasePaymentSelection(initialData),
       discount: initialData.discount,
       paidAmount: initialData.paidAmount,
       items: initialData.items.map((item: any) => ({
@@ -81,6 +82,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   })
 
   const purchaseType = watch("purchaseType")
+  const paymentOptions = [...(dropdownData?.paymeters || [])]
+  if (initialData?.paymentMethod && getPurchasePaymentSelection(initialData).paymentSource === "PAYMETER" &&
+      !paymentOptions.some(method => method.id === initialData.paymentMethodId)) {
+    paymentOptions.push({ id: initialData.paymentMethodId, name: initialData.paymentMethod.name })
+  }
   const [vehicleSearch, setVehicleSearch] = useState("")
   const [isJobCardSelectOpen, setIsJobCardSelectOpen] = useState(false)
   const [jobCardPickerPosition, setJobCardPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
@@ -93,6 +99,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const selectedJobCard = dropdownData?.jobCards?.find((jc: any) => jc.id === watch("jobCardId"))
 
   const matchingPurchaseJobCards = dropdownData?.jobCards?.filter((jc: any) => {
+    if (purchaseType === "PENDING_PARTS" && !jc.parts?.some((part: { isPending: boolean }) => part.isPending)) return false
     const query = vehicleSearch.trim().toLowerCase()
     return (!query || jc.vehicle.plateNumber.toLowerCase().includes(query) || jc.customer.name.toLowerCase().includes(query) || jc.complaint.toLowerCase().includes(query))
   }) || []
@@ -125,6 +132,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
     mutationFn: (data: PurchaseFormValues) =>
       initialData ? updatePurchase(initialData.id, data) : createPurchase(data),
     onSuccess: () => {
+      void refreshQueries(queryClient, ["jobcard", "payments", "pending-jobcards", "pending-jobcards-dropdown", "supplier", "suppliers", "report-totals", "report-details", "report-chart", "invoice-dropdowns", "parts-list", "direct-sale-stock", "purchase-dropdowns"]);
       toast.success(initialData ? t.common.save : t.purchases.purchaseRegisteredSuccess)
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
@@ -286,7 +294,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                           <span className="min-w-0"><span className="block font-medium">{jc.vehicle.plateNumber} - {jc.customer.name}</span><span className="block truncate text-xs text-muted-foreground">{jc.complaint}</span></span>
                           {field.value === jc.id && <Check className="ml-3 h-4 w-4 text-primary" />}
                         </button>
-                      )) : <p className="px-3 py-4 text-center text-sm text-muted-foreground">No active job cards found.</p>}
+                      )) : <p className="px-3 py-4 text-center text-sm text-muted-foreground">{purchaseType === "PENDING_PARTS" ? "No job cards with pending parts found." : "No active job cards found."}</p>}
                     </div>, document.body
                   )}
                 </div>
@@ -411,7 +419,9 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                 setValue("paymentMethodId", "")
                 setValue("directPaymentMethod", undefined)
               }}>
-                <SelectTrigger id="paymentSource"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="paymentSource">
+                  <SelectValue>{(value: string) => value === "DIRECT" ? t.payments.directPayment : t.purchases.paymeterLedger}</SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PAYMETER">{t.purchases.paymeterLedger}</SelectItem>
                   <SelectItem value="DIRECT">{t.payments.directPayment}</SelectItem>
@@ -431,11 +441,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger id="paymentMethodId">
                   <SelectValue placeholder={t.purchases.selectPaymeter}>
-                    {(val: string) => dropdownData?.paymeters.find((p: any) => p.id === val)?.name || null}
+                    {(val: string) => paymentOptions.find(p => p.id === val)?.name || null}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {dropdownData?.paymeters.map((p: any) => (
+                  {paymentOptions.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -452,7 +462,11 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
             name="directPaymentMethod"
             render={({ field }) => (
               <Select value={field.value || ""} onValueChange={field.onChange}>
-                <SelectTrigger id="directPaymentMethod"><SelectValue placeholder={t.payments.selectMethod} /></SelectTrigger>
+                <SelectTrigger id="directPaymentMethod">
+                  <SelectValue placeholder={t.payments.selectMethod}>{(value: string) =>
+                    value === "CASH" ? t.payments.cash : value === "BANK_TRANSFER" ? t.payments.bankTransfer : value === "CARD" ? t.payments.card : null
+                  }</SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="CASH">{t.payments.cash}</SelectItem>
                   <SelectItem value="BANK_TRANSFER">{t.payments.bankTransfer}</SelectItem>

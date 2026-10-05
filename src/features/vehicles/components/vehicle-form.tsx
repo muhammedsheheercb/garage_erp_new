@@ -106,7 +106,7 @@ export function VehicleForm({ initialData, initialCustomerId, defaultFuelType, o
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={(event) => { event.stopPropagation(); void handleSubmit(onSubmit)(event) }} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="plateNumber">{t.vehicles.plateNumber} <span className="text-destructive">*</span></Label>
         <Input id="plateNumber" placeholder="e.g. ABC 1234" {...register("plateNumber")} />

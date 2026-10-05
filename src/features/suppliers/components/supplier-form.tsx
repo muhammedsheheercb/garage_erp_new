@@ -54,7 +54,7 @@ export function SupplierForm({ initialData, onSuccess }: SupplierFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={(event) => { event.stopPropagation(); void handleSubmit(onSubmit)(event) }} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">{t.suppliers.supplierName} <span className="text-destructive">*</span></Label>
         <Input id="name" placeholder="Auto Parts LLC" {...register("name")} />

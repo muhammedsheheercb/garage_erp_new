@@ -22,7 +22,7 @@ import { formatAmount } from "@/lib/amount"
 export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onSuccess?: () => void }) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
-  const isPaidLock = initialData?.status === "PAID"
+  const isPaidLock = initialData?.status === "PAID" && initialData.grandTotal > 0
 
   const [otherChargesList, setOtherChargesList] = useState<Array<{ name: string; amount: number | string }>>(() => {
     if (initialData?.otherCharges) {
@@ -48,10 +48,9 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
   const [discountInput, setDiscountInput] = useState<number>(() => Number(initialData?.discount) || 0)
 
   const [taxType, setTaxType] = useState<"percentage" | "amount">(() => {
-    return initialData?.jobCard?.tax ? "percentage" : (initialData?.tax > 0 ? "amount" : "percentage")
+    return initialData?.tax > 0 ? "amount" : "percentage"
   })
   const [taxInput, setTaxInput] = useState<number>(() => {
-    if (initialData?.jobCard?.tax) return Number(initialData.jobCard.tax)
     return Number(initialData?.tax) || 0
   })
 
@@ -143,7 +142,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
         }
 
         if (jc.tax > 0) {
-          setTaxType("percentage")
+          setTaxType("amount")
           setTaxInput(jc.tax)
         } else {
           setTaxInput(0)

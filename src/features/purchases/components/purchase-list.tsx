@@ -1,5 +1,6 @@
 "use client"
 
+import { refreshQueries } from "@/lib/refresh-queries"
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getPurchases, deletePurchase } from "../actions"
@@ -51,6 +52,7 @@ export function PurchaseList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deletePurchase(id),
     onSuccess: () => {
+      void refreshQueries(queryClient, ["supplier", "suppliers", "report-totals", "report-details", "report-chart", "purchase-dropdowns", "direct-sale-stock", "parts-list"]);
       toast.success(t.purchases.purchaseDeletedSuccess)
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
@@ -338,6 +340,7 @@ export function PurchaseList() {
               <DialogTitle>{t.common.edit}: {editingPurchase.purchaseNumber}</DialogTitle>
             </DialogHeader>
             <PurchaseForm 
+              key={editingPurchase.id}
               initialData={editingPurchase} 
               onSuccess={() => setEditingPurchase(null)} 
             />

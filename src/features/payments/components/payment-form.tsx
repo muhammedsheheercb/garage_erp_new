@@ -1,5 +1,6 @@
 "use client"
 
+import { refreshQueries } from "@/lib/refresh-queries"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -70,6 +71,7 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
   const mutation = useMutation({
     mutationFn: (data: PaymentFormValues) => createPayment(data),
     onSuccess: () => {
+      void refreshQueries(queryClient, ["jobcard", "invoice-dropdowns"]);
       toast.success(t.payments.paymentRecordedSuccess)
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['pending-jobcards'] })

@@ -6,6 +6,9 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { batchAvailability } from "@/lib/batch-stock"
 
+// Stock restoration, validation and multi-item writes can exceed five seconds.
+const directSaleTransactionOptions = { timeout: 30_000 }
+
 const saleSchema = z.object({
   vehicleNumber: z.string().trim().optional().default(""),
   customerName: z.string().trim().optional().default(""),
@@ -105,7 +108,7 @@ export async function createDirectSale(data: SaleInput) {
   const sale = await prisma.$transaction(async tx => {
     await assertAndDeduct(tx, rows)
     return tx.directSale.create({ data: { vehicleNumber: parsed.vehicleNumber, customerName: parsed.customerName, customerMobile: parsed.customerMobile, saleDate, paymentMethod: parsed.paymentMethod, ...summary, createdBy, items: { create: rows.map(item => ({ batchId: item.batchId, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat, discount: item.discount, totalAmount: item.totalAmount })) } } })
-  })
+  }, directSaleTransactionOptions)
   revalidateDirectSalePaths(); return sale
 }
 
@@ -119,7 +122,7 @@ export async function updateDirectSale(id: string, data: SaleInput) {
     for (const item of existing.items) await tx.inventoryBatch.update({ where: { id: item.batchId }, data: { quantity: { increment: item.quantity } } })
     await assertAndDeduct(tx, rows)
     await tx.directSale.update({ where: { id }, data: { vehicleNumber: parsed.vehicleNumber, customerName: parsed.customerName, customerMobile: parsed.customerMobile, saleDate, paymentMethod: parsed.paymentMethod, ...summary, items: { deleteMany: {}, create: rows.map(item => ({ batchId: item.batchId, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat, discount: item.discount, totalAmount: item.totalAmount })) } } })
-  })
+  }, directSaleTransactionOptions)
   revalidateDirectSalePaths(); return { success: true }
 }
 
@@ -130,7 +133,7 @@ export async function deleteDirectSale(id: string) {
     if (!sale) throw new Error("Direct sale not found.")
     for (const item of sale.items) await tx.inventoryBatch.update({ where: { id: item.batchId }, data: { quantity: { increment: item.quantity } } })
     await tx.directSale.delete({ where: { id } })
-  })
+  }, directSaleTransactionOptions)
   revalidateDirectSalePaths(); return { success: true }
 }
 

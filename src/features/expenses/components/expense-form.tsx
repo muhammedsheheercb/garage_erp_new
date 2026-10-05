@@ -1,5 +1,6 @@
 "use client";
 
+import { refreshQueries } from "@/lib/refresh-queries"
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -78,6 +79,7 @@ export function ExpenseForm({
     mutationFn: (data: ExpenseFormValues) =>
       initialData ? updateExpense(initialData.id, data) : createExpense(data),
     onSuccess: () => {
+      void refreshQueries(queryClient, ["report-totals", "report-details", "report-chart"]);
       toast.success(
         initialData
           ? t.expensesMod.expenseUpdated

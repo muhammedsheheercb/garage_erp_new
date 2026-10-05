@@ -5,6 +5,7 @@ import { JobCardFormValues, jobCardSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { requirePagePermission, getCreatorName } from "@/lib/authorization"
 import { batchAvailability } from "@/lib/batch-stock"
+import { calculateJobCardTotals } from "./totals"
 
 export async function getJobCards(
   page = 1, 
@@ -87,8 +88,7 @@ export async function getJobCardById(id: string) {
 // Fetch lists for dropdowns
 export async function getDropdownData() {
   await requirePagePermission("jobcards")
-  const [customers, vehicles, mechanics] = await Promise.all([
-    prisma.customer.findMany({ select: { id: true, name: true, phone: true }, orderBy: { name: 'asc' } }),
+  const [vehicles, mechanics] = await Promise.all([
     prisma.vehicle.findMany({
       select: {
         id: true,
@@ -104,7 +104,24 @@ export async function getDropdownData() {
     }),
     prisma.mechanic.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } })
   ])
-  return { customers, vehicles, mechanics }
+  return { vehicles, mechanics }
+}
+
+export async function getJobCardCustomers(search = "", customerId?: string, showAll = false) {
+  await requirePagePermission("jobcards")
+  const query = search.trim()
+  if (!query && !customerId && !showAll) return []
+  return prisma.customer.findMany({
+    where: customerId ? { id: customerId } : !query ? {} : {
+      OR: [
+        { name: { contains: query, mode: "insensitive" } },
+        { phone: { contains: query, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, name: true, phone: true },
+    orderBy: { name: "asc" },
+    take: showAll && !query ? undefined : 20,
+  })
 }
 
 export async function getVehicleHistory(vehicleId: string, excludeJobCardId?: string) {
@@ -179,6 +196,7 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
 export async function createJobCard(data: JobCardFormValues) {
   await requirePagePermission("jobcards")
   const parsed = jobCardSchema.parse(data)
+  Object.assign(parsed, calculateJobCardTotals(parsed))
   const jobCardDate = new Date(parsed.date + "T12:00:00")
   const creatorName = await getCreatorName()
   
@@ -250,13 +268,18 @@ export async function createJobCard(data: JobCardFormValues) {
 export async function updateJobCard(id: string, data: JobCardFormValues) {
   await requirePagePermission("jobcards")
   const parsed = jobCardSchema.parse(data)
+  Object.assign(parsed, calculateJobCardTotals(parsed))
   const jobCardDate = new Date(parsed.date + "T12:00:00")
   
   // Update inventory stock ONLY if status changes to COMPLETED
   const existingJobCard = await prisma.jobCard.findUnique({
     where: { id },
-    select: { status: true, customerId: true, vehicleId: true, quotation: { select: { customerId: true, vehicleId: true } } }
+    select: { status: true, customerId: true, vehicleId: true, discount: true, tax: true, quotation: { select: { customerId: true, vehicleId: true } } }
   })
+
+  if (existingJobCard?.status === "COMPLETED") {
+    throw new Error("Completed job cards cannot be edited.")
+  }
   
   if (existingJobCard?.quotation && (parsed.customerId !== existingJobCard.quotation.customerId || parsed.vehicleId !== existingJobCard.quotation.vehicleId)) {
     throw new Error("Customer and vehicle are locked because this job card was created from a quotation.")
@@ -266,19 +289,25 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
     throw new Error("Pending out-of-stock parts must be replaced with available stock before completing this job card.")
   }
 
-  if (existingJobCard?.status !== "COMPLETED" && parsed.status === "COMPLETED") {
-    // Deduct stock
-    for (const part of parsed.parts.filter((part) => !part.isPending && part.batchId)) {
-      await prisma.inventoryBatch.update({
-        where: { id: part.batchId },
-        data: { quantity: { decrement: part.quantity } }
-      })
-    }
-  }
-  
   // Save the advance receipt together with the job card so reports cannot miss it.
   const creatorName = await getCreatorName()
   await prisma.$transaction(async (tx) => {
+    // Preserve adjustments even if a payment changed them while the form was open.
+    const adjustments = await tx.jobCard.findUniqueOrThrow({
+      where: { id }, select: { discount: true, tax: true, status: true },
+    })
+    if (adjustments.status === "COMPLETED") throw new Error("Completed job cards cannot be edited.")
+    if (parsed.status === "COMPLETED") {
+      for (const part of parsed.parts.filter(part => !part.isPending && part.batchId)) {
+        await tx.inventoryBatch.update({
+          where: { id: part.batchId },
+          data: { quantity: { decrement: part.quantity } },
+        })
+      }
+    }
+    parsed.discount = adjustments.discount
+    parsed.tax = adjustments.tax
+    Object.assign(parsed, calculateJobCardTotals(parsed))
     const advancePayments = await tx.payment.findMany({
       where: { jobCardId: id, method: "ADVANCE" },
       orderBy: { createdAt: "asc" },
@@ -350,7 +379,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
         }
       }
     })
-  })
+  }, { timeout: 30_000 })
   
   revalidatePath('/payments')
   revalidatePath('/')

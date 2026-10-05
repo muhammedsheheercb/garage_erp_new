@@ -109,6 +109,8 @@ export function JobCardList() {
     queryKey: ["jobcard", editingJobId],
     queryFn: () => getJobCardById(editingJobId!),
     enabled: Boolean(editingJobId),
+    // An edit form must never initialize from another record's placeholder data.
+    placeholderData: () => undefined,
   });
 
   const deleteMutation = useMutation({
@@ -185,7 +187,7 @@ export function JobCardList() {
               <TableHead>Created By</TableHead>
               <TableHead>Expected finish</TableHead>
               <TableHead>{t.jobcards.estCost}</TableHead>
-              <TableHead>Paid Amount</TableHead>
+              <TableHead>Advance Paid</TableHead>
               <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
@@ -276,8 +278,9 @@ export function JobCardList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => setEditingJobId(job.id)}
-                              title={t.jobcards.editJobCard}
+                              disabled={job.status === "COMPLETED"}
+                              onClick={() => { if (job.status !== "COMPLETED") setEditingJobId(job.id); }}
+                              title={job.status === "COMPLETED" ? "Completed job cards cannot be edited" : t.jobcards.editJobCard}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -288,10 +291,11 @@ export function JobCardList() {
                             <DialogHeader>
                               <DialogTitle>{t.jobcards.editJobCard}</DialogTitle>
                             </DialogHeader>
-                            {editingJobLoading || !editingJob ? (
+                            {editingJobLoading || !editingJob || editingJob.id !== job.id ? (
                               <div className="p-6 text-center text-sm text-muted-foreground">{t.common.loading}</div>
                             ) : (
                               <JobCardForm
+                                key={editingJob.id}
                                 initialData={editingJob}
                                 onSuccess={() => setEditingJobId(null)}
                               />

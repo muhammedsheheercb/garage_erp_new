@@ -1,5 +1,7 @@
 "use client"
 
+import { refreshQueries } from "@/lib/refresh-queries"
+import { formatDateInput } from "@/lib/date-format"
 import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createDirectSale, updateDirectSale } from "../actions"
@@ -18,7 +20,7 @@ const money = (amount: number) => amount.toFixed(3).replace(/\.?0+$/, "")
 export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; onSuccess: () => void }) {
   const queryClient = useQueryClient()
   const [customer, setCustomer] = useState({ vehicleNumber: initialData?.vehicleNumber || "", customerName: initialData?.customerName || "", customerMobile: initialData?.customerMobile || "" })
-  const [saleDate, setSaleDate] = useState(() => initialData?.saleDate ? new Date(initialData.saleDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10))
+  const [saleDate, setSaleDate] = useState(() => formatDateInput(initialData?.saleDate || new Date()))
   const [rows, setRows] = useState<Row[]>(() => initialData?.items?.map((item: any) => ({ batchId: item.batchId, label: `${item.batch.inventory.itemName} — Batch ${item.batch.batchNumber}`, available: item.quantity, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat })) || [])
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">(initialData?.paymentMethod || "CASH")
   const [discount, setDiscount] = useState(initialData?.discount || 0)
@@ -34,7 +36,9 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
       if (initialData) await updateDirectSale(initialData.id, data); else await createDirectSale(data)
       return { success: true }
     },
-    onSuccess: () => { toast.success(initialData ? "Direct sale updated." : "Direct sale created successfully."); queryClient.invalidateQueries({ queryKey: ["direct-sales"] }); queryClient.invalidateQueries({ queryKey: ["payments"] }); queryClient.invalidateQueries({ queryKey: ["direct-sale-stock"] }); onSuccess() },
+    onSuccess: () => {
+      void refreshQueries(queryClient, ["direct-sale", "inventory", "parts-list", "report-totals", "report-details", "report-chart"]);
+      toast.success(initialData ? "Direct sale updated." : "Direct sale created successfully."); queryClient.invalidateQueries({ queryKey: ["direct-sales"] }); queryClient.invalidateQueries({ queryKey: ["payments"] }); queryClient.invalidateQueries({ queryKey: ["direct-sale-stock"] }); onSuccess() },
     onError: (error: Error) => { const message = error.message || "Direct sale could not be created."; setErrors({ items: message }); toast.error(message) },
   })
   const submit = () => {
@@ -46,7 +50,7 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
       <CustomerField id="sale-vehicle" label="Vehicle Number" value={customer.vehicleNumber} error={errors.vehicleNumber} onChange={value => { setCustomer({ ...customer, vehicleNumber: value }); setErrors({ ...errors, vehicleNumber: undefined }) }} />
       <CustomerField id="sale-customer" label="Customer Name" value={customer.customerName} error={errors.customerName} onChange={value => { setCustomer({ ...customer, customerName: value }); setErrors({ ...errors, customerName: undefined }) }} />
       <CustomerField id="sale-mobile" label="Customer Mobile Number" value={customer.customerMobile} onChange={value => setCustomer({ ...customer, customerMobile: value })} />
-      <CustomerField id="sale-date" label="Sale Date" type="date" max={new Date().toISOString().slice(0, 10)} value={saleDate} error={errors.saleDate} onChange={value => { setSaleDate(value); setErrors({ ...errors, saleDate: undefined }) }} />
+      <CustomerField id="sale-date" label="Sale Date" type="date" max={formatDateInput()} value={saleDate} error={errors.saleDate} onChange={value => { setSaleDate(value); setErrors({ ...errors, saleDate: undefined }) }} />
     </div>
     <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Products</h3><DirectSalePartPicker onSelect={addPart} /></div>
     {errors.items && <p className="text-sm text-destructive">{errors.items}</p>}

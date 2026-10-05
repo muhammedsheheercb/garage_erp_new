@@ -64,11 +64,10 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
 
   const paymentsWithBalances = data.map((payment) => {
     const transactionHistory = [...(payment.jobCard?.payments ?? [])].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-    const transactionIndex = transactionHistory.findIndex((item) => item.id === payment.id)
-    const fallbackTotalPaid = transactionHistory.slice(0, transactionIndex + 1).reduce((sum, item) => sum + item.amount, 0)
-    const totalPaid = payment.totalPaidAtPayment ?? fallbackTotalPaid
-    const grandTotal = payment.grandTotalAtPayment ?? payment.jobCard?.grandTotal ?? 0
-    const balanceAmount = payment.balanceAfterPayment ?? Math.max(0, grandTotal - totalPaid)
+    // Match the current invoice, including charges and payments added later.
+    const totalPaid = transactionHistory.reduce((sum, item) => sum + item.amount, 0)
+    const grandTotal = payment.jobCard?.grandTotal ?? 0
+    const balanceAmount = Math.max(0, grandTotal - totalPaid)
     const latestTransaction = transactionHistory[transactionHistory.length - 1]
 
     return {
@@ -178,6 +177,7 @@ export async function createPayment(data: PaymentFormValues) {
   const parsed = paymentSchema.parse(data)
   const discountAmount = parsed.discountAmount || 0
   let affectedCustomerId: string | null = null
+  const creatorName = await getCreatorName()
   
   const result = await prisma.$transaction(async (tx) => {
     const invoiceBeforePayment = await tx.jobCard.findUnique({
@@ -204,7 +204,6 @@ export async function createPayment(data: PaymentFormValues) {
       throw new Error(`Payment amount and discount cannot exceed the outstanding balance of ${(dueAmount)} OMR.`)
     }
 
-    const creatorName = await getCreatorName()
     const { discountAmount: _discountAmount, paymentDate: paymentDateValue, ...paymentData } = parsed
     const paymentDate = new Date(paymentDateValue + "T12:00:00")
     const grandTotalAtPayment = Math.max(0, invoiceBeforePayment.grandTotal - discountAmount)
@@ -234,6 +233,11 @@ export async function createPayment(data: PaymentFormValues) {
     }
 
     return payment
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30_000 }).catch((error: unknown) => {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      throw new Error("Another payment or job card change happened at the same time. Refresh the balance and try again.")
+    }
+    throw error
   })
   
   revalidatePath('/payments')
@@ -250,7 +254,7 @@ export async function getPaymentBill(id: string) {
   return prisma.payment.findUnique({
     where: { id },
     include: {
-      jobCard: { include: { customer: true, vehicle: true, services: { include: { service: true } }, parts: { include: { batch: { include: { inventory: true } } } }, payments: { orderBy: { createdAt: "asc" } } } },
+      jobCard: { include: { customer: true, vehicle: true, services: { include: { service: true } }, parts: { include: { inventory: true, batch: { include: { inventory: true } } } }, payments: { orderBy: { createdAt: "asc" } } } },
     },
   })
 }
@@ -262,7 +266,7 @@ export async function getJobCardBill(id: string) {
       customer: true,
       vehicle: true,
       services: { include: { service: true } },
-      parts: { include: { batch: { include: { inventory: true } } } },
+      parts: { include: { inventory: true, batch: { include: { inventory: true } } } },
       payments: { orderBy: { createdAt: "asc" } },
     },
   })

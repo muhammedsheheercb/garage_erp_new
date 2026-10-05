@@ -7,6 +7,8 @@ import { PurchaseFormValues, purchaseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { getCreatorName } from "@/lib/authorization"
 import { userPaymeterWhere } from "@/lib/paymeter"
+import { recalculateJobCardTotals } from "../jobcards/recalculate"
+import { assertPurchasableJobCard, editPurchaseStock } from "./edit-stock"
 
 // Purchases write multiple items, stock batches, ledger entries and job card parts.
 // Allow these atomic operations more time than Prisma's five-second default.
@@ -197,6 +199,7 @@ export async function createPurchase(data: PurchaseFormValues) {
   const creatorName = await getCreatorName()
 
   const result = await prisma.$transaction(async (tx) => {
+    if (parsed.purchaseType !== "STOCK") await assertPurchasableJobCard(tx, parsed.jobCardId)
     const selectedPaymentMethodId = paymentMethodId || await getDirectPaymeterId(tx, parsed.directPaymentMethod!)
     // 1. Create the purchase
     const purchase = await tx.purchase.create({
@@ -242,7 +245,6 @@ export async function createPurchase(data: PurchaseFormValues) {
     }
 
     // 4. Create Inventory Batches and optional JobCardParts
-    let addedPartsTotal = 0
     for (const item of parsed.items) {
       const batch = await tx.inventoryBatch.create({
         data: {
@@ -259,7 +261,6 @@ export async function createPurchase(data: PurchaseFormValues) {
         await tx.jobCardPart.create({
           data: { jobCardId: parsed.jobCardId, batchId: batch.id, isPending: false, quantity: item.quantity, price: item.sellingPrice }
         })
-        addedPartsTotal += item.quantity * item.sellingPrice
       }
 
       if (parsed.purchaseType === "PENDING_PARTS" && parsed.jobCardId) {
@@ -278,25 +279,8 @@ export async function createPurchase(data: PurchaseFormValues) {
       }
     }
     
-    if (parsed.purchaseType === 'VEHICLE' && parsed.jobCardId && addedPartsTotal > 0) {
-      // Update JobCard totals
-      const jobCard = await tx.jobCard.findUnique({ where: { id: parsed.jobCardId } })
-      if (jobCard) {
-        const taxRate = jobCard.tax > 0 ? (jobCard.tax / (jobCard.serviceTotal + jobCard.partsTotal)) : 0
-        const newPartsTotal = jobCard.partsTotal + addedPartsTotal
-        const subTotal = jobCard.serviceTotal + newPartsTotal
-        const newTax = subTotal * taxRate
-        const newGrandTotal = subTotal + newTax - jobCard.discount
-        
-        await tx.jobCard.update({
-          where: { id: parsed.jobCardId },
-          data: {
-            partsTotal: newPartsTotal,
-            tax: newTax,
-            grandTotal: newGrandTotal
-          }
-        })
-      }
+    if (parsed.jobCardId && ["VEHICLE", "PENDING_PARTS"].includes(parsed.purchaseType)) {
+      await recalculateJobCardTotals(tx, parsed.jobCardId)
     }
 
     return purchase
@@ -307,6 +291,10 @@ export async function createPurchase(data: PurchaseFormValues) {
   revalidatePath('/paymeters')
   revalidatePath('/jobcards')
   revalidatePath('/vehicles')
+  revalidatePath('/payments')
+  revalidatePath('/suppliers')
+  revalidatePath('/reports')
+  revalidatePath('/')
   return result
 }
 
@@ -353,6 +341,10 @@ export async function deletePurchase(id: string) {
   revalidatePath('/paymeters')
   revalidatePath('/jobcards')
   revalidatePath('/vehicles')
+  revalidatePath('/payments')
+  revalidatePath('/suppliers')
+  revalidatePath('/reports')
+  revalidatePath('/')
   return result
 }
 
@@ -450,6 +442,9 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
   }
 
   const result = await prisma.$transaction(async (tx) => {
+    await assertPurchasableJobCard(tx, existingPurchase.jobCardId)
+    if (parsed.purchaseType !== "STOCK") await assertPurchasableJobCard(tx, parsed.jobCardId)
+    await editPurchaseStock(tx, existingPurchase, parsed)
     const selectedPaymentMethodId = paymentMethodId || await getDirectPaymeterId(tx, parsed.directPaymentMethod!)
     
     // 1. Revert old paymeter spentAmount
@@ -460,39 +455,7 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
       })
     }
 
-    // 2. Handle old JobCard parts and totals
-    if (existingPurchase.purchaseType === 'VEHICLE' && existingPurchase.jobCardId) {
-      const oldBatches = await tx.inventoryBatch.findMany({ where: { purchaseId: id } })
-      const oldBatchIds = oldBatches.map(b => b.id)
-      
-      if (oldBatchIds.length > 0) {
-        // Find how much was contributed
-        const oldParts = await tx.jobCardPart.findMany({ where: { batchId: { in: oldBatchIds } } })
-        const oldPartsTotal = oldParts.reduce((sum, p) => sum + (p.quantity * p.price), 0)
-        
-        await tx.jobCardPart.deleteMany({ where: { batchId: { in: oldBatchIds } } })
-        
-        if (oldPartsTotal > 0) {
-          const oldJobCard = await tx.jobCard.findUnique({ where: { id: existingPurchase.jobCardId } })
-          if (oldJobCard) {
-            const taxRate = oldJobCard.tax > 0 ? (oldJobCard.tax / (oldJobCard.serviceTotal + oldJobCard.partsTotal)) : 0
-            const newPartsTotal = Math.max(0, oldJobCard.partsTotal - oldPartsTotal)
-            const subTotal = oldJobCard.serviceTotal + newPartsTotal
-            const newTax = subTotal * taxRate
-            const newGrandTotal = subTotal + newTax - oldJobCard.discount
-            
-            await tx.jobCard.update({
-              where: { id: existingPurchase.jobCardId },
-              data: { partsTotal: newPartsTotal, tax: newTax, grandTotal: newGrandTotal }
-            })
-          }
-        }
-      }
-    }
-
-    // 3. Delete old items, batches, payments
     await tx.purchaseItem.deleteMany({ where: { purchaseId: id } })
-    await tx.inventoryBatch.deleteMany({ where: { purchaseId: id } })
     await tx.purchasePayment.deleteMany({ where: { purchaseId: id } })
 
     // 4. Update the purchase
@@ -537,48 +500,10 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
       })
     }
 
-    // 7. Create Inventory Batches and JobCardParts
-    let addedPartsTotal = 0
-    for (const item of parsed.items) {
-      const batch = await tx.inventoryBatch.create({
-        data: {
-          inventoryId: item.inventoryId,
-          batchNumber: purchase.purchaseNumber,
-          quantity: item.quantity,
-          purchasePrice: item.purchasePrice,
-          sellingPrice: item.sellingPrice,
-          purchaseId: purchase.id
-        }
-      })
-      
-      if (parsed.purchaseType === 'VEHICLE' && parsed.jobCardId) {
-        await tx.jobCardPart.create({
-          data: {
-            jobCardId: parsed.jobCardId,
-            batchId: batch.id,
-            quantity: item.quantity,
-            price: item.sellingPrice
-          }
-        })
-        addedPartsTotal += (item.quantity * item.sellingPrice)
-      }
-    }
-    
-    if (parsed.purchaseType === 'VEHICLE' && parsed.jobCardId && addedPartsTotal > 0) {
-      const jobCard = await tx.jobCard.findUnique({ where: { id: parsed.jobCardId } })
-      if (jobCard) {
-        const taxRate = jobCard.tax > 0 ? (jobCard.tax / (jobCard.serviceTotal + jobCard.partsTotal)) : 0
-        const newPartsTotal = jobCard.partsTotal + addedPartsTotal
-        const subTotal = jobCard.serviceTotal + newPartsTotal
-        const newTax = subTotal * taxRate
-        const newGrandTotal = subTotal + newTax - jobCard.discount
-        
-        await tx.jobCard.update({
-          where: { id: parsed.jobCardId },
-          data: { partsTotal: newPartsTotal, tax: newTax, grandTotal: newGrandTotal }
-        })
-      }
-    }
+    const affectedJobCards = new Set<string>()
+    if (["VEHICLE", "PENDING_PARTS"].includes(existingPurchase.purchaseType) && existingPurchase.jobCardId) affectedJobCards.add(existingPurchase.jobCardId)
+    if (["VEHICLE", "PENDING_PARTS"].includes(parsed.purchaseType) && parsed.jobCardId) affectedJobCards.add(parsed.jobCardId)
+    for (const jobCardId of affectedJobCards) await recalculateJobCardTotals(tx, jobCardId)
 
     return purchase
   }, purchaseTransactionOptions)
@@ -588,5 +513,9 @@ export async function updatePurchase(id: string, data: PurchaseFormValues) {
   revalidatePath('/paymeters')
   revalidatePath('/jobcards')
   revalidatePath('/vehicles')
+  revalidatePath('/payments')
+  revalidatePath('/suppliers')
+  revalidatePath('/reports')
+  revalidatePath('/')
   return result
 }

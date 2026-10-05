@@ -103,6 +103,8 @@ export async function createExpense(data: ExpenseFormValues) {
   })
   
   revalidatePath('/expenses')
+  revalidatePath('/reports')
+  revalidatePath('/')
   revalidatePath('/paymeters')
   return expense
 }
@@ -150,6 +152,8 @@ export async function updateExpense(id: string, data: ExpenseFormValues) {
   })
   
   revalidatePath('/expenses')
+  revalidatePath('/reports')
+  revalidatePath('/')
   revalidatePath('/paymeters')
   return expense
 }
@@ -170,6 +174,8 @@ export async function deleteExpense(id: string) {
   })
   
   revalidatePath('/expenses')
+  revalidatePath('/reports')
+  revalidatePath('/')
   revalidatePath('/paymeters')
   return { success: true }
 }
@@ -213,6 +219,8 @@ export async function payExpense(expenseId: string, amount: number, paymentDate:
   })
 
   revalidatePath('/expenses')
+  revalidatePath('/reports')
+  revalidatePath('/')
   revalidatePath('/paymeters')
   revalidatePath('/')
   revalidatePath('/reports')

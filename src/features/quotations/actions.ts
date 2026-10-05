@@ -5,6 +5,7 @@ import { requirePagePermission, getCreatorName } from "@/lib/authorization"
 import { revalidatePath } from "next/cache"
 import { quotationSchema, type QuotationFormValues } from "./schema"
 import { batchAvailability } from "@/lib/batch-stock"
+import { calculateQuotationTotals } from "./totals"
 
 const quotationInclude = {
   customer: { select: { id: true, name: true, phone: true } },
@@ -95,6 +96,7 @@ export async function getQuotationServices(search = "") {
 export async function createQuotation(data: QuotationFormValues) {
   await requirePagePermission("quotations", "create")
   const parsed = quotationSchema.parse(data)
+  Object.assign(parsed, calculateQuotationTotals(parsed))
   const quotation = await prisma.quotation.create({ data: {
     customerId: parsed.customerId, vehicleId: parsed.vehicleId, complaint: parsed.complaint, notes: parsed.notes || null,
     date: new Date(parsed.date), validUntil: new Date(parsed.validUntil), vehicleKm: parsed.vehicleKm, otherCharge: 0,
@@ -109,6 +111,7 @@ export async function createQuotation(data: QuotationFormValues) {
 export async function updateQuotation(id: string, data: QuotationFormValues) {
   await requirePagePermission("quotations", "edit")
   const parsed = quotationSchema.parse(data)
+  Object.assign(parsed, calculateQuotationTotals(parsed))
   await prisma.quotation.update({ where: { id }, data: {
     customerId: parsed.customerId, vehicleId: parsed.vehicleId, complaint: parsed.complaint, notes: parsed.notes || null,
     date: new Date(parsed.date), validUntil: new Date(parsed.validUntil), vehicleKm: parsed.vehicleKm, otherCharge: 0,
@@ -189,7 +192,7 @@ export async function getQuotationJobCardPrefill(id: string) {
   return {
     customerId: quote.customerId, vehicleId: quote.vehicleId, complaint: quote.complaint, notes: quote.notes || "", vehicleKm: quote.vehicleKm, hideServicePartsAmounts: quote.hideServicePartsAmounts,
     date: new Date().toISOString(),
-    services: quote.services.map((service) => ({ serviceId: service.serviceId, service: { name: service.service.name }, quantity: service.quantity, price: service.price })),
+    services: quote.services.map((service) => ({ serviceId: service.serviceId, service: { name: service.service.name }, quantity: service.quantity, price: service.price * service.quantity })),
     parts: partRows, serviceTotal: quote.serviceTotal, partsTotal, grandTotal: quote.serviceTotal + partsTotal,
   }
 }

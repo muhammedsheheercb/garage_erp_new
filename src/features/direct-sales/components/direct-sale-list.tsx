@@ -1,5 +1,6 @@
 "use client"
 
+import { refreshQueries } from "@/lib/refresh-queries"
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { endOfDay } from "date-fns"
@@ -27,9 +28,10 @@ export function DirectSaleList() {
   const fromDate = dateRange?.from?.toISOString()
   const toDate = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined
   const { data, isLoading } = useQuery({ queryKey: ["direct-sales", search, fromDate, toDate], queryFn: () => getDirectSales(1, search, fromDate, toDate) })
-  const { data: editing } = useQuery({ queryKey: ["direct-sale", editingId], queryFn: () => getDirectSaleById(editingId!), enabled: !!editingId })
-  const { data: viewing } = useQuery({ queryKey: ["direct-sale", viewingId], queryFn: () => getDirectSaleById(viewingId!), enabled: !!viewingId })
-  const deletion = useMutation({ mutationFn: deleteDirectSale, onSuccess: () => { toast.success("Direct sale deleted and stock restored."); client.invalidateQueries({ queryKey: ["direct-sales"] }); client.invalidateQueries({ queryKey: ["payments"] }) }, onError: (error: Error) => toast.error(error.message) })
+  const { data: editing } = useQuery({ queryKey: ["direct-sale", editingId], queryFn: () => getDirectSaleById(editingId!), enabled: !!editingId, placeholderData: () => undefined })
+  const { data: viewing } = useQuery({ queryKey: ["direct-sale", viewingId], queryFn: () => getDirectSaleById(viewingId!), enabled: !!viewingId, placeholderData: () => undefined })
+  const deletion = useMutation({ mutationFn: deleteDirectSale, onSuccess: () => {
+      void refreshQueries(client, ["direct-sale", "direct-sale-stock", "inventory", "parts-list", "report-totals", "report-details", "report-chart"]); toast.success("Direct sale deleted and stock restored."); client.invalidateQueries({ queryKey: ["direct-sales"] }); client.invalidateQueries({ queryKey: ["payments"] }) }, onError: (error: Error) => toast.error(error.message) })
   const resetFilters = () => { setSearch(""); setDateRange(undefined) }
   const openBill = (id: string) => router.push(`/direct-sales/${id}/print`)
   return <div className="space-y-5">
@@ -43,8 +45,8 @@ export function DirectSaleList() {
     </div>
     <div className="overflow-x-auto rounded-lg border bg-card shadow-sm"><table className="w-full min-w-[760px] text-sm"><thead className="bg-muted/70"><tr className="border-b"><th className="p-3 text-left font-semibold">Sale #</th><th className="text-left font-semibold">Sale Date</th><th className="text-left font-semibold">Customer</th><th className="text-left font-semibold">Vehicle</th><th className="text-right font-semibold">Grand Total</th><th className="p-3 text-right font-semibold">Actions</th></tr></thead><tbody>{isLoading ? <tr><td className="h-24 p-3 text-center text-muted-foreground" colSpan={6}>Loading...</td></tr> : !data?.data.length ? <tr><td className="h-24 p-3 text-center text-muted-foreground" colSpan={6}>No direct sales found.</td></tr> : data.data.map(sale => <tr className="border-b border-border/70 bg-card transition-colors hover:bg-muted/40" key={sale.id}><td className="p-3 font-medium">DS-{sale.id.split("-")[0].toUpperCase()}</td><td>{formatDisplayDate(sale.saleDate)}</td><td>{sale.customerName}<span className="block text-xs text-muted-foreground">{sale.customerMobile || "—"}</span></td><td>{sale.vehicleNumber}</td><td className="text-right font-medium">{sale.grandTotal}</td><td className="p-2 text-right whitespace-nowrap"><Button variant="ghost" size="icon" title="View bill" onClick={() => setViewingId(sale.id)}><Eye className="h-4 w-4" /></Button><Button variant="ghost" size="icon" title="Edit" onClick={() => setEditingId(sale.id)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon" title="Print bill" onClick={() => openBill(sale.id)}><Printer className="h-4 w-4" /></Button><AlertDialog><AlertDialogTrigger render={<Button variant="ghost" size="icon" className="text-destructive"><Trash className="h-4 w-4" /></Button>} /><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete this direct sale?</AlertDialogTitle><AlertDialogDescription>This permanently removes the bill and restores its quantities to inventory.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive" onClick={() => deletion.mutate(sale.id)}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></td></tr>)}</tbody></table></div>
     <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="max-h-[92dvh] overflow-y-auto"><DialogHeader><DialogTitle>New Direct Sale</DialogTitle></DialogHeader><DirectSaleForm onSuccess={() => setCreateOpen(false)} /></DialogContent></Dialog>
-    <Dialog open={!!viewingId} onOpenChange={open => !open && setViewingId(null)}><DialogContent className="max-h-[85dvh] max-w-5xl overflow-y-auto sm:max-w-5xl"><DialogHeader><DialogTitle>Direct Sale Bill</DialogTitle></DialogHeader>{viewing && <SaleDetails sale={viewing} />}</DialogContent></Dialog>
-    <Dialog open={!!editingId} onOpenChange={open => !open && setEditingId(null)}><DialogContent className="max-h-[92dvh] overflow-y-auto"><DialogHeader><DialogTitle>Edit Direct Sale</DialogTitle></DialogHeader>{editing && <DirectSaleForm initialData={editing} onSuccess={() => setEditingId(null)} />}</DialogContent></Dialog>
+    <Dialog open={!!viewingId} onOpenChange={open => !open && setViewingId(null)}><DialogContent className="max-h-[85dvh] max-w-5xl overflow-y-auto sm:max-w-5xl"><DialogHeader><DialogTitle>Direct Sale Bill</DialogTitle></DialogHeader>{viewing?.id === viewingId ? <SaleDetails sale={viewing} /> : <p className="p-6 text-center">Loading...</p>}</DialogContent></Dialog>
+    <Dialog open={!!editingId} onOpenChange={open => !open && setEditingId(null)}><DialogContent className="max-h-[92dvh] overflow-y-auto"><DialogHeader><DialogTitle>Edit Direct Sale</DialogTitle></DialogHeader>{editing?.id === editingId ? <DirectSaleForm key={editing.id} initialData={editing} onSuccess={() => setEditingId(null)} /> : <p className="p-6 text-center">Loading...</p>}</DialogContent></Dialog>
   </div>
 }
 

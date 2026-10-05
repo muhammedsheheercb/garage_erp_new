@@ -1,8 +1,10 @@
 "use client";
 
+import { refreshQueries } from "@/lib/refresh-queries"
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { JobCardFormValues, jobCardSchema } from "../schema";
+import { calculateJobCardTotals } from "../totals";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ import {
   createJobCard,
   updateJobCard,
   getDropdownData,
+  getJobCardCustomers,
   getVehicleHistory,
 } from "../actions";
 import { toast } from "sonner";
@@ -46,7 +49,7 @@ import {
 import { CustomerForm } from "@/features/customers/components/customer-form";
 import { VehicleForm } from "@/features/vehicles/components/vehicle-form";
 import { useTranslation } from "@/i18n";
-import { formatDisplayDate } from "@/lib/date-format";
+import { formatDisplayDate, formatDateInput } from "@/lib/date-format";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/amount";
@@ -68,6 +71,12 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
   const [isVehiclePickerOpen, setIsVehiclePickerOpen] = useState(false);
   const [vehiclePickerPosition, setVehiclePickerPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState("");
+  const [chosenCustomer, setChosenCustomer] = useState<{ id: string; name: string; phone?: string | null } | null>(initialData?.customer || null);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedCustomerSearch(customerSearch.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [customerSearch]);
   const [isCustomerPickerOpen, setIsCustomerPickerOpen] = useState(false);
   const [customerPickerPosition, setCustomerPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const [mechanicSearch, setMechanicSearch] = useState("");
@@ -99,7 +108,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       date: initialData?.date
         ? format(new Date(initialData.date), "yyyy-MM-dd")
         : format(initialData?.createdAt ? new Date(initialData.createdAt) : new Date(), "yyyy-MM-dd"),
-      expectedFinishDate: initialData?.expectedFinishDate ? new Date(initialData.expectedFinishDate).toISOString().slice(0, 10) : "",
+      expectedFinishDate: initialData?.expectedFinishDate ? formatDateInput(initialData.expectedFinishDate) : "",
       vehicleKm: initialData?.vehicleKm ?? 0,
 
       services:
@@ -128,8 +137,8 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
 
       serviceTotal: initialData?.serviceTotal || 0,
       partsTotal: initialData?.partsTotal || 0,
-      discount: 0,
-      tax: 0,
+      discount: initialData?.discount || 0,
+      tax: initialData?.tax || 0,
       grandTotal: initialData?.grandTotal || 0,
       advancePaid: initialData?.advancePaid || 0,
       advancePaymentMethod: initialData?.payments?.[0]?.receivedMethod || "CASH",
@@ -168,34 +177,25 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
   const servicesJson = JSON.stringify(watchedServices);
   const partsJson = JSON.stringify(watchedParts);
   const otherChargesJson = JSON.stringify(watchedOtherCharges);
+  const watchedDiscount = watch("discount") || 0;
+  const watchedTax = watch("tax") || 0;
 
   useEffect(() => {
-    const sTotal = (watchedServices || []).reduce(
-        (acc, curr) => acc + (Number(curr?.price) || 0),
-        0,
-      );
-    const pTotal = (watchedParts || []).reduce(
-        (acc, curr) => acc + (Number(curr?.quantity) || 0) * (Number(curr?.price) || 0),
-        0,
-      );
-    const otherChargesTotal = (watchedOtherCharges || []).reduce(
-      (acc, charge) => acc + (Number(charge?.amount) || 0),
-      0,
-    );
+    const totals = calculateJobCardTotals({
+      services: watchedServices.map(service => ({ ...service, price: Number(service.price) || 0 })),
+      parts: watchedParts.map(part => ({ ...part, price: Number(part.price) || 0, quantity: Number(part.quantity) || 0 })),
+      otherCharges: watchedOtherCharges.map(charge => ({ ...charge, amount: Number(charge.amount) || 0 })),
+      discount: watchedDiscount,
+      tax: watchedTax,
+    });
+    setValue("serviceTotal", totals.serviceTotal);
+    setValue("partsTotal", totals.partsTotal);
 
-    setValue("serviceTotal", sTotal);
-    setValue("partsTotal", pTotal);
-
-    const subTotal = sTotal + pTotal + otherChargesTotal;
-    const gTotal = subTotal;
-    setValue("discount", 0);
-    setValue("tax", 0);
-
-    setValue("grandTotal", gTotal > 0 ? gTotal : 0);
-  }, [servicesJson, partsJson, otherChargesJson, setValue]);
+    setValue("grandTotal", totals.grandTotal);
+  }, [servicesJson, partsJson, otherChargesJson, watchedDiscount, watchedTax, setValue]);
 
   const {
-    data: dropdowns = { customers: [], vehicles: [], mechanics: [] },
+    data: dropdowns = { vehicles: [], mechanics: [] },
     isLoading,
   } = useQuery({
     queryKey: ["jobcards-dropdowns"],
@@ -210,6 +210,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       return createJobCard(data);
     },
     onSuccess: async (result) => {
+      void refreshQueries(queryClient, ["invoice-dropdowns", "parts-list", "direct-sale-stock", "vehicle-history"]);
       if (quotationId && !initialData?.id && result && typeof result === "object" && "id" in result) {
         await markQuotationConverted(quotationId, String(result.id));
       }
@@ -217,6 +218,9 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
         initialData?.id ? t.jobcards.jobCardUpdated : t.jobcards.jobCardCreated,
       );
       queryClient.invalidateQueries({ queryKey: ["jobcards"] });
+      if (initialData?.id) {
+        queryClient.invalidateQueries({ queryKey: ["jobcard", initialData.id] });
+      }
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["pending-jobcards"] });
       queryClient.invalidateQueries({ queryKey: ["pending-jobcards-dropdown"] });
@@ -238,28 +242,35 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
   const onSubmit = (data: JobCardFormValues) => {
     mutation.mutate({
       ...data,
+      ...calculateJobCardTotals(data),
       services: data.services.map((service) => ({ ...service, quantity: service.quantity || 1 })),
     });
   };
 
   const selectedCustomerId = watch("customerId");
-  const selectedCustomer = dropdowns.customers.find(
-    (customer: any) => customer.id === selectedCustomerId,
-  );
+  const { data: savedCustomers = [] } = useQuery({
+    queryKey: ["jobcard-customer", selectedCustomerId],
+    queryFn: () => getJobCardCustomers("", selectedCustomerId),
+    enabled: Boolean(selectedCustomerId) && chosenCustomer?.id !== selectedCustomerId,
+    placeholderData: () => undefined,
+  });
+  const selectedCustomer = chosenCustomer?.id === selectedCustomerId ? chosenCustomer : savedCustomers.find(customer => customer.id === selectedCustomerId);
+  const { data: matchingCustomers = [], isFetching: customersFetching, isError: customersError } = useQuery({
+    queryKey: ["jobcard-customer-search", debouncedCustomerSearch, !initialData?.id],
+    queryFn: () => getJobCardCustomers(debouncedCustomerSearch, undefined, !initialData?.id),
+    enabled: isCustomerPickerOpen && (Boolean(debouncedCustomerSearch) || !initialData?.id),
+    placeholderData: () => undefined,
+  });
   const selectedVehicleId = watch("vehicleId");
   const selectedVehicle = dropdowns.vehicles.find(
     (vehicle: any) => vehicle.id === selectedVehicleId,
-  );
+  ) || (initialData?.vehicle?.id === selectedVehicleId ? initialData.vehicle : undefined);
   const matchingVehicles = dropdowns.vehicles.filter((vehicle: any) => {
     if (selectedCustomerId && vehicle.customerId !== selectedCustomerId) return false;
     const query = vehicleSearch.trim().toLowerCase();
     return !query || vehicle.plateNumber.toLowerCase().includes(query) ||
       vehicle.brand.toLowerCase().includes(query) ||
       vehicle.model.toLowerCase().includes(query);
-  });
-  const matchingCustomers = dropdowns.customers.filter((customer: any) => {
-    const query = customerSearch.trim().toLowerCase();
-    return !query || customer.name.toLowerCase().includes(query) || customer.phone?.toLowerCase().includes(query);
   });
 
   const updateVehiclePickerPosition = (element: HTMLElement) => {
@@ -359,6 +370,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                             })
                             .then(() => {
                               if (newCust && newCust.id) {
+                                setChosenCustomer(newCust);
                                 setValue("customerId", newCust.id);
                                 setValue("vehicleId", "");
                               }
@@ -377,10 +389,10 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   placeholder={t.jobcards.selectCustomer}
                   className="pl-9 pr-9"
                   autoComplete="off"
-                  disabled={isLoading || Boolean(quotationId || initialData?.quotation)}
+                  disabled={Boolean(quotationId || initialData?.quotation)}
                   onFocus={(event) => {
                     setCustomerSearch("");
-                    setIsCustomerPickerOpen(true);
+                    setIsCustomerPickerOpen(!initialData?.id);
                     updateCustomerPickerPosition(event.currentTarget);
                   }}
                   onBlur={() => window.setTimeout(() => {
@@ -408,25 +420,30 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                       setValue("customerId", "");
                       setValue("vehicleId", "");
                       setVehicleSearch("");
-                      setIsCustomerPickerOpen(true);
+                      setIsCustomerPickerOpen(!initialData?.id);
                       if (input) updateCustomerPickerPosition(input);
                     }}
                   >
                     <X className="h-4 w-4" />
                   </button>
                 )}
-                {isCustomerPickerOpen && customerPickerPosition && typeof document !== "undefined" && createPortal(
+                {isCustomerPickerOpen && (customerSearch.trim() || !initialData?.id) && customerPickerPosition && typeof document !== "undefined" && createPortal(
                   <div
                     className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
                     style={{ top: customerPickerPosition.top, left: customerPickerPosition.left, width: customerPickerPosition.width }}
                   >
-                    {matchingCustomers.length > 0 ? matchingCustomers.map((customer: any) => (
+                    {customersFetching || customerSearch.trim() !== debouncedCustomerSearch ? (
+                      <p className="px-3 py-4 text-center text-sm text-muted-foreground">{t.common.loading}</p>
+                    ) : customersError ? (
+                      <p className="px-3 py-4 text-center text-sm text-destructive">Unable to load customers. Please try again.</p>
+                    ) : matchingCustomers.length > 0 ? matchingCustomers.map((customer) => (
                       <button
                         key={customer.id}
                         type="button"
                         className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent focus:bg-accent"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => {
+                          setChosenCustomer(customer);
                           setValue("customerId", customer.id, { shouldValidate: true });
                           setValue("vehicleId", "");
                           setVehicleSearch("");

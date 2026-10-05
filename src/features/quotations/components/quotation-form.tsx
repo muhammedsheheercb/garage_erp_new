@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { createQuotation, getQuotationDropdowns, updateQuotation } from "../actions"
 import { quotationSchema, type QuotationFormValues } from "../schema"
+import { calculateQuotationTotals } from "../totals"
 import { QuotationPartSelectionModal } from "./quotation-part-selection-modal"
 import { ServiceSelectionModal } from "@/features/jobcards/components/service-selection-modal"
 import { ServiceForm } from "@/features/services/components/service-form"
@@ -53,8 +54,8 @@ export function QuotationForm({ initialData, onSuccess }: { initialData?: any; o
   const pickerPosition = (element: HTMLElement) => { const rect = element.getBoundingClientRect(); const width = Math.min(Math.max(rect.width, 280), window.innerWidth - 16); return { top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)), width } }
   useEffect(() => { if (selectedCustomerData && !customerPickerOpen) setCustomerSearch(selectedCustomerData.name) }, [selectedCustomerData, customerPickerOpen])
   useEffect(() => { if (selectedVehicle && !vehiclePickerOpen) setVehicleSearch(selectedVehicle.plateNumber) }, [selectedVehicle, vehiclePickerOpen])
-  const mutation = useMutation({ mutationFn: async (data: QuotationFormValues) => { if (initialData?.id) await updateQuotation(initialData.id, data); else await createQuotation(data) }, onSuccess: () => { toast.success(initialData?.id ? "Quotation updated" : "Quotation saved"); queryClient.invalidateQueries({ queryKey: ["quotations"] }); onSuccess?.() }, onError: (error: Error) => toast.error(error.message || "Unable to save quotation") })
-  return <form className="quotation-form space-y-5 sm:space-y-6" onSubmit={form.handleSubmit((data) => mutation.mutate(data))}>
+  const mutation = useMutation({ mutationFn: async (data: QuotationFormValues) => { if (initialData?.id) await updateQuotation(initialData.id, data); else await createQuotation(data) }, onSuccess: () => { toast.success(initialData?.id ? "Quotation updated" : "Quotation saved"); queryClient.invalidateQueries({ queryKey: ["quotations"] }); queryClient.invalidateQueries({ queryKey: ["quotation-jobcard-prefill"] }); onSuccess?.() }, onError: (error: Error) => toast.error(error.message || "Unable to save quotation") })
+  return <form className="quotation-form space-y-5 sm:space-y-6" onSubmit={form.handleSubmit((data) => mutation.mutate({ ...data, ...calculateQuotationTotals(data) }))}>
     <style dangerouslySetInnerHTML={{ __html: "@media (max-width: 639px) { [data-slot=dialog-content]:has(.quotation-form) { height: calc(100dvh - 1rem); max-height: calc(100dvh - 1rem); min-height: 0; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; } .quotation-form, .quotation-form > div, .quotation-form .lg\\:col-span-2 { min-width: 0; max-width: 100%; } .quotation-form input, .quotation-form textarea { max-width: 100%; } .quotation-form section { overflow-x: auto; padding: 0.75rem; } .quotation-form section table { min-width: 520px; } .quotation-form aside { padding: 1rem; } .quotation-form .flex.items-center.justify-between { flex-wrap: wrap; align-items: flex-start; gap: 0.5rem; } }" }} />
     <div className="grid gap-6 lg:grid-cols-3"><div className="space-y-6 lg:col-span-2">
       <div className="grid gap-4 sm:grid-cols-2">

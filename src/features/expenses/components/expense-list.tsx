@@ -1,5 +1,6 @@
 "use client";
 
+import { refreshQueries } from "@/lib/refresh-queries"
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -122,6 +123,7 @@ export function ExpenseList() {
   const deleteMutation = useMutation({
     mutationFn: deleteExpense,
     onSuccess: () => {
+      void refreshQueries(queryClient, ["paymeters", "report-totals", "report-details", "report-chart"]);
       toast.success(t.settings.taxTab.expenseDeleted);
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["monthly-expenses"] });

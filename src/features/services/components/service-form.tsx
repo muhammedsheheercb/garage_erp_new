@@ -67,7 +67,11 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
   ]
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={(event) => {
+      // Dialog submit events bubble through React portals to the parent form.
+      event.stopPropagation()
+      void handleSubmit(onSubmit)(event)
+    }} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">{t.services.serviceName} <span className="text-destructive">*</span></Label>
         <Input id="name" placeholder="E.g. Oil Change" {...register("name")} list="common-services" />

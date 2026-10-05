@@ -71,7 +71,7 @@ export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
 
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={(event) => { event.stopPropagation(); void handleSubmit(onSubmit)(event) }} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">
           {t.common.name} <span className="text-destructive">*</span>
