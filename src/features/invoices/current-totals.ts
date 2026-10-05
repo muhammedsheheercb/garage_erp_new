@@ -23,6 +23,16 @@ export function currentInvoiceTotals(invoice: InvoiceTotals) {
 }
 
 export async function syncJobCardInvoice(tx: Prisma.TransactionClient, jobCardId: string) {
-  const invoice = await tx.invoice.findUnique({ where: { jobCardId }, include: { payments: true, jobCard: { include: { payments: true } } } })
-  if (invoice) await tx.invoice.update({ where: { id: invoice.id }, data: currentInvoiceTotals(invoice) })
+  const invoice = await tx.invoice.findUnique({ where: { jobCardId }, include: { payments: true, jobCard: { include: { payments: true, services: { include: { service: true } }, parts: { include: { inventory: true, batch: { include: { inventory: true } } } } } } } })
+  if (invoice) await tx.invoice.update({ where: { id: invoice.id }, data: { ...currentInvoiceTotals(invoice), ...currentInvoiceDetails(invoice.jobCard) } })
+}
+
+export function currentInvoiceDetails(job: {
+  services?: Array<{ quantity: number; service: { name: string } }>;
+  parts?: Array<{ quantity: number; isPending: boolean; inventory?: { itemName: string } | null; batch?: { inventory: { itemName: string } } | null }>;
+}) {
+  return {
+    ...(job.services ? { servicesDetails: job.services.map(s => `${s.service.name} (Qty: ${s.quantity})`).join(", ") } : {}),
+    ...(job.parts ? { partsDetails: job.parts.map(p => `${p.batch?.inventory.itemName || p.inventory?.itemName || "Unknown part"} (Qty: ${p.quantity})${p.isPending ? " — Pending purchase" : ""}`).join(", ") } : {}),
+  }
 }

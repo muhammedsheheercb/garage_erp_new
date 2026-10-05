@@ -843,3 +843,41 @@ test('invoice and missing advance save together or roll back together', async ()
   await createInvoice(input)
   assert.deepEqual([invoices, receipts], [1, 1])
 })
+
+test('quotation conversion claims the quotation before creating a job card', async () => {
+  let converted = false, cards = 0
+  const { createJobCard } = loadSource('src/features/jobcards/actions.ts', { ...commonMocks, '@/lib/prisma': {
+    $transaction: async callback => callback({
+      quotation: {
+        findUnique: async () => ({ customerId: 'customer', vehicleId: 'vehicle' }),
+        updateMany: async () => { if (converted) return { count: 0 }; converted = true; return { count: 1 } },
+        update: async args => { assert.equal(args.data.jobCardId, 'job') },
+      },
+      jobCard: { create: async () => { cards++; return { id: 'job' } } },
+    }),
+  } })
+  await createJobCard(form, 'quote')
+  await assert.rejects(createJobCard(form, 'quote'), /already been converted/)
+  assert.equal(cards, 1)
+})
+
+test('invoice deletion detaches receipts without deleting customer payments', async () => {
+  let detached = false
+  const { deleteInvoice } = loadSource('src/features/invoices/actions.ts', { ...commonMocks, '@/lib/prisma': {
+    $transaction: async callback => callback({
+      invoice: { findUnique: async () => ({ customerId: 'customer' }), delete: async () => { assert.equal(detached, true) } },
+      payment: { updateMany: async args => { assert.deepEqual(args, { where: { invoiceId: 'invoice' }, data: { invoiceId: null } }); detached = true }, deleteMany: async () => assert.fail('Keep customer receipts') },
+    }),
+  } })
+  await deleteInvoice('invoice')
+  assert.equal(detached, true)
+})
+
+test('invoice descriptions follow current service and part names including pending parts without batches', () => {
+  const { currentInvoiceDetails } = loadSource('src/features/invoices/current-totals.ts')
+  const job = { services: [{ service: { name: 'Oil Change' }, quantity: 1 }], parts: [{ inventory: { itemName: 'Brake Pad' }, batch: null, quantity: 2, isPending: true }] }
+  assert.match(currentInvoiceDetails(job).partsDetails, /Brake Pad.*2.*Pending purchase/)
+  job.parts[0] = { batch: { inventory: { itemName: 'Filter' } }, quantity: 1, isPending: false }
+  assert.match(currentInvoiceDetails(job).partsDetails, /Filter/)
+  assert.doesNotMatch(currentInvoiceDetails(job).partsDetails, /Brake Pad/)
+})

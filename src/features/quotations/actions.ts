@@ -137,14 +137,6 @@ export async function acceptQuotation(id: string) {
   return { success: true }
 }
 
-export async function markQuotationConverted(id: string, jobCardId: string) {
-  await requirePagePermission("quotations", "edit")
-  const updated = await prisma.quotation.updateMany({ where: { id, status: "PENDING", jobCardId: null }, data: { status: "CONVERTED", jobCardId } })
-  if (!updated.count) throw new Error("This quotation has already been converted")
-  revalidatePath("/quotations")
-  return { success: true }
-}
-
 export async function getQuotationJobCardPrefill(id: string) {
   await requirePagePermission("jobcards", "create")
   const quote = await prisma.quotation.findFirst({ where: { id, status: "PENDING", jobCardId: null }, include: quotationInclude })

@@ -154,7 +154,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
           setValue("servicesDetails", servicesText)
         }
         if (jc.parts && jc.parts.length > 0) {
-          const partsText = jc.parts.map((p: any) => `${p.batch.inventory.itemName} (${t.invoicesMod.qty}: ${p.quantity})`).join(", ")
+          const partsText = jc.parts.map((p: any) => `${p.batch?.inventory?.itemName || p.inventory?.itemName || "Unknown part"} (${t.invoicesMod.qty}: ${p.quantity})${p.isPending ? " — Pending purchase" : ""}`).join(", ")
           setValue("partsDetails", partsText)
         }
       }

@@ -1,6 +1,6 @@
 "use server"
 
-import { currentInvoiceTotals } from "./current-totals"
+import { currentInvoiceTotals, currentInvoiceDetails } from "./current-totals"
 import prisma from "@/lib/prisma"
 import { InvoiceFormValues, invoiceSchema } from "./schema"
 import { revalidatePath } from "next/cache"
@@ -38,7 +38,7 @@ export async function getInvoices(page = 1, search = "", fromDate?: string, toDa
             payments: true,
             customer: true,
             services: { include: { service: true } },
-            parts: { include: { batch: { include: { inventory: true } } } }
+            parts: { include: { inventory: true, batch: { include: { inventory: true } } } }
           }
         },
       },
@@ -48,7 +48,7 @@ export async function getInvoices(page = 1, search = "", fromDate?: string, toDa
   ]);
 
   return {
-    data: data.map(invoice => ({ ...invoice, ...currentInvoiceTotals(invoice) })),
+    data: data.map(invoice => ({ ...invoice, ...currentInvoiceTotals(invoice), ...currentInvoiceDetails(invoice.jobCard) })),
     meta: {
       total,
       page,
@@ -68,6 +68,8 @@ export async function getInvoiceById(id: string) {
         include: {
           vehicle: true,
           mechanic: true,
+          services: { include: { service: true } },
+          parts: { include: { inventory: true, batch: { include: { inventory: true } } } },
           payments: true
         }
       },
@@ -78,7 +80,7 @@ export async function getInvoiceById(id: string) {
   })
   if (!invoice) return null
   const payments = [...new Map([...invoice.payments, ...invoice.jobCard.payments].map(payment => [payment.id, payment])).values()]
-  return { ...invoice, ...currentInvoiceTotals(invoice), payments }
+  return { ...invoice, ...currentInvoiceTotals(invoice), ...currentInvoiceDetails(invoice.jobCard), payments }
 }
 
 // Fetch lists for dropdowns
@@ -91,7 +93,7 @@ export async function getDropdownData() {
         customer: true,
         vehicle: true,
         services: { include: { service: true } },
-        parts: { include: { batch: { include: { inventory: true } } } }
+        parts: { include: { inventory: true, batch: { include: { inventory: true } } } }
       },
       orderBy: { createdAt: 'desc' }
     }),
@@ -275,10 +277,17 @@ export async function updateInvoice(id: string, data: InvoiceFormValues) {
 
 export async function deleteInvoice(id: string) {
   await requirePagePermission("invoices", "delete")
-  await prisma.$transaction([
-    prisma.payment.deleteMany({ where: { invoiceId: id } }),
-    prisma.invoice.delete({ where: { id } })
-  ])
+  const invoice = await prisma.$transaction(async tx => {
+    const existing = await tx.invoice.findUnique({ where: { id } })
+    if (!existing) throw new Error("Invoice not found.")
+    await tx.payment.updateMany({ where: { invoiceId: id }, data: { invoiceId: null } })
+    await tx.invoice.delete({ where: { id } })
+    return existing
+  }, { timeout: 30_000, isolationLevel: "Serializable" })
+  revalidatePath('/payments')
+  revalidatePath('/reports')
+  revalidatePath('/')
+  revalidatePath(`/customers/${invoice.customerId}`)
 
   revalidatePath('/invoices')
   return { success: true }

@@ -53,7 +53,6 @@ import { formatDisplayDate, formatDateInput } from "@/lib/date-format";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/amount";
-import { markQuotationConverted } from "@/features/quotations/actions";
 
 interface JobCardFormProps {
   initialData?: any; // JobCard with relations
@@ -207,9 +206,9 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       if (initialData?.id) {
         return updateJobCard(initialData.id, data);
       }
-      return createJobCard(data);
+      return createJobCard(data, quotationId || undefined);
     },
-    onSuccess: async (result) => {
+    onSuccess: async () => {
       // Stock screens may be unmounted while this form is open. Refresh their
       // cached queries too, and finish before closing the form.
       await Promise.all([
@@ -218,9 +217,6 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
         ),
         refreshQueries(queryClient, ["invoices", "invoice-dropdowns", "vehicle-history"]),
       ]);
-      if (quotationId && !initialData?.id && result && typeof result === "object" && "id" in result) {
-        await markQuotationConverted(quotationId, String(result.id));
-      }
       toast.success(
         initialData?.id ? t.jobcards.jobCardUpdated : t.jobcards.jobCardCreated,
       );

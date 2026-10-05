@@ -196,14 +196,14 @@ export async function getInventoryList(search = "", excludeJobCardId?: string) {
   }))]
 }
 
-export async function createJobCard(data: JobCardFormValues) {
+export async function createJobCard(data: JobCardFormValues, quotationId?: string) {
   await requirePagePermission("jobcards", "create")
   const parsed = jobCardSchema.parse(data)
   Object.assign(parsed, calculateJobCardTotals(parsed))
   const jobCardDate = new Date(parsed.date + "T12:00:00")
   const creatorName = await getCreatorName()
   
-  const jobCard = await prisma.jobCard.create({
+  const createData: Prisma.JobCardCreateArgs = {
     data: {
       customerId: parsed.customerId,
       vehicleId: parsed.vehicleId,
@@ -254,8 +254,19 @@ export async function createJobCard(data: JobCardFormValues) {
         }))
       }
     }
-  })
-  
+  }
+  const jobCard = quotationId ? await prisma.$transaction(async tx => {
+    await requirePagePermission("quotations", "edit")
+    const quote = await tx.quotation.findUnique({ where: { id: quotationId } })
+    if (!quote || quote.customerId !== parsed.customerId || quote.vehicleId !== parsed.vehicleId) throw new Error("The quotation customer and vehicle must match the job card.")
+    const claimed = await tx.quotation.updateMany({ where: { id: quotationId, status: "PENDING", jobCardId: null }, data: { status: "CONVERTED" } })
+    if (claimed.count !== 1) throw new Error("This quotation has already been converted.")
+    const job = await tx.jobCard.create(createData)
+    await tx.quotation.update({ where: { id: quotationId }, data: { jobCardId: job.id } })
+    return job
+  }, { timeout: 30_000, isolationLevel: "Serializable" }) : await prisma.jobCard.create(createData)
+  if (quotationId) revalidatePath('/quotations')
+
   revalidatePath('/jobcards')
   revalidatePath('/invoices')
   revalidatePath('/payments')
