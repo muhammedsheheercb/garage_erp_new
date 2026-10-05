@@ -1,5 +1,6 @@
 "use server"
 
+import { syncJobCardInvoice } from "../invoices/current-totals"
 import prisma from "@/lib/prisma"
 import { PaymentFormValues, paymentSchema } from "./schema"
 import { revalidatePath } from "next/cache"
@@ -7,7 +8,7 @@ import { Prisma } from "@prisma/client"
 import { getCreatorName, requirePagePermission } from "@/lib/authorization"
 
 export async function getPayments(page = 1, search = "", fromDate?: string, toDate?: string) {
-  await requirePagePermission("payments")
+  await requirePagePermission("payments", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
@@ -117,6 +118,7 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
 }
 
 export async function getPendingInvoices(page = 1, search = "") {
+  await requirePagePermission("payments", "view")
   const limit = 5
   const where: any = {}
   if (search.trim()) {
@@ -151,6 +153,7 @@ export async function getPendingInvoices(page = 1, search = "") {
 }
 
 export async function getPendingInvoicesDropdown() {
+  await requirePagePermission("payments", "view")
   const invoices = await prisma.jobCard.findMany({
     include: {
       customer: true,
@@ -174,6 +177,7 @@ export async function getPendingInvoicesDropdown() {
 }
 
 export async function createPayment(data: PaymentFormValues) {
+  await requirePagePermission("payments", "create")
   const parsed = paymentSchema.parse(data)
   const discountAmount = parsed.discountAmount || 0
   let affectedCustomerId: string | null = null
@@ -232,6 +236,7 @@ export async function createPayment(data: PaymentFormValues) {
       })
     }
 
+    await syncJobCardInvoice(tx, parsed.jobCardId)
     return payment
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 30_000 }).catch((error: unknown) => {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
@@ -240,6 +245,7 @@ export async function createPayment(data: PaymentFormValues) {
     throw error
   })
   
+  revalidatePath('/invoices')
   revalidatePath('/payments')
   revalidatePath('/jobcards')
   revalidatePath('/')
@@ -251,6 +257,7 @@ export async function createPayment(data: PaymentFormValues) {
 }
 
 export async function getPaymentBill(id: string) {
+  await requirePagePermission("payments", "view")
   return prisma.payment.findUnique({
     where: { id },
     include: {
@@ -260,6 +267,7 @@ export async function getPaymentBill(id: string) {
 }
 
 export async function getJobCardBill(id: string) {
+  await requirePagePermission("payments", "view")
   return prisma.jobCard.findUnique({
     where: { id },
     include: {

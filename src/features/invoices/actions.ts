@@ -1,11 +1,13 @@
 "use server"
 
+import { currentInvoiceTotals } from "./current-totals"
 import prisma from "@/lib/prisma"
 import { InvoiceFormValues, invoiceSchema } from "./schema"
 import { revalidatePath } from "next/cache"
-import { getCreatorName } from "@/lib/authorization"
+import { getCreatorName, requirePagePermission } from "@/lib/authorization"
 
 export async function getInvoices(page = 1, search = "", fromDate?: string, toDate?: string) {
+  await requirePagePermission("invoices", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
@@ -29,9 +31,11 @@ export async function getInvoices(page = 1, search = "", fromDate?: string, toDa
       take: limit,
       include: {
         customer: { select: { id: true, name: true, phone: true } },
-        jobCard: { 
-          include: { 
+        payments: true,
+        jobCard: {
+          include: {
             vehicle: true,
+            payments: true,
             customer: true,
             services: { include: { service: true } },
             parts: { include: { batch: { include: { inventory: true } } } }
@@ -44,7 +48,7 @@ export async function getInvoices(page = 1, search = "", fromDate?: string, toDa
   ]);
 
   return {
-    data,
+    data: data.map(invoice => ({ ...invoice, ...currentInvoiceTotals(invoice) })),
     meta: {
       total,
       page,
@@ -55,14 +59,16 @@ export async function getInvoices(page = 1, search = "", fromDate?: string, toDa
 }
 
 export async function getInvoiceById(id: string) {
-  return prisma.invoice.findUnique({
+  await requirePagePermission("invoices", "view")
+  const invoice = await prisma.invoice.findUnique({
     where: { id },
     include: {
       customer: true,
       jobCard: {
         include: {
           vehicle: true,
-          mechanic: true
+          mechanic: true,
+          payments: true
         }
       },
       payments: {
@@ -70,20 +76,24 @@ export async function getInvoiceById(id: string) {
       }
     }
   })
+  if (!invoice) return null
+  const payments = [...new Map([...invoice.payments, ...invoice.jobCard.payments].map(payment => [payment.id, payment])).values()]
+  return { ...invoice, ...currentInvoiceTotals(invoice), payments }
 }
 
 // Fetch lists for dropdowns
 export async function getDropdownData() {
+  await requirePagePermission("invoices", "view")
   const [jobCards, customers] = await Promise.all([
-    prisma.jobCard.findMany({ 
+    prisma.jobCard.findMany({
       where: { invoice: null }, // only job cards without invoice
-      include: { 
-        customer: true, 
+      include: {
+        customer: true,
         vehicle: true,
         services: { include: { service: true } },
         parts: { include: { batch: { include: { inventory: true } } } }
       },
-      orderBy: { createdAt: 'desc' } 
+      orderBy: { createdAt: 'desc' }
     }),
     prisma.customer.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
   ])
@@ -91,6 +101,7 @@ export async function getDropdownData() {
 }
 
 export async function createInvoice(data: InvoiceFormValues) {
+  await requirePagePermission("invoices", "create")
   const parsed = invoiceSchema.parse(data)
   const jobCard = await prisma.jobCard.findUnique({
     where: { id: parsed.jobCardId },
@@ -112,7 +123,7 @@ export async function createInvoice(data: InvoiceFormValues) {
   const serviceCharge = jobCard.serviceTotal ?? 0
   const partsCost = jobCard.partsTotal ?? 0
   const advancePaid = jobCard.advancePaid ?? 0
-  
+
   let otherAmountSum = 0
   if (parsed.otherCharges) {
     try {
@@ -124,7 +135,7 @@ export async function createInvoice(data: InvoiceFormValues) {
       console.error("Failed to parse otherCharges", e)
     }
   }
-  
+
   const subTotal = serviceCharge + parsed.labourCharge + partsCost + otherAmountSum;
   const grandTotal = Math.max(0, subTotal + parsed.tax - parsed.discount);
 
@@ -168,94 +179,101 @@ export async function createInvoice(data: InvoiceFormValues) {
       },
     })
   }
-  
+
   revalidatePath('/invoices')
   revalidatePath(`/customers/${jobCard.customerId}`)
   return invoice
 }
 
 export async function updateInvoice(id: string, data: InvoiceFormValues) {
+  await requirePagePermission("invoices", "edit")
   const parsed = invoiceSchema.parse(data)
-  
-  const existingInvoice = await prisma.invoice.findUnique({
-    where: { id },
-    include: {
-      payments: true,
-      jobCard: { select: { payments: { select: { id: true, amount: true } } } },
-    }
-  });
 
-  // A zero-value invoice with an advance is marked PAID, but it must remain
-  // editable so later service charges can use that saved customer credit.
-  if (existingInvoice && existingInvoice.status === "PAID" && existingInvoice.grandTotal > 0) {
-    throw new Error("This invoice is fully paid and cannot be edited.")
-  }
-
-  if (!existingInvoice) {
-    throw new Error("Invoice not found.")
-  }
-
-  let otherAmountSum = 0
-  if (parsed.otherCharges) {
-    try {
-      const parsedCharges = JSON.parse(parsed.otherCharges)
-      if (Array.isArray(parsedCharges)) {
-        otherAmountSum = parsedCharges.reduce((acc, c: any) => acc + Math.max(0, Number(c.amount) || 0), 0)
+  const invoice = await prisma.$transaction(async tx => {
+    const existingInvoice = await tx.invoice.findUnique({
+      where: { id },
+      include: {
+        payments: true,
+        jobCard: { select: { serviceTotal: true, partsTotal: true, payments: { select: { id: true, amount: true } } } },
       }
-    } catch (e) {
-      console.error("Failed to parse otherCharges", e)
+    });
+
+    // A zero-value invoice with an advance is marked PAID, but it must remain
+    // editable so later service charges can use that saved customer credit.
+    if (existingInvoice && currentInvoiceTotals(existingInvoice).status === "PAID" && currentInvoiceTotals(existingInvoice).grandTotal > 0) {
+      throw new Error("This invoice is fully paid and cannot be edited.")
     }
-  }
 
-  const subTotal = existingInvoice.serviceCharge + parsed.labourCharge + existingInvoice.partsCost + otherAmountSum;
-  const grandTotal = Math.max(0, subTotal + parsed.tax - parsed.discount);
-
-  let newStatus = existingInvoice.status;
-  const totalPaid = Array.from(
-    new Map(
-      [...existingInvoice.payments, ...(existingInvoice.jobCard?.payments ?? [])]
-        .map((payment) => [payment.id, payment.amount]),
-    ).values(),
-  ).reduce((total, amount) => total + amount, 0);
-  if (totalPaid >= grandTotal) {
-    newStatus = "PAID";
-  } else if (totalPaid > 0) {
-    newStatus = "PARTIAL";
-  } else {
-    newStatus = "UNPAID";
-  }
-
-  const invoice = await prisma.invoice.update({
-    where: { id },
-    data: {
-      jobCardId: existingInvoice.jobCardId,
-      customerId: existingInvoice.customerId,
-      serviceCharge: existingInvoice.serviceCharge,
-      labourCharge: parsed.labourCharge,
-      partsCost: existingInvoice.partsCost,
-      discount: parsed.discount,
-      tax: parsed.tax,
-      subTotal,
-      amount: grandTotal,
-      grandTotal,
-      servicesDetails: parsed.servicesDetails,
-      partsDetails: parsed.partsDetails,
-      otherCharges: parsed.otherCharges,
-      status: newStatus,
+    if (!existingInvoice) {
+      throw new Error("Invoice not found.")
     }
-  })
-  
+
+    let otherAmountSum = 0
+    if (parsed.otherCharges) {
+      try {
+        const parsedCharges = JSON.parse(parsed.otherCharges)
+        if (Array.isArray(parsedCharges)) {
+          otherAmountSum = parsedCharges.reduce((acc, c: any) => acc + Math.max(0, Number(c.amount) || 0), 0)
+        }
+      } catch (e) {
+        console.error("Failed to parse otherCharges", e)
+      }
+    }
+
+    const subTotal = existingInvoice.jobCard.serviceTotal + parsed.labourCharge + existingInvoice.jobCard.partsTotal + otherAmountSum;
+    const grandTotal = Math.max(0, subTotal + parsed.tax - parsed.discount);
+
+    let newStatus = existingInvoice.status;
+    const totalPaid = Array.from(
+      new Map(
+        [...existingInvoice.payments, ...(existingInvoice.jobCard?.payments ?? [])]
+          .map((payment) => [payment.id, payment.amount]),
+      ).values(),
+    ).reduce((total, amount) => total + amount, 0);
+    if (totalPaid >= grandTotal) {
+      newStatus = "PAID";
+    } else if (totalPaid > 0) {
+      newStatus = "PARTIAL";
+    } else {
+      newStatus = "UNPAID";
+    }
+
+    const updatedInvoice = await tx.invoice.update({
+      where: { id },
+      data: {
+        jobCardId: existingInvoice.jobCardId,
+        customerId: existingInvoice.customerId,
+        serviceCharge: existingInvoice.jobCard.serviceTotal,
+        labourCharge: parsed.labourCharge,
+        partsCost: existingInvoice.jobCard.partsTotal,
+        discount: parsed.discount,
+        tax: parsed.tax,
+        subTotal,
+        amount: grandTotal,
+        grandTotal,
+        servicesDetails: parsed.servicesDetails,
+        partsDetails: parsed.partsDetails,
+        otherCharges: parsed.otherCharges,
+        status: newStatus,
+      }
+    })
+
+    return updatedInvoice
+  }, { timeout: 30_000, isolationLevel: "Serializable" })
+
   revalidatePath('/invoices')
-  revalidatePath(`/customers/${existingInvoice.customerId}`)
+  revalidatePath(`/customers/${invoice.customerId}`)
   return invoice
 }
 
+
 export async function deleteInvoice(id: string) {
+  await requirePagePermission("invoices", "delete")
   await prisma.$transaction([
     prisma.payment.deleteMany({ where: { invoiceId: id } }),
     prisma.invoice.delete({ where: { id } })
   ])
-  
+
   revalidatePath('/invoices')
   return { success: true }
 }

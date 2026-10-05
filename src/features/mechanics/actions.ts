@@ -1,11 +1,13 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { requirePagePermission } from "@/lib/authorization"
 import type { Prisma } from "@prisma/client"
 import { MechanicFormValues, mechanicSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
 export async function getMechanics(page = 1, search = "", fromDate?: string, toDate?: string) {
+  await requirePagePermission("mechanics", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
@@ -61,6 +63,7 @@ export async function getMechanics(page = 1, search = "", fromDate?: string, toD
 }
 
 export async function createMechanic(data: MechanicFormValues) {
+  await requirePagePermission("mechanics", "create")
   const parsed = mechanicSchema.parse(data)
   
   const existingName = await prisma.mechanic.findFirst({
@@ -92,6 +95,7 @@ export async function createMechanic(data: MechanicFormValues) {
 }
 
 export async function updateMechanic(id: string, data: MechanicFormValues) {
+  await requirePagePermission("mechanics", "edit")
   const parsed = mechanicSchema.parse(data)
   
   const existingName = await prisma.mechanic.findFirst({
@@ -130,6 +134,7 @@ export async function updateMechanic(id: string, data: MechanicFormValues) {
 }
 
 export async function deleteMechanic(id: string) {
+  await requirePagePermission("mechanics", "delete")
   const jobCardCount = await prisma.jobCard.count({ where: { mechanicId: id } })
   if (jobCardCount > 0) {
     throw new Error("This mechanic cannot be deleted because they are assigned to job cards.")

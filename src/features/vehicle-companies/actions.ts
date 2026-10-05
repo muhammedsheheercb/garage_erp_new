@@ -1,6 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { requirePagePermission } from "@/lib/authorization"
 import { revalidatePath } from "next/cache"
 import { companyCreateSchema, companySchema, modelSchema, type CompanyCreateFormValues, type CompanyFormValues, type ModelFormValues } from "./schema"
 
@@ -10,6 +11,7 @@ const refreshVehicleData = () => {
 }
 
 export async function getVehicleCompanies(fromDateStr?: string, toDateStr?: string, search = "") {
+  await requirePagePermission("vehicle-companies", "view")
   const where: any = {};
   if (fromDateStr || toDateStr) {
     where.createdAt = {};
@@ -26,6 +28,7 @@ export async function getVehicleCompanies(fromDateStr?: string, toDateStr?: stri
 }
 
 export async function createVehicleCompany(data: CompanyCreateFormValues) {
+  await requirePagePermission("vehicle-companies", "create")
   const parsed = companyCreateSchema.parse(data)
   const existing = await prisma.vehicleCompany.findFirst({
     where: { name: { equals: parsed.name, mode: "insensitive" } },
@@ -44,6 +47,7 @@ export async function createVehicleCompany(data: CompanyCreateFormValues) {
 }
 
 export async function updateVehicleCompany(id: string, data: CompanyFormValues) {
+  await requirePagePermission("vehicle-companies", "edit")
   const parsed = companySchema.parse(data)
   const existing = await prisma.vehicleCompany.findFirst({
     where: {
@@ -60,12 +64,14 @@ export async function updateVehicleCompany(id: string, data: CompanyFormValues) 
 }
 
 export async function deleteVehicleCompany(id: string) {
+  await requirePagePermission("vehicle-companies", "delete")
   await prisma.vehicleCompany.delete({ where: { id } })
   refreshVehicleData()
   return { success: true }
 }
 
 export async function createVehicleModel(data: ModelFormValues) {
+  await requirePagePermission("vehicle-companies", "create")
   const parsed = modelSchema.parse(data)
   const existing = await prisma.vehicleModel.findFirst({
     where: {
@@ -82,6 +88,7 @@ export async function createVehicleModel(data: ModelFormValues) {
 }
 
 export async function updateVehicleModel(id: string, data: ModelFormValues) {
+  await requirePagePermission("vehicle-companies", "edit")
   const parsed = modelSchema.parse(data)
   const existing = await prisma.vehicleModel.findFirst({
     where: {
@@ -98,6 +105,7 @@ export async function updateVehicleModel(id: string, data: ModelFormValues) {
 }
 
 export async function deleteVehicleModel(id: string) {
+  await requirePagePermission("vehicle-companies", "delete")
   await prisma.vehicleModel.delete({ where: { id } })
   refreshVehicleData()
   return { success: true }

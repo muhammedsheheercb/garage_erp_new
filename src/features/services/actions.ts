@@ -1,10 +1,12 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { requirePagePermission } from "@/lib/authorization"
 import { ServiceFormValues, serviceSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
 export async function getServices(page = 1, search = "", fromDate?: string, toDate?: string) {
+  await requirePagePermission("services", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
@@ -43,6 +45,7 @@ export async function getServices(page = 1, search = "", fromDate?: string, toDa
 }
 
 export async function createService(data: ServiceFormValues) {
+  await requirePagePermission("services", "create")
   const parsed = serviceSchema.parse(data)
 
   const existing = await prisma.service.findFirst({
@@ -65,6 +68,7 @@ export async function createService(data: ServiceFormValues) {
 }
 
 export async function updateService(id: string, data: ServiceFormValues) {
+  await requirePagePermission("services", "edit")
   const parsed = serviceSchema.parse(data)
 
   const existing = await prisma.service.findFirst({
@@ -91,6 +95,7 @@ export async function updateService(id: string, data: ServiceFormValues) {
 }
 
 export async function deleteService(id: string) {
+  await requirePagePermission("services", "delete")
   const jobCardServiceCount = await prisma.jobCardService.count({ where: { serviceId: id } })
   if (jobCardServiceCount > 0) {
     throw new Error("This service cannot be deleted because it is used in job cards.")

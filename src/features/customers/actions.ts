@@ -1,10 +1,12 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { requirePagePermission } from "@/lib/authorization"
 import { CustomerFormValues, customerSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
 export async function getCustomers(page = 1, search = "", fromDate?: string, toDate?: string) {
+  await requirePagePermission("customers", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
@@ -44,6 +46,7 @@ export async function getCustomers(page = 1, search = "", fromDate?: string, toD
 }
 
 export async function getCustomer(id: string) {
+  await requirePagePermission("customers", "view")
   return prisma.customer.findUnique({
     where: { id },
     include: { vehicles: true }
@@ -51,6 +54,7 @@ export async function getCustomer(id: string) {
 }
 
 export async function createCustomer(data: CustomerFormValues) {
+  await requirePagePermission("customers", "create")
   const parsed = customerSchema.parse(data)
   
   if (parsed.phone) {
@@ -76,6 +80,7 @@ export async function createCustomer(data: CustomerFormValues) {
 }
 
 export async function updateCustomer(id: string, data: CustomerFormValues) {
+  await requirePagePermission("customers", "edit")
   const parsed = customerSchema.parse(data)
   
   if (parsed.phone) {
@@ -105,6 +110,7 @@ export async function updateCustomer(id: string, data: CustomerFormValues) {
 }
 
 export async function deleteCustomer(id: string) {
+  await requirePagePermission("customers", "delete")
   const [vehicleCount, jobCardCount, invoiceCount] = await Promise.all([
     prisma.vehicle.count({ where: { customerId: id } }),
     prisma.jobCard.count({ where: { customerId: id } }),
@@ -124,6 +130,7 @@ export async function deleteCustomer(id: string) {
 }
 
 export async function getCustomerFullDetails(id: string, fromDate?: string, toDate?: string) {
+  await requirePagePermission("customers", "view")
   const jobCardWhere: any = {};
   const paymentWhere: any = {
     OR: [

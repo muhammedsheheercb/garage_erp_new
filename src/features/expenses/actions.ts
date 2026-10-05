@@ -4,9 +4,10 @@ import prisma from "@/lib/prisma"
 import { parseSettlementDate } from "@/lib/settlement-date"
 import { ExpenseFormValues, expenseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
-import { getCreatorName } from "@/lib/authorization"
+import { getCreatorName, requirePagePermission } from "@/lib/authorization"
 
 export async function getExpenses(page = 1, search = "", fromDate?: string, toDate?: string) {
+  await requirePagePermission("expenses", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
@@ -45,6 +46,7 @@ export async function getExpenses(page = 1, search = "", fromDate?: string, toDa
 }
 
 export async function getMonthlyExpenseReport(year: number, month: number) {
+  await requirePagePermission("expenses", "view")
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
@@ -72,6 +74,7 @@ export async function getMonthlyExpenseReport(year: number, month: number) {
 }
 
 export async function createExpense(data: ExpenseFormValues) {
+  await requirePagePermission("expenses", "create")
   const parsed = expenseSchema.parse(data)
   const { paymentType, ...dbData } = parsed
   if (paymentType === "PAYMETER") {
@@ -110,6 +113,7 @@ export async function createExpense(data: ExpenseFormValues) {
 }
 
 export async function updateExpense(id: string, data: ExpenseFormValues) {
+  await requirePagePermission("expenses", "edit")
   const parsed = expenseSchema.parse(data)
   const { paymentType, ...dbData } = parsed
   if (paymentType === "PAYMETER") {
@@ -159,6 +163,7 @@ export async function updateExpense(id: string, data: ExpenseFormValues) {
 }
 
 export async function deleteExpense(id: string) {
+  await requirePagePermission("expenses", "delete")
   await prisma.$transaction(async (tx) => {
     const oldExpense = await tx.expense.findUnique({ where: { id } })
     if (!oldExpense) return
@@ -181,6 +186,7 @@ export async function deleteExpense(id: string) {
 }
 
 export async function payExpense(expenseId: string, amount: number, paymentDate: string) {
+  await requirePagePermission("expenses", "edit")
   const date = parseSettlementDate(paymentDate)
   if (amount <= 0) throw new Error("Amount must be greater than 0")
 

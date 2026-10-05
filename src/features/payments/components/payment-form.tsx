@@ -71,7 +71,7 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
   const mutation = useMutation({
     mutationFn: (data: PaymentFormValues) => createPayment(data),
     onSuccess: () => {
-      void refreshQueries(queryClient, ["jobcard", "invoice-dropdowns"]);
+      void refreshQueries(queryClient, ["invoices", "jobcard", "invoice-dropdowns"]);
       toast.success(t.payments.paymentRecordedSuccess)
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['pending-jobcards'] })

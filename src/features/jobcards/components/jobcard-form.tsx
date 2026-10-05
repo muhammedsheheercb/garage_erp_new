@@ -210,7 +210,14 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       return createJobCard(data);
     },
     onSuccess: async (result) => {
-      void refreshQueries(queryClient, ["invoice-dropdowns", "parts-list", "direct-sale-stock", "vehicle-history"]);
+      // Stock screens may be unmounted while this form is open. Refresh their
+      // cached queries too, and finish before closing the form.
+      await Promise.all([
+        ...["inventory", "parts-list", "direct-sale-stock"].map(prefix =>
+          queryClient.invalidateQueries({ queryKey: [prefix], refetchType: "all" }),
+        ),
+        refreshQueries(queryClient, ["invoices", "invoice-dropdowns", "vehicle-history"]),
+      ]);
       if (quotationId && !initialData?.id && result && typeof result === "object" && "id" in result) {
         await markQuotationConverted(quotationId, String(result.id));
       }
@@ -229,7 +236,6 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       queryClient.invalidateQueries({ queryKey: ["report-chart"] });
       queryClient.invalidateQueries({ queryKey: ["mechanics"] });
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["purchases"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-dropdowns"] });
       onSuccess?.();

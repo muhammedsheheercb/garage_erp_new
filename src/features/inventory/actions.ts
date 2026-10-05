@@ -1,10 +1,12 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { requirePagePermission } from "@/lib/authorization"
 import { InventoryFormValues, inventorySchema, openingStockSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 
 export async function getInventory(page = 1, search = "", fromDate?: string, toDate?: string) {
+  await requirePagePermission("inventory", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
@@ -59,6 +61,7 @@ export async function getInventory(page = 1, search = "", fromDate?: string, toD
 
 
 export async function getNextPartNumber() {
+  await requirePagePermission("inventory", "view")
   const latestItem = await prisma.inventory.findFirst({
     orderBy: { partNumber: 'desc' }
   })
@@ -75,6 +78,7 @@ export async function getNextPartNumber() {
 }
 
 export async function getInventoryItemOptions() {
+  await requirePagePermission("inventory", "view")
   const items = await prisma.inventory.findMany({
     select: {
       id: true,
@@ -102,6 +106,7 @@ export async function addOpeningStockToItem(
   inventoryId: string,
   data: Pick<InventoryFormValues, "openingStock" | "purchasePrice" | "sellingPrice">
 ) {
+  await requirePagePermission("inventory", "edit")
   const parsed = openingStockSchema
     .pick({ openingStock: true, purchasePrice: true, sellingPrice: true })
     .parse(data)
@@ -135,6 +140,7 @@ export async function addOpeningStockToItem(
 }
 
 export async function createInventoryItem(data: InventoryFormValues, withOpeningStock = false) {
+  await requirePagePermission("inventory", "create")
   const partNumber = await getNextPartNumber()
   const parsed = (withOpeningStock ? openingStockSchema : inventorySchema).parse({ ...data, partNumber })
 
@@ -174,6 +180,7 @@ export async function createInventoryItem(data: InventoryFormValues, withOpening
 }
 
 export async function updateInventoryItem(id: string, data: InventoryFormValues) {
+  await requirePagePermission("inventory", "edit")
   const parsed = inventorySchema.parse(data)
 
   const existing = await prisma.inventory.findFirst({
@@ -204,6 +211,7 @@ export async function updateInventoryItem(id: string, data: InventoryFormValues)
 }
 
 export async function deleteInventoryItem(id: string) {
+  await requirePagePermission("inventory", "delete")
   const jobCardPartCount = await prisma.jobCardPart.count({
     where: { batch: { inventoryId: id } },
   })

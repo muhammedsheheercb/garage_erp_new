@@ -1,12 +1,14 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { requirePagePermission } from "@/lib/authorization"
 import { parseSettlementDate } from "@/lib/settlement-date"
 import { PaymeterFormValues, paymeterSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { userPaymeterWhere } from "@/lib/paymeter"
 
 export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: string, search = "") {
+  await requirePagePermission("paymeters", "view")
   const limit = 5
   const skip = (page - 1) * limit
   const purchaseWhere: any = {};
@@ -125,6 +127,7 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
 }
 
 export async function getPaymetersDropdown() {
+  await requirePagePermission("paymeters", "view")
   return prisma.paymeter.findMany({
     where: userPaymeterWhere,
     select: { id: true, name: true },
@@ -133,6 +136,7 @@ export async function getPaymetersDropdown() {
 }
 
 export async function createPaymeter(data: PaymeterFormValues) {
+  await requirePagePermission("paymeters", "create")
   const parsed = paymeterSchema.parse(data)
 
   const existing = await prisma.paymeter.findFirst({
@@ -155,6 +159,7 @@ export async function createPaymeter(data: PaymeterFormValues) {
 }
 
 export async function updatePaymeter(id: string, data: PaymeterFormValues) {
+  await requirePagePermission("paymeters", "edit")
   const parsed = paymeterSchema.parse(data)
 
   const existing = await prisma.paymeter.findFirst({
@@ -178,6 +183,7 @@ export async function updatePaymeter(id: string, data: PaymeterFormValues) {
 }
 
 export async function deletePaymeter(id: string) {
+  await requirePagePermission("paymeters", "delete")
   const paymeter = await prisma.paymeter.findUnique({
     where: { id },
     select: { spentAmount: true },
@@ -233,26 +239,25 @@ export async function deletePaymeter(id: string) {
 }
 
 export async function settlePaymeter(id: string, amount: number) {
-  if (amount <= 0) throw new Error("Amount must be greater than 0")
-  
-  const paymeter = await prisma.paymeter.update({
-    where: { id },
-    data: {
-      spentAmount: { decrement: amount }
-    }
-  })
+  await requirePagePermission("paymeters", "edit")
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Amount must be greater than 0")
+  const paymeter = await prisma.$transaction(async tx => {
+    const updated = await tx.paymeter.updateMany({ where: { id, spentAmount: { gte: amount } },
+      data: { spentAmount: { decrement: amount } },
+    })
+    if (updated.count !== 1) throw new Error("Reimbursement cannot exceed the current paymeter balance. Refresh and try again.")
+    await tx.paymeterSettlement.create({ data: { paymeterId: id, amount, type: "MANUAL_REIMBURSEMENT" } })
+    return tx.paymeter.findUniqueOrThrow({ where: { id } })
+  }, { timeout: 30_000 })
 
-  await prisma.paymeterSettlement.create({
-    data: { paymeterId: id, amount, type: "MANUAL_REIMBURSEMENT" }
-  })
-  
   revalidatePath('/paymeters')
   return paymeter
 }
 
 export async function payPurchasePayment(paymentId: string, amount: number, paymentDate: string) {
+  await requirePagePermission("paymeters", "edit")
   const date = parseSettlementDate(paymentDate)
-  if (amount <= 0) throw new Error("Amount must be greater than 0")
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Amount must be greater than 0")
   
   const payment = await prisma.purchasePayment.findUnique({
     where: { id: paymentId }
@@ -267,18 +272,17 @@ export async function payPurchasePayment(paymentId: string, amount: number, paym
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.purchasePayment.update({
-      where: { id: paymentId },
-      data: {
-        paidAmount: { increment: amount },
-        pendingAmount: { decrement: amount }
-      }
+    const updated = await tx.purchasePayment.updateMany({
+      where: { id: paymentId, pendingAmount: { gte: amount } },
+      data: { paidAmount: { increment: amount }, pendingAmount: { decrement: amount } },
     })
+    if (updated.count !== 1) throw new Error("The reimbursement balance changed. Refresh and try again.")
 
-    await tx.paymeter.update({
-      where: { id: payment.paymeterId },
+    const reimbursed = await tx.paymeter.updateMany({
+      where: { id: payment.paymeterId, spentAmount: { gte: amount } },
       data: { spentAmount: { decrement: amount } }
     })
+    if (reimbursed.count !== 1) throw new Error("Reimbursement cannot exceed the current paymeter balance. Refresh and try again.")
     await tx.paymeterSettlement.create({
       data: { paymeterId: payment.paymeterId, amount, date, type: "SUPPLIER_REIMBURSEMENT" }
     })

@@ -1,6 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { requirePagePermission } from "@/lib/authorization"
 import type { Prisma } from "@prisma/client"
 import { SupplierFormValues, supplierSchema, SupplierPaymentFormValues, supplierPaymentSchema } from "./schema"
 import { revalidatePath } from "next/cache"
@@ -24,6 +25,7 @@ async function getDirectPaymeterId(
 }
 
 export async function getSuppliers(page = 1, search = "", fromDateStr?: string, toDateStr?: string) {
+  await requirePagePermission("suppliers", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
@@ -69,6 +71,7 @@ export async function getSuppliers(page = 1, search = "", fromDateStr?: string, 
 }
 
 export async function getSupplierDetails(id: string) {
+  await requirePagePermission("suppliers", "view")
   const [supplier, paymentMethods] = await Promise.all([
     prisma.supplier.findUnique({
     where: { id },
@@ -100,6 +103,7 @@ export async function getSupplierDetails(id: string) {
 }
 
 export async function createSupplier(data: SupplierFormValues) {
+  await requirePagePermission("suppliers", "create")
   const parsed = supplierSchema.parse(data)
   
   const existingName = await prisma.supplier.findFirst({
@@ -132,6 +136,7 @@ export async function createSupplier(data: SupplierFormValues) {
 }
 
 export async function updateSupplier(id: string, data: SupplierFormValues) {
+  await requirePagePermission("suppliers", "edit")
   const parsed = supplierSchema.parse(data)
   
   const existingName = await prisma.supplier.findFirst({
@@ -171,6 +176,7 @@ export async function updateSupplier(id: string, data: SupplierFormValues) {
 }
 
 export async function deleteSupplier(id: string) {
+  await requirePagePermission("suppliers", "delete")
   const count = await prisma.purchase.count({
     where: { supplierId: id }
   })
@@ -193,6 +199,7 @@ export async function deleteSupplier(id: string) {
 }
 
 export async function createSupplierPayment(supplierId: string, data: SupplierPaymentFormValues) {
+  await requirePagePermission("suppliers", "create")
   const parsed = supplierPaymentSchema.parse(data)
 
   const purchase = await prisma.purchase.findFirst({
@@ -209,6 +216,11 @@ export async function createSupplierPayment(supplierId: string, data: SupplierPa
   }
 
   const payment = await prisma.$transaction(async (tx) => {
+    const settled = await tx.purchase.updateMany({
+      where: { id: purchase.id, supplierId, pendingAmount: { gte: parsed.amount } },
+      data: { paidAmount: { increment: parsed.amount }, pendingAmount: { decrement: parsed.amount } },
+    })
+    if (settled.count !== 1) throw new Error("The purchase balance changed. Refresh it before making another payment.")
     const selectedPaymeterId = parsed.paymentSource === "PAYMETER"
       ? parsed.paymeterId!
       : await getDirectPaymeterId(tx, parsed.directPaymentMethod!)
@@ -223,13 +235,6 @@ export async function createSupplierPayment(supplierId: string, data: SupplierPa
       },
     })
 
-    await tx.purchase.update({
-      where: { id: purchase.id },
-      data: {
-        paidAmount: { increment: parsed.amount },
-        pendingAmount: { decrement: parsed.amount },
-      },
-    })
 
     await tx.paymeter.update({
       where: { id: selectedPaymeterId },
@@ -248,6 +253,7 @@ export async function createSupplierPayment(supplierId: string, data: SupplierPa
 }
 
 export async function deletePurchasePayment(paymentId: string) {
+  await requirePagePermission("suppliers", "delete")
   const payment = await prisma.purchasePayment.findUnique({
     where: { id: paymentId },
     include: { purchase: { select: { paymentMethodId: true } } },
@@ -277,6 +283,7 @@ export async function deletePurchasePayment(paymentId: string) {
 }
 
 export async function deleteSupplierPayment(paymentId: string) {
+  await requirePagePermission("suppliers", "delete")
   await prisma.supplierPayment.delete({
     where: { id: paymentId }
   })

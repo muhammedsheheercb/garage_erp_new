@@ -1,3 +1,4 @@
+import { syncJobCardInvoice } from "../invoices/current-totals"
 import type { Prisma } from "@prisma/client"
 import { calculateJobCardTotals } from "./totals"
 
@@ -12,4 +13,5 @@ export async function recalculateJobCardTotals(tx: Prisma.TransactionClient, id:
     }
   }
   await tx.jobCard.update({ where: { id }, data: calculateJobCardTotals({ ...job, otherCharges }) })
+  await syncJobCardInvoice(tx, id)
 }

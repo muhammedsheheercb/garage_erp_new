@@ -32,7 +32,7 @@ const form = {
   serviceTotal: 100, partsTotal: 0, discount: 0, tax: 0, grandTotal: 100, advancePaid: 50,
 }
 const auth = { requirePagePermission: async () => {}, getCreatorName: async () => 'Test' }
-const commonMocks = { 'next/cache': { revalidatePath: () => {} }, '@/lib/authorization': auth }
+const commonMocks = { '../invoices/current-totals': { syncJobCardInvoice: async () => {} }, 'next/cache': { revalidatePath: () => {} }, '@/lib/authorization': auth }
 
 test('job card print keeps service line amounts and names parts without a batch', () => {
   const { JobCardPrintClient } = loadSource('src/app/jobcards/[id]/print/job-card-print-client.tsx', {
@@ -361,7 +361,7 @@ test('job card completion sets its timeout explicitly and deducts stock inside t
       findUniqueOrThrow: async () => ({ discount: 0, tax: 0, status: 'PENDING' }),
       update: async () => { assert.equal(stockUpdated, true) },
     },
-    inventoryBatch: { update: async () => { assert.equal(insideTransaction, true); stockUpdated = true } },
+    inventoryBatch: { findUnique: async () => ({ jobCardParts: [] }), updateMany: async () => { assert.equal(insideTransaction, true); stockUpdated = true; return { count: 1 } } },
     payment: { findMany: async () => [] },
     jobCardService: { deleteMany: async () => {} }, jobCardPart: { deleteMany: async () => {} },
   }
@@ -384,7 +384,7 @@ test('job card completion sets its timeout explicitly and deducts stock inside t
 })
 
 test('purchase recalculation uses actual parts and retains other charges and adjustments', async () => {
-  const { recalculateJobCardTotals } = loadSource('src/features/jobcards/recalculate.ts')
+  const { recalculateJobCardTotals } = loadSource('src/features/jobcards/recalculate.ts', commonMocks)
   let saved
   const job = { serviceTotal: 999, partsTotal: 999, discount: 20, tax: 5,
     services: [{ price: 100 }], parts: [{ quantity: 2, price: 30 }],
@@ -576,4 +576,164 @@ test('a backdated payment counts on its payment date rather than its creation or
   const { getReportsDashboardTotals } = loadSource('src/features/reports/actions.ts', { '@/lib/prisma': prisma })
   assert.equal((await getReportsDashboardTotals('2026-10-03', '2026-10-03')).totalIncome, 75)
   assert.equal((await getReportsDashboardTotals('2026-10-04', '2026-10-04')).totalIncome, 0)
+})
+
+test('completion groups duplicate batches and protects stock reserved by other jobs', async () => {
+  const { deductCompletionStock } = loadSource('src/features/jobcards/complete-stock.ts')
+  let stock = 5, reads = 0
+  const tx = { inventoryBatch: {
+    findUnique: async args => {
+      reads++
+      assert.equal(args.include.jobCardParts.where.jobCardId.not, 'job')
+      return { jobCardParts: [{ quantity: 2 }] }
+    },
+    updateMany: async args => {
+      if (stock < args.where.quantity.gte) return { count: 0 }
+      stock -= args.data.quantity.decrement
+      return { count: 1 }
+    },
+  } }
+  const parts = [1, 2].map(quantity => ({ batchId: 'batch', quantity, isPending: false }))
+  await deductCompletionStock(tx, 'job', parts)
+  assert.equal(reads, 1)
+  assert.equal(stock, 2)
+  await assert.rejects(deductCompletionStock(tx, 'job', parts), /Stock changed/)
+  assert.equal(stock, 2)
+  await assert.rejects(deductCompletionStock(tx, 'job', [{ batchId: '', quantity: 1, isPending: true }]), /pending parts/)
+})
+
+test('manual reimbursement writes its receipt atomically and rejects excessive or repeated amounts', async () => {
+  let balance = 50, receipts = 0, failReceipt = false
+  const prisma = { $transaction: async callback => {
+    const original = balance
+    try { return await callback({
+      paymeter: {
+        updateMany: async args => {
+          if (balance < args.where.spentAmount.gte) return { count: 0 }
+          balance -= args.data.spentAmount.decrement
+          return { count: 1 }
+        },
+        findUniqueOrThrow: async () => ({ spentAmount: balance }),
+      },
+      paymeterSettlement: { create: async () => { if (failReceipt) throw Error('receipt failed'); receipts++ } },
+    }) } catch (error) { balance = original; throw error }
+  } }
+  const { settlePaymeter } = loadSource('src/features/paymeters/actions.ts', { ...commonMocks, '@/lib/prisma': prisma })
+  await assert.rejects(settlePaymeter('ledger', 60), /cannot exceed/)
+  failReceipt = true
+  await assert.rejects(settlePaymeter('ledger', 20), /receipt failed/)
+  assert.equal(balance, 50)
+  failReceipt = false
+  await settlePaymeter('ledger', 50)
+  await assert.rejects(settlePaymeter('ledger', 1), /cannot exceed/)
+  assert.equal(balance, 0)
+  assert.equal(receipts, 1)
+})
+
+test('supplier payments recheck the remaining balance before creating a receipt', async () => {
+  let pending = 40, receipts = 0
+  const { createSupplierPayment } = loadSource('src/features/suppliers/actions.ts', {
+    ...commonMocks, '@/lib/prisma': {
+      purchase: { findFirst: async () => ({ id: 'purchase', pendingAmount: 40 }) },
+      $transaction: async callback => callback({
+        purchase: { updateMany: async args => {
+          if (pending < args.where.pendingAmount.gte) return { count: 0 }
+          pending -= args.data.pendingAmount.decrement
+          return { count: 1 }
+        } },
+        purchasePayment: { create: async () => { receipts++; return {} } },
+        paymeter: { update: async () => {} },
+      }),
+    },
+  })
+  const data = { purchaseId: 'purchase', paymentDate: '2026-01-01', paymentSource: 'PAYMETER', paymeterId: 'ledger', amount: 30 }
+  await createSupplierPayment('supplier', data)
+  await assert.rejects(createSupplierPayment('supplier', data), /balance changed/)
+  assert.equal(pending, 10)
+  assert.equal(receipts, 1)
+})
+
+test('saved invoices follow current job charges and count shared receipts once', async () => {
+  const { currentInvoiceTotals, syncJobCardInvoice } = loadSource('src/features/invoices/current-totals.ts')
+  const receipt = { id: 'receipt', amount: 100 }
+  const invoice = { id: 'invoice', serviceCharge: 200, partsCost: 0, labourCharge: 10,
+    otherCharges: '[{"amount":20}]', tax: 5, discount: 15, payments: [receipt],
+    jobCard: { serviceTotal: 200, partsTotal: 1050, payments: [receipt, { id: 'second', amount: 50 }] } }
+  const totals = currentInvoiceTotals(invoice)
+  assert.equal(totals.grandTotal, 1270)
+  assert.equal(totals.status, 'PARTIAL')
+  let saved
+  await syncJobCardInvoice({ invoice: { findUnique: async () => invoice, update: async args => { saved = args.data } } }, 'job')
+  assert.deepEqual(saved, totals)
+  invoice.jobCard.payments.push({ id: 'third', amount: 1120 })
+  assert.equal(currentInvoiceTotals(invoice).status, 'PAID')
+})
+
+test('financial mutations check their specific permission before accessing the database', async () => {
+  for (const [module, action, args, permission] of [
+    ['jobcards', 'updateJobCard', ['job', {}], 'edit'],
+    ['purchases', 'updatePurchase', ['purchase', {}], 'edit'],
+    ['suppliers', 'createSupplierPayment', ['supplier', {}], 'create'],
+    ['paymeters', 'settlePaymeter', ['ledger', 1], 'edit'],
+    ['payments', 'createPayment', [{}], 'create'],
+    ['invoices', 'deleteInvoice', ['invoice'], 'delete'],
+    ['expenses', 'createExpense', [{}], 'create'],
+    ['inventory', 'deleteInventoryItem', ['item'], 'delete'],
+  ]) {
+    const actions = loadSource(`src/features/${module}/actions.ts`, { ...commonMocks, '@/lib/prisma': {},
+      '@/lib/authorization': { ...auth, requirePagePermission: async (name, verb) => {
+        assert.equal(name, module); assert.equal(verb, permission); throw Error('Forbidden')
+      } },
+    })
+    await assert.rejects(actions[action](...args), /Forbidden/)
+  }
+})
+
+test('purchase edits retain supplier receipts and reject changing settled payment details', async () => {
+  const supplierReceipt = { id: 'supplier-payment', amount: 30, pendingAmount: 30, paidAmount: 0 }
+  const initialReceipt = { id: 'initial-payment', amount: 20, pendingAmount: 0, paidAmount: 0 }
+  const purchase = { id: 'purchase', purchaseType: 'STOCK', jobCardId: null, supplierId: 'supplier', paymentMethodId: 'ledger',
+    paidAmount: 50, paymeterReimbursed: 0, purchasePayments: [initialReceipt, supplierReceipt] }
+  let writes = 0
+  const actions = loadSource('src/features/purchases/actions.ts', { ...commonMocks,
+    './edit-stock': { assertPurchasableJobCard: async () => {}, editPurchaseStock: async () => {} },
+    '@/lib/prisma': {
+      purchase: { findUnique: async () => purchase },
+      $transaction: async (callback, options) => {
+        assert.equal(options.isolationLevel, 'Serializable')
+        return callback({ purchase: { findUniqueOrThrow: async () => purchase, update: async args => { writes++; return args.data } },
+          purchaseItem: { deleteMany: async () => {} },
+          purchasePayment: { deleteMany: async () => assert.fail('Payment history must survive edits'), create: async () => assert.fail('No duplicate receipt'), update: async () => assert.fail('Do not change supplier receipts') },
+          paymeter: { update: async () => assert.fail('Already settled money must not move ledgers') },
+        })
+      },
+    },
+  })
+  const data = { purchaseDate: '2026-01-01', supplierId: 'supplier', purchaseType: 'STOCK', paymentSource: 'PAYMETER',
+    paymentMethodId: 'ledger', discount: 0, paidAmount: 50,
+    items: [{ inventoryId: 'item', quantity: 1, purchasePrice: 100, sellingPrice: 120, taxRate: 0 }] }
+  const result = await actions.updatePurchase('purchase', data)
+  assert.equal(result.pendingAmount, 50)
+  await assert.rejects(actions.updatePurchase('purchase', { ...data, paidAmount: 60 }), /has settlements/)
+  assert.equal(writes, 1)
+})
+
+test('invoice edits use current charges even when the stored invoice was previously fully paid', async () => {
+  let saved
+  const oldInvoice = { id: 'invoice', jobCardId: 'job', customerId: 'customer', status: 'PAID', grandTotal: 100,
+    serviceCharge: 100, partsCost: 0, labourCharge: 0, discount: 0, tax: 0, otherCharges: null,
+    payments: [{ id: 'receipt', amount: 100 }],
+    jobCard: { serviceTotal: 200, partsTotal: 50, payments: [{ id: 'receipt', amount: 100 }] } }
+  const { updateInvoice } = loadSource('src/features/invoices/actions.ts', { ...commonMocks, '@/lib/prisma': {
+    $transaction: async (callback, options) => {
+      assert.equal(options.isolationLevel, 'Serializable')
+      return callback({ invoice: { findUnique: async () => oldInvoice, update: async args => { saved = args.data; return args.data } } })
+    },
+  } })
+  await updateInvoice('invoice', { jobCardId: 'job', customerId: 'customer', labourCharge: 10, discount: 0, tax: 0,
+    serviceCharge: 100, partsCost: 0, status: 'PAID' })
+  assert.equal(saved.serviceCharge, 200)
+  assert.equal(saved.partsCost, 50)
+  assert.equal(saved.grandTotal, 260)
+  assert.equal(saved.status, 'PARTIAL')
 })

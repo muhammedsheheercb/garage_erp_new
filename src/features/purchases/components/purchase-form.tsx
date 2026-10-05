@@ -132,7 +132,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
     mutationFn: (data: PurchaseFormValues) =>
       initialData ? updatePurchase(initialData.id, data) : createPurchase(data),
     onSuccess: () => {
-      void refreshQueries(queryClient, ["jobcard", "payments", "pending-jobcards", "pending-jobcards-dropdown", "supplier", "suppliers", "report-totals", "report-details", "report-chart", "invoice-dropdowns", "parts-list", "direct-sale-stock", "purchase-dropdowns"]);
+      void refreshQueries(queryClient, ["invoices", "jobcard", "payments", "pending-jobcards", "pending-jobcards-dropdown", "supplier", "suppliers", "report-totals", "report-details", "report-chart", "invoice-dropdowns", "parts-list", "direct-sale-stock", "purchase-dropdowns"]);
       toast.success(initialData ? t.common.save : t.purchases.purchaseRegisteredSuccess)
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
