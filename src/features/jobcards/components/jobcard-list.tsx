@@ -185,19 +185,20 @@ export function JobCardList() {
               <TableHead>Created By</TableHead>
               <TableHead>Expected finish</TableHead>
               <TableHead>{t.jobcards.estCost}</TableHead>
+              <TableHead>Paid Amount</TableHead>
               <TableHead className="text-right">{t.common.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center h-24">
+                <TableCell colSpan={8} className="text-center h-24">
                   {t.common.loading}
                 </TableCell>
               </TableRow>
             ) : data?.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center h-24">
+                <TableCell colSpan={8} className="text-center h-24">
                   {t.jobcards.noJobCards}
                 </TableCell>
               </TableRow>
@@ -251,6 +252,9 @@ export function JobCardList() {
                   </TableCell>
                   <TableCell>
                     <Currency amount={job.grandTotal || 0} />
+                  </TableCell>
+                  <TableCell>
+                    <Currency amount={job.advancePaid || 0} />
                   </TableCell>
                   <TableCell className="text-right space-x-1 whitespace-nowrap">
                     <Button
