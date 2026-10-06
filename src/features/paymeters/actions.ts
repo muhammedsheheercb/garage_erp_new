@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { requirePagePermission } from "@/lib/authorization"
 import { parseSettlementDate } from "@/lib/settlement-date"
@@ -11,9 +12,9 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
   await requirePagePermission("paymeters", "view")
   const limit = 5
   const skip = (page - 1) * limit
-  const purchaseWhere: any = {};
-  const expenseWhere: any = {};
-  const purchasePaymentWhere: any = {};
+  const purchaseWhere: Prisma.PurchaseWhereInput = {};
+  const expenseWhere: Prisma.ExpenseWhereInput = {};
+  const purchasePaymentWhere: Prisma.PurchasePaymentWhereInput = {};
   if (fromDateStr || toDateStr) {
     purchaseWhere.purchaseDate = {};
     expenseWhere.date = {};
@@ -31,7 +32,7 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
   }
 
   const nameWhere = search.trim() ? { contains: search.trim(), mode: "insensitive" as const } : undefined
-  const where: any = { ...userPaymeterWhere, ...(nameWhere ? { name: nameWhere } : {}) }
+  const where: Prisma.PaymeterWhereInput = { ...userPaymeterWhere, ...(nameWhere ? { name: nameWhere } : {}) }
 
   // When a date range is selected, return only paymeters that had a
   // transaction during that range. The nested relation filters below keep
@@ -86,16 +87,16 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
   ])
   
   // Calculate dynamic spent amount for the selected date range
-  const data = paymeters.map((pm: any) => {
+  const data = paymeters.map((pm) => {
     // We no longer sum purchase.grandTotal because all actual payments
     // (including initial ones) are recorded as PurchasePayments (supplierPaymentTotal).
-    const expenseTotal = pm.expenses.reduce((acc: number, e: any) => acc + (e.amount || 0), 0);
+    const expenseTotal = pm.expenses.reduce((acc: number, e) => acc + (e.amount || 0), 0);
     const allPurchasePaymentTotal = (pm.purchasePayments || []).reduce(
-      (acc: number, payment: any) => acc + (payment.amount || 0),
+      (acc: number, payment) => acc + (payment.amount || 0),
       0,
     )
     const supplierPayments = (pm.purchasePayments || []).filter(
-      (payment: any) => payment.pendingAmount > 0 || payment.paidAmount > 0,
+      (payment) => payment.pendingAmount > 0 || payment.paidAmount > 0,
     )
 
     return {
@@ -103,12 +104,12 @@ export async function getPaymeters(page = 1, fromDateStr?: string, toDateStr?: s
       // `Purchase.paidAmount` includes supplier payments made later from the
       // supplier screen. Subtract those here so the purchase row represents
       // only its original paymeter advance.
-      purchases: (pm.purchases || []).map((purchase: any) => {
+      purchases: (pm.purchases || []).map((purchase) => {
         const purchaseSupplierPayments = (purchase.purchasePayments || []).filter(
-          (payment: any) => payment.pendingAmount > 0 || payment.paidAmount > 0,
+          (payment) => payment.pendingAmount > 0 || payment.paidAmount > 0,
         )
         const laterSupplierPayments = purchaseSupplierPayments.reduce(
-          (acc: number, payment: any) => acc + (payment.amount || 0),
+          (acc: number, payment) => acc + (payment.amount || 0),
           0,
         )
 

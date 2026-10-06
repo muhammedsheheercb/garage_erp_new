@@ -3,6 +3,12 @@ import { getSession } from "@/lib/session"
 import { canUseModule, parseModulePermissions, type PagePermission, type PermissionAction } from "@/lib/permissions"
 import { Prisma } from "@prisma/client"
 
+export async function requireSession() {
+  const session = await getSession()
+  if (!session) throw new Error("Unauthorized")
+  return session
+}
+
 export async function requireAdmin() {
   const session = await getSession()
   if (!session || session.role !== "ADMIN") throw new Error("Unauthorized")

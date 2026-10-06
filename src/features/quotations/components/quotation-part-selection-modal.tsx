@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Search } from "lucide-react"
 
-export function QuotationPartSelectionModal({ onSelect }: { onSelect: (part: any) => void }) {
+export function QuotationPartSelectionModal({ onSelect }: { onSelect: (part: Awaited<ReturnType<typeof getQuotationInventory>>[number]) => void }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const { data: parts = [], isLoading } = useQuery({ queryKey: ["quotation-parts", search], queryFn: () => getQuotationInventory(search) })

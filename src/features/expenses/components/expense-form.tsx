@@ -1,9 +1,13 @@
-"use client";
+"use client"
+
+import type { ExpenseView } from "@/lib/view-models";
 
 import { refreshQueries } from "@/lib/refresh-queries"
-import { useForm, Controller } from "react-hook-form";
+import { useWatch, useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { z } from "zod";
+type ExpenseFormInput = z.input<typeof expenseSchema>;
 import { ExpenseFormValues, expenseSchema, expenseCategories } from "../schema";
 import { createExpense, updateExpense } from "../actions";
 import { getPaymetersDropdown } from "@/features/paymeters/actions";
@@ -26,7 +30,7 @@ export function ExpenseForm({
   initialData,
   onSuccess,
 }: {
-  initialData?: any;
+  initialData?: ExpenseView;
   onSuccess?: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -47,28 +51,30 @@ export function ExpenseForm({
     register,
     handleSubmit,
     control,
-    watch,
     formState: { errors },
-  } = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseSchema) as any,
+  } = useForm<ExpenseFormInput, unknown, ExpenseFormValues>({
+    resolver: zodResolver(expenseSchema),
     defaultValues: initialData
       ? {
           ...initialData,
-          date: format(new Date(initialData.date), "yyyy-MM-dd") as unknown as Date,
+          category: initialData.category as ExpenseFormValues["category"],
+          description: initialData.description || "",
+          date: format(new Date(initialData.date), "yyyy-MM-dd"),
           paymentType: initialData.paymentMethod === "PAYMETER" ? "PAYMETER" : "DIRECT",
         }
       : {
           category: "Other Expenses",
           amount: 0,
           description: "",
-          date: format(new Date(), "yyyy-MM-dd") as unknown as Date,
+          date: format(new Date(), "yyyy-MM-dd"),
           paymentType: "DIRECT",
           paymentMethod: "CASH",
           paymeterId: null,
         },
   });
 
-  const paymentType = watch("paymentType");
+  const subscribedPaymentType = useWatch({ control: control, name: "paymentType" })
+  const paymentType = subscribedPaymentType;
 
   const { data: paymeters = [] } = useQuery({
     queryKey: ["paymetersDropdown"],
@@ -90,7 +96,7 @@ export function ExpenseForm({
       queryClient.invalidateQueries({ queryKey: ["paymeters"] });
       onSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong);
     },
   });
@@ -217,12 +223,12 @@ export function ExpenseForm({
                   <SelectTrigger>
                     <SelectValue placeholder="Select a paymeter">
                       {field.value 
-                        ? paymeters.find((pm: any) => pm.id === field.value)?.name || "Select a paymeter"
+                        ? paymeters.find((pm) => pm.id === field.value)?.name || "Select a paymeter"
                         : "Select a paymeter"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {paymeters.map((pm: any) => (
+                    {paymeters.map((pm) => (
                       <SelectItem key={pm.id} value={pm.id}>
                         {pm.name}
                       </SelectItem>

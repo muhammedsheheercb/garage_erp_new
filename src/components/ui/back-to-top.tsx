@@ -1,23 +1,17 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowUp } from "lucide-react"
 
-// Throttle function to limit how often a function runs
-function useThrottle(callback: (...args: any[]) => void, limit: number) {
-  const [inThrottle, setInThrottle] = useState(false)
-
-  return useCallback(
-    (...args: any[]) => {
-      if (!inThrottle) {
-        callback(...args)
-        setInThrottle(true)
-        setTimeout(() => setInThrottle(false), limit)
-      }
-    },
-    [callback, limit, inThrottle]
-  )
+function useThrottle(callback: () => void, limit: number) {
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (timeout.current) clearTimeout(timeout.current) }, [])
+  return useCallback(() => {
+    if (timeout.current) return
+    callback()
+    timeout.current = setTimeout(() => { timeout.current = null }, limit)
+  }, [callback, limit])
 }
 
 export function BackToTop() {
@@ -36,7 +30,7 @@ export function BackToTop() {
   const throttledScroll = useThrottle(handleScroll, 200)
 
   useEffect(() => {
-    window.addEventListener("scroll", throttledScroll)
+    window.addEventListener("scroll", throttledScroll, { passive: true })
     return () => window.removeEventListener("scroll", throttledScroll)
   }, [throttledScroll])
 

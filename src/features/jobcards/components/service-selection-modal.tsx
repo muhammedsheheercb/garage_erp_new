@@ -1,5 +1,7 @@
 "use client"
 
+import type { ServiceOption } from "@/lib/view-models"
+
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getServicesList } from "../actions"
@@ -11,7 +13,7 @@ import { Search, Plus } from "lucide-react"
 import { useTranslation } from "@/i18n"
 
 interface ServiceSelectionModalProps {
-  onSelect: (service: any) => void
+  onSelect: (service: ServiceOption) => void
 }
 
 export function ServiceSelectionModal({ onSelect }: ServiceSelectionModalProps) {
@@ -63,7 +65,7 @@ export function ServiceSelectionModal({ onSelect }: ServiceSelectionModalProps) 
               ) : services?.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center">{t.jobcards.noServicesFound}</TableCell></TableRow>
               ) : (
-                services?.map((service: any) => (
+                services?.map((service) => (
                   <TableRow key={service.id}>
                     <TableCell className="font-medium">{service.name}</TableCell>
                     <TableCell>{service.category || '-'}</TableCell>

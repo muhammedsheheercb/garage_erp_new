@@ -46,7 +46,7 @@ export function decrypt(encryptedText: string): string | null {
     decrypted += decipher.final("utf8")
     
     return decrypted
-  } catch (error) {
+  } catch  {
     return null
   }
 }
@@ -105,7 +105,7 @@ export async function getSession(): Promise<SessionData | null> {
     }
     
     return data
-  } catch (error) {
+  } catch  {
     return null
   }
 }
@@ -113,9 +113,4 @@ export async function getSession(): Promise<SessionData | null> {
 export async function clearSession() {
   const cookieStore = await cookies()
   cookieStore.delete(SESSION_COOKIE_NAME)
-}
-
-export async function isAuthenticated(): Promise<boolean> {
-  const session = await getSession()
-  return session !== null
 }

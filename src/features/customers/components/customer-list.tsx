@@ -1,5 +1,7 @@
 "use client"
 
+import type { CustomerView, TranslationKeys } from "@/lib/view-models"
+
 import { useState, useEffect, useCallback, memo, useMemo } from "react"
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { getCustomers, deleteCustomer } from "../actions"
@@ -34,20 +36,20 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 // React.memo: Prevents re-rendering of table rows that haven't changed during search/pagination.
-const CustomerRow = memo(({ 
-  customer, 
-  onEdit, 
-  onDelete, 
+const CustomerRow = memo(({
+  customer,
+  onEdit,
+  onDelete,
   isEditing,
   t,
   canEdit,
   canDelete
-}: { 
-  customer: any, 
-  onEdit: (customer: any) => void, 
+}: {
+  customer: CustomerView,
+  onEdit: (customer: CustomerView | null) => void,
   onDelete: (id: string) => void,
   isEditing: boolean,
-  t: any,
+  t: TranslationKeys,
   canEdit: boolean,
   canDelete: boolean
 }) => (
@@ -79,9 +81,9 @@ const CustomerRow = memo(({
               <DialogHeader>
                 <DialogTitle>{t.customers.editCustomer}</DialogTitle>
               </DialogHeader>
-              <CustomerForm 
-                initialData={customer} 
-                onSuccess={() => onEdit(null)} 
+              <CustomerForm
+                initialData={customer}
+                onSuccess={() => onEdit(null)}
               />
             </DialogContent>
           )}
@@ -121,7 +123,7 @@ export function CustomerList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [editingCustomer, setEditingCustomer] = useState<any>(null)
+  const [editingCustomer, setEditingCustomer] = useState<CustomerView | null>(null)
   const { t } = useTranslation()
   const { can } = usePermissions()
 
@@ -153,7 +155,7 @@ export function CustomerList() {
     deleteMutation.mutate(id)
   }, [deleteMutation])
 
-  const handleEdit = useCallback((customer: any) => {
+  const handleEdit = useCallback((customer: CustomerView | null) => {
     setEditingCustomer(customer)
   }, [])
 
@@ -162,28 +164,28 @@ export function CustomerList() {
     if (!data?.data || data.data.length === 0) {
       return <TableRow><TableCell colSpan={3} className="text-center h-24">{t.customers.noCustomers}</TableCell></TableRow>
     }
-    return data.data.map((customer: any) => (
-      <CustomerRow 
-        key={customer.id} 
-        customer={customer} 
-        onEdit={handleEdit} 
-        onDelete={handleDelete} 
+    return data.data.map((customer) => (
+      <CustomerRow
+        key={customer.id}
+        customer={customer}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
         isEditing={editingCustomer?.id === customer.id}
         t={t}
         canEdit={can("customers", "edit")}
         canDelete={can("customers", "delete")}
       />
     ))
-  }, [data?.data, handleEdit, handleDelete, editingCustomer?.id, t, can])
+  }, [data, handleEdit, handleDelete, editingCustomer?.id, t, can])
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
+          <Input
             placeholder={t.customers.searchCustomers}
-            className="pl-8" 
+            className="pl-8"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
@@ -191,10 +193,10 @@ export function CustomerList() {
             }}
           />
         </div>
-        
-        <DatePickerWithRange 
-          date={dateRange} 
-          setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
+
+        <DatePickerWithRange
+          date={dateRange}
+          setDate={(newDate) => { setDateRange(newDate); setPage(1); }}
         />
 
         {can("customers", "create") && (

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { addDays, format } from "date-fns"
+import { format } from "date-fns";
 import { Calendar as CalendarIcon, X } from "lucide-react"
 import { DateRange } from "react-day-picker"
 import { ar, enUS } from "date-fns/locale"
@@ -28,17 +28,17 @@ export function DatePickerWithRange({
   setDate,
   placeholder = "Pick a date range",
 }: DatePickerWithRangeProps) {
-  const { locale, t } = useTranslation()
+  const { locale } = useTranslation()
   const dateLocale = locale === 'ar' ? ar : enUS
 
   const [isOpen, setIsOpen] = React.useState(false)
-  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>(date)
-
-  React.useEffect(() => {
-    if (isOpen) {
-      setInternalDate(date)
-    }
-  }, [isOpen, date])
+  const [draft, setDraft] = React.useState<{ source: DateRange | undefined; value: DateRange | undefined }>({ source: date, value: date })
+  const internalDate = draft.source === date ? draft.value : date
+  const setInternalDate = (value: DateRange | undefined) => setDraft({ source: date, value })
+  const handleOpenChange = (open: boolean) => {
+    if (open) setInternalDate(date)
+    setIsOpen(open)
+  }
 
   const handleApply = () => {
     setDate(internalDate)
@@ -55,7 +55,7 @@ export function DatePickerWithRange({
 
   return (
     <div className={cn("grid gap-2 relative", className)}>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover open={isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           id="date"
           className={cn(

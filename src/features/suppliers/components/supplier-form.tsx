@@ -1,5 +1,7 @@
 "use client"
 
+import type { SupplierView } from "@/lib/view-models"
+
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -9,12 +11,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { Textarea } from "@/components/ui/textarea"
+
 import { useTranslation } from "@/i18n"
 
 interface SupplierFormProps {
-  initialData?: any
-  onSuccess?: (data?: any) => void
+  initialData?: SupplierView
+  onSuccess?: (data?: Exclude<Awaited<ReturnType<typeof createSupplier>>, { success: false }>) => void
 }
 
 export function SupplierForm({ initialData, onSuccess }: SupplierFormProps) {
@@ -42,9 +44,9 @@ export function SupplierForm({ initialData, onSuccess }: SupplierFormProps) {
       toast.success(initialData ? t.suppliers.supplierUpdated : t.suppliers.supplierCreated)
       queryClient.invalidateQueries({ queryKey: ['suppliers'] })
       queryClient.invalidateQueries({ queryKey: ['supplier', initialData?.id] })
-      onSuccess?.(data)
+      if ("id" in data) onSuccess?.(data)
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })

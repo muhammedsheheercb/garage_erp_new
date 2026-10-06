@@ -1,4 +1,6 @@
-"use client";
+"use client"
+
+import type { CustomerView } from "@/lib/view-models";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,8 +16,8 @@ import { useTranslation } from "@/i18n";
 import type { z } from "zod";
 
 interface CustomerFormProps {
-  initialData?: CustomerFormValues & { id?: string };
-  onSuccess?: (customer?: any) => void;
+  initialData?: Partial<CustomerView>;
+  onSuccess?: (customer?: Exclude<Awaited<ReturnType<typeof createCustomer>>, { success: false }>) => void;
 }
 
 export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
@@ -25,7 +27,6 @@ export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors },
   } = useForm<z.input<typeof customerSchema>, unknown, CustomerFormValues>({
     resolver: zodResolver(customerSchema),
@@ -57,9 +58,9 @@ export function CustomerForm({ initialData, onSuccess }: CustomerFormProps) {
           : t.customers.customerCreated,
       );
       queryClient.invalidateQueries({ queryKey: ["customers"] });
-      onSuccess?.(data);
+      if ("id" in data) onSuccess?.(data);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong);
     },
   });

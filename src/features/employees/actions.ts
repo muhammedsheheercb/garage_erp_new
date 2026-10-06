@@ -27,11 +27,10 @@ export type EmployeeInput = {
   permissions: ModulePermissions
 }
 
-type EmployeeRow = { id: string; username: string | null; permissions: string; isActive: boolean; createdAt: Date }
 
 export async function getEmployees(fromDate?: string, toDate?: string, search = "") {
   await requireAdmin()
-  const where: any = {}
+  const where: Prisma.EmployeeWhereInput = {}
   if (fromDate || toDate) {
     where.createdAt = {}
     if (fromDate) where.createdAt.gte = new Date(fromDate)

@@ -4,7 +4,7 @@ import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { SupplierPaymentFormValues, supplierPaymentSchema } from "../schema"
-import { createSupplierPayment } from "../actions"
+import { createSupplierPayment, getSupplierDetails } from "../actions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ import { format } from "date-fns"
 
 interface SupplierPaymentFormProps {
   supplierId: string
-  purchases: any[]
+  purchases: NonNullable<Awaited<ReturnType<typeof getSupplierDetails>>>["purchases"]
   paymentMethods: { id: string; name: string }[]
   onSuccess?: () => void
 }
@@ -64,7 +64,7 @@ export function SupplierPaymentForm({ supplierId, purchases, paymentMethods, onS
       queryClient.invalidateQueries({ queryKey: ['report-details'] })
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })

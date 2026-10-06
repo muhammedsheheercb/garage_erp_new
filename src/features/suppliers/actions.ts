@@ -5,31 +5,14 @@ import { requirePagePermission } from "@/lib/authorization"
 import type { Prisma } from "@prisma/client"
 import { SupplierFormValues, supplierSchema, SupplierPaymentFormValues, supplierPaymentSchema } from "./schema"
 import { revalidatePath } from "next/cache"
-import { userPaymeterWhere } from "@/lib/paymeter"
-
-const directPaymentNames = {
-  CASH: "Direct Cash",
-  BANK_TRANSFER: "Direct Bank Transfer",
-  CARD: "Card",
-} as const
-
-async function getDirectPaymeterId(
-  tx: Prisma.TransactionClient,
-  method: keyof typeof directPaymentNames,
-) {
-  const name = directPaymentNames[method]
-  const existing = await tx.paymeter.findUnique({ where: { name } })
-  if (existing) return existing.id
-
-  return (await tx.paymeter.create({ data: { name } })).id
-}
+import { userPaymeterWhere, getDirectPaymeterId } from "@/lib/paymeter"
 
 export async function getSuppliers(page = 1, search = "", fromDateStr?: string, toDateStr?: string) {
   await requirePagePermission("suppliers", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = {
+  const where: Prisma.SupplierWhereInput = {
     OR: [
       { name: { contains: search, mode: "insensitive" } },
       { contact: { contains: search, mode: "insensitive" } },
@@ -268,14 +251,5 @@ export async function deletePurchasePayment(paymentId: string) {
   revalidatePath('/suppliers')
   revalidatePath('/purchases')
   revalidatePath('/paymeters')
-  return { success: true }
-}
-
-export async function deleteSupplierPayment(paymentId: string) {
-  await requirePagePermission("suppliers", "delete")
-  await prisma.supplierPayment.delete({
-    where: { id: paymentId }
-  })
-  revalidatePath('/suppliers')
   return { success: true }
 }

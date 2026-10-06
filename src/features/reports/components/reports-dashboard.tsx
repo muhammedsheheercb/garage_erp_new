@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getReportsDashboardTotals,
   getRevenueExpenseChartData,
-  getReportsDashboardDetails,
 } from "../actions";
 import {
   Card,
@@ -14,22 +13,9 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import {
-  Loader2,
-  Printer,
-  TrendingUp,
-  Package,
-  Activity,
-  ChevronDown,
-  ChevronUp,
-  Receipt,
-  CreditCard,
-  ShoppingCart,
-  Wallet,
-  Wrench,
-} from "lucide-react";
+import { Loader2, Printer, TrendingUp, Package, Activity, ChevronDown, ChevronUp, Receipt, ShoppingCart, Wallet, Wrench } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -40,14 +26,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import { useTranslation } from "@/i18n";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
@@ -70,7 +49,7 @@ function BreakdownCard({
 }: {
   title: string;
   value: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string; size?: number }>;
   color: string;
   breakdown?: Record<string, number>;
   details?: React.ReactNode;
@@ -124,7 +103,6 @@ export function ReportsDashboard() {
   const { t } = useTranslation();
   const [chartPeriod, setChartPeriod] = useState<"daily" | "monthly">("daily");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [activeDetailTab, setActiveDetailTab] = useState<"income" | "expenses" | "purchases" | "paymeters">("income");
 
   const fromDateStr = dateRange?.from?.toISOString();
   const toDateStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : undefined;
@@ -140,11 +118,6 @@ export function ReportsDashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["report-totals", fromDateStr, toDateStr],
     queryFn: () => getReportsDashboardTotals(fromDateStr, toDateStr),
-  });
-
-  const { data: reportDetails, isLoading: detailsLoading } = useQuery({
-    queryKey: ["report-details", fromDateStr, toDateStr],
-    queryFn: () => getReportsDashboardDetails(fromDateStr, toDateStr),
   });
 
   const { data: chartData, isLoading: chartLoading } = useQuery({
@@ -314,7 +287,7 @@ export function ReportsDashboard() {
           </div>
           <Tabs
             value={chartPeriod}
-            onValueChange={(v: any) => setChartPeriod(v)}
+            onValueChange={(v) => { if (v === "week" || v === "month" || v === "year") setChartPeriod(v) }}
             className="w-full sm:w-[200px] print:hidden"
           >
             <TabsList className="grid w-full grid-cols-2">
@@ -362,7 +335,7 @@ export function ReportsDashboard() {
                       border: "none",
                       boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                     }}
-                    formatter={(val: any) => [`${formatMoney(Number(val) || 0)} OMR`, ""]}
+                    formatter={(val) => [`${formatMoney(Number(val) || 0)} OMR`, ""]}
                   />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
                   <Bar

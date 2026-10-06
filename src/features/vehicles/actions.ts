@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { VehicleFormValues, vehicleSchema } from "./schema"
 import { revalidatePath } from "next/cache"
@@ -10,7 +11,7 @@ export async function getVehicles(page = 1, search = "", fromDate?: string, toDa
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = {
+  const where: Prisma.VehicleWhereInput = {
     OR: [
       { plateNumber: { contains: search, mode: "insensitive" } },
       { brand: { contains: search, mode: "insensitive" } },

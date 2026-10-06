@@ -6,15 +6,15 @@ import { ServiceFormValues, serviceSchema } from "../schema"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createService, updateService } from "../actions"
 import { toast } from "sonner"
 import { useTranslation } from "@/i18n"
 
 interface ServiceFormProps {
-  initialData?: ServiceFormValues & { id?: string }
-  onSuccess?: (service?: any) => void
+  initialData?: Partial<import("@prisma/client").Service>
+  onSuccess?: (service?: Exclude<Awaited<ReturnType<typeof createService>>, { success: false }>) => void
 }
 
 export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
@@ -45,9 +45,9 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
       }
       toast.success(initialData?.id ? t.services.serviceUpdated : t.services.serviceCreated)
       queryClient.invalidateQueries({ queryKey: ['services'] })
-      onSuccess?.(result)
+      if ("id" in result) onSuccess?.(result)
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })

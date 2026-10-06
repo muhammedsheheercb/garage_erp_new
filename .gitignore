@@ -46,3 +46,8 @@ next-env.d.ts
 
 # Database backups contain private application data
 /prisma/backups/
+
+# Legacy local database and compiler output
+/prisma/*.db
+/prisma/*.db-journal
+/tsc.log

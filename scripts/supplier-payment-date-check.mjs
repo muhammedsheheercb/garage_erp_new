@@ -1,7 +1,10 @@
-const assert = require('node:assert/strict')
-const fs = require('node:fs')
-const ts = require('typescript')
-const { startOfDay, endOfDay, subDays } = require('date-fns')
+
+import { createRequire } from "node:module"
+const nodeRequire = createRequire(import.meta.url)
+import assert from "node:assert/strict"
+import fs from "node:fs"
+import ts from "typescript"
+import { startOfDay, endOfDay, subDays } from "date-fns"
 
 // Run the actual report actions against isolated fixtures, without changing the database.
 function load(file, overrides = {}) {
@@ -12,7 +15,7 @@ function load(file, overrides = {}) {
   new Function('require', 'exports', code)((name) => {
     if (name in overrides) return overrides[name]
     if (name.startsWith('@/')) return load(`src/${name.slice(2)}.ts`, overrides)
-    return require(name)
+    return nodeRequire(name)
   }, exports)
   return exports
 }
@@ -38,7 +41,7 @@ async function main() {
         && (!where.date.lte || row.date <= where.date.lte))
     },
   } : emptyModel })
-  const actions = load('src/features/reports/actions.ts', { '@/lib/prisma': { default: prisma } })
+  const actions = load('src/features/reports/actions.ts', { '@/lib/prisma': { default: prisma }, '@/lib/authorization': { requireSession: async () => {}, requirePagePermission: async () => {} } })
   const dashboard = await actions.getDashboardStats()
   assert.equal(dashboard.dailyDirectSupplierPaid, 25)
   assert.equal(dashboard.dailyDirectPurchasePaid, 10)

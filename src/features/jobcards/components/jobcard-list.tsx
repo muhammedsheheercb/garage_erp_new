@@ -1,6 +1,8 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
+import type { TranslationKeys } from "@/lib/view-models";
+
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getJobCards, getJobCardById, deleteJobCard } from "../actions";
 import {
@@ -53,7 +55,7 @@ import { formatDisplayDate } from "@/lib/date-format";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getQuotationJobCardPrefill } from "@/features/quotations/actions";
 
-const getTranslatedStatus = (t: any, status: string): string => {
+const getTranslatedStatus = (t: TranslationKeys, status: string): string => {
   const statusMap: Record<string, string> = {
     PENDING: "statusPending",
     IN_PROGRESS: "statusInProgress",
@@ -73,7 +75,7 @@ export function JobCardList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isQuotationPrefillActive, setIsQuotationPrefillActive] = useState(false);
+  const [dismissedQuotation, setDismissedQuotation] = useState<string | null>(null);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const { t } = useTranslation();
   const { can } = usePermissions();
@@ -85,12 +87,8 @@ export function JobCardList() {
     enabled: Boolean(quotationId),
   });
 
-  useEffect(() => {
-    if (quotationPrefill) {
-      setIsAddOpen(true);
-      setIsQuotationPrefillActive(true);
-    }
-  }, [quotationPrefill]);
+  const isQuotationPrefillActive = Boolean(quotationPrefill && quotationId !== dismissedQuotation)
+  const isDialogOpen = isAddOpen || isQuotationPrefillActive
 
   const fromDateStr = createdDateRange?.from?.toISOString();
   const toDateStr = createdDateRange?.to ? endOfDay(createdDateRange.to).toISOString() : undefined;
@@ -159,7 +157,7 @@ export function JobCardList() {
         </div>
 
         {can("jobcards", "create") && (
-          <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) setIsQuotationPrefillActive(false); }}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) setDismissedQuotation(quotationId); }}>
             <DialogTrigger
               render={
                 <Button className="w-full sm:w-auto">

@@ -4,19 +4,16 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  const email = 'admin@garage.com'
-  const password = await bcrypt.hash('admin123', 10)
-
-  await prisma.admin.deleteMany({
-    where: { email: { not: email } },
-  })
+  const email = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase()
+  const initialPassword = process.env.INITIAL_ADMIN_PASSWORD
+  if (!email || !initialPassword || initialPassword.length < 12) {
+    throw new Error("Set INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD (at least 12 characters) to initialize the admin.")
+  }
+  const password = await bcrypt.hash(initialPassword, 12)
 
   const admin = await prisma.admin.upsert({
     where: { email },
-    update: {
-      name: 'System Admin',
-      password,
-    },
+    update: {},
     create: {
       email,
       name: 'System Admin',
@@ -24,7 +21,7 @@ async function main() {
     },
   })
 
-  console.log({ admin })
+  console.info("Administrator initialized:", admin.email)
 }
 
 main()

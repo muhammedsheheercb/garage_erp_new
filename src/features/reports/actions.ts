@@ -1,6 +1,7 @@
 "use server"
 
 import prisma from "@/lib/prisma"
+import { requirePagePermission, requireSession } from "@/lib/authorization"
 import { Prisma } from "@prisma/client"
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths, format, subDays, eachDayOfInterval, eachMonthOfInterval } from "date-fns"
 import { emptyPaymentBreakdown, paymentChannel, receiptMethod, receiptMethodLabel } from "@/lib/payment-method"
@@ -22,6 +23,7 @@ function supplierPaymentReportFilter(date: Prisma.DateTimeFilter): Prisma.Purcha
 }
 
 export async function getDashboardStats() {
+  await requireSession()
   const now = new Date()
   const todayStart = startOfDay(now)
   const todayEnd = endOfDay(now)
@@ -112,6 +114,7 @@ export async function getDashboardStats() {
 }
 
 export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = 'daily') {
+  await requirePagePermission("reports")
   const now = new Date()
   
   if (period === 'daily') {
@@ -192,102 +195,8 @@ export async function getRevenueExpenseChartData(period: 'daily' | 'monthly' = '
 }
 
 
-export async function getDetailedReportData(type: 'revenue' | 'expenses' | 'jobs' | 'customers' | 'vehicles', period: 'daily' | 'monthly' = 'daily') {
-  const now = new Date()
-  const startDate = period === 'daily' ? startOfDay(subDays(now, 30)) : startOfMonth(subMonths(now, 12))
-  
-  if (type === 'revenue') {
-    const data = await prisma.payment.findMany({
-      where: paymentReportFilter({ gte: startDate }),
-      include: {
-        jobCard: { include: { customer: true, vehicle: true } },
-        invoice: {
-          include: { customer: true, jobCard: { include: { vehicle: true } } }
-        }
-      },
-      orderBy: { paymentDate: 'desc' }
-    })
-    
-    return data.map((p: any) => ({
-      id: p.id,
-      date: formatDisplayDate(paymentReportDate(p), true),
-      amount: p.amount,
-      method: receiptMethodLabel(p),
-      customer: p.invoice?.customer.name || p.jobCard?.customer.name || '-',
-      vehicle: p.invoice?.jobCard.vehicle.plateNumber || p.jobCard?.vehicle.plateNumber || '-',
-      invoice: p.invoice ? `INV-${p.invoice.id.split('-')[0].toUpperCase()}` : `JOB-${p.jobCard?.id.split('-')[0].toUpperCase() || '-'}`
-    }))
-  }
-  
-  if (type === 'expenses') {
-    const data = await prisma.expense.findMany({
-      where: { date: { gte: startDate } },
-      orderBy: { date: 'desc' }
-    })
-    
-    return data.map(e => ({
-      id: e.id,
-      date: formatDisplayDate(e.date),
-      category: e.category,
-      amount: e.amount,
-      description: e.description || '-'
-    }))
-  }
-
-  if (type === 'jobs') {
-    const data = await prisma.jobCard.findMany({
-      where: { createdAt: { gte: startDate } },
-      include: { customer: true, vehicle: true, mechanic: true },
-      orderBy: { createdAt: 'desc' }
-    })
-    
-    return data.map(j => ({
-      id: j.id,
-      date: formatDisplayDate(j.createdAt),
-      customer: j.customer.name,
-      vehicle: j.vehicle.plateNumber,
-      mechanic: j.mechanic.name,
-      status: j.status,
-      grandTotal: j.grandTotal
-    }))
-  }
-
-  if (type === 'customers') {
-    const data = await prisma.customer.findMany({
-      where: { createdAt: { gte: startDate } },
-      orderBy: { createdAt: 'desc' }
-    })
-    
-    return data.map(c => ({
-      id: c.id,
-      dateJoined: formatDisplayDate(c.createdAt),
-      name: c.name,
-      email: c.email || '-',
-      phone: c.phone || '-'
-    }))
-  }
-
-  if (type === 'vehicles') {
-    const data = await prisma.vehicle.findMany({
-      where: { createdAt: { gte: startDate } },
-      include: { customer: true },
-      orderBy: { createdAt: 'desc' }
-    })
-    
-    return data.map(v => ({
-      id: v.id,
-      dateAdded: formatDisplayDate(v.createdAt),
-      plateNumber: v.plateNumber,
-      brand: v.brand,
-      model: v.model,
-      customer: v.customer.name
-    }))
-  }
-
-  return []
-}
-
 export async function getRecentActivities() {
+  await requireSession()
   const [latestInvoices, latestJobs] = await Promise.all([
     prisma.invoice.findMany({
       take: 3,
@@ -339,7 +248,8 @@ export async function getRecentActivities() {
 }
 
 export async function getReportsDashboardTotals(fromDate?: string, toDate?: string) {
-  let dateFilter: any = {}
+  await requirePagePermission("reports")
+  const dateFilter: Prisma.DateTimeFilter = {}
   
   if (fromDate || toDate) {
     const start = fromDate ? new Date(fromDate) : new Date(toDate!)
@@ -546,7 +456,8 @@ export async function getReportsDashboardTotals(fromDate?: string, toDate?: stri
 }
 
 export async function getReportsDashboardDetails(fromDate?: string, toDate?: string) {
-  let dateFilter: any = {}
+  await requirePagePermission("reports")
+  const dateFilter: Prisma.DateTimeFilter = {}
   
   if (fromDate || toDate) {
     const start = fromDate ? new Date(fromDate) : new Date(toDate!)
@@ -593,7 +504,7 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
     })
   ])
 
-  const incomeDetails = [...incomeList.map((p: any) => ({
+  const incomeDetails = [...incomeList.map((p) => ({
     id: p.id,
     date: formatDisplayDate(paymentReportDate(p), true),
     amount: p.amount,
@@ -666,7 +577,8 @@ export async function getReportsDashboardDetails(fromDate?: string, toDate?: str
 }
 
 export async function getPaymeterReportTransactions(fromDate?: string, toDate?: string) {
-  const dateFilter: any = {}
+  await requirePagePermission("reports")
+  const dateFilter: Prisma.DateTimeFilter = {}
   if (fromDate || toDate) {
     if (fromDate) dateFilter.gte = new Date(fromDate)
     if (toDate) dateFilter.lte = endOfDay(new Date(toDate))
@@ -706,7 +618,8 @@ export async function getPaymeterReportTransactions(fromDate?: string, toDate?: 
 }
 
 export async function getExpenseReportDetails(fromDate?: string, toDate?: string) {
-  const dateFilter: any = {}
+  await requirePagePermission("reports")
+  const dateFilter: Prisma.DateTimeFilter = {}
   if (fromDate || toDate) {
     if (fromDate) dateFilter.gte = new Date(fromDate)
     if (toDate) dateFilter.lte = endOfDay(new Date(toDate))

@@ -7,7 +7,7 @@ export default async function JobCardInvoicePage({ params }: { params: Promise<{
   const job = await getJobCardBill(id)
   if (!job) notFound()
   let otherChargesList: Array<{ name: string; amount: number }> = []
-  try { otherChargesList = JSON.parse(job.otherCharges || "[]").map((charge: any) => ({ name: charge.description, amount: Number(charge.amount) || 0 })) } catch {}
+  try { otherChargesList = JSON.parse(job.otherCharges || "[]").map((charge: { description: string; amount: number }) => ({ name: charge.description, amount: Number(charge.amount) || 0 })) } catch {}
   return <InvoicePrintClient invoice={{
     id: job.id, createdAt: job.createdAt, payments: job.payments, grandTotal: job.grandTotal,
     serviceCharge: job.serviceTotal, labourCharge: 0, partsCost: job.partsTotal,

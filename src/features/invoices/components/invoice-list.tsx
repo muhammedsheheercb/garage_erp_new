@@ -1,12 +1,14 @@
 "use client"
 
+import type { InvoiceView } from "@/lib/view-models"
+
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getInvoices, deleteInvoice } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Printer, FileText, ClipboardList } from "lucide-react"
+import { Search, Plus, Edit, Trash, ChevronLeft, ChevronRight, Printer, ClipboardList } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { InvoiceForm } from "./invoice-form"
@@ -23,8 +25,8 @@ export function InvoiceList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [editingInvoice, setEditingInvoice] = useState<any>(null)
-  const [viewingJobCard, setViewingJobCard] = useState<any>(null)
+  const [editingInvoice, setEditingInvoice] = useState<InvoiceView | null>(null)
+  const [viewingJobCard, setViewingJobCard] = useState<InvoiceView["jobCard"] | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const { t } = useTranslation()
 
@@ -170,7 +172,7 @@ export function InvoiceList() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {viewingJobCard.services.map((s: any) => (
+                                      {viewingJobCard.services.map((s) => (
                                         <TableRow key={s.id}>
                                           <TableCell>{s.service?.name}</TableCell>
                                           <TableCell>{s.quantity}</TableCell>
@@ -194,7 +196,7 @@ export function InvoiceList() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {viewingJobCard.parts.map((p: any) => (
+                                      {viewingJobCard.parts.map((p) => (
                                         <TableRow key={p.id}>
                                           <TableCell>{p.batch?.inventory?.itemName}</TableCell>
                                           <TableCell>{p.quantity}</TableCell>

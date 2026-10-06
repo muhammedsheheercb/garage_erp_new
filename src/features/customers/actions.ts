@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { requirePagePermission } from "@/lib/authorization"
 import { CustomerFormValues, customerSchema } from "./schema"
@@ -10,7 +11,7 @@ export async function getCustomers(page = 1, search = "", fromDate?: string, toD
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = {
+  const where: Prisma.CustomerWhereInput = {
     OR: [
       { name: { contains: search, mode: "insensitive" } },
       { email: { contains: search, mode: "insensitive" } },
@@ -131,8 +132,8 @@ export async function deleteCustomer(id: string) {
 
 export async function getCustomerFullDetails(id: string, fromDate?: string, toDate?: string) {
   await requirePagePermission("customers", "view")
-  const jobCardWhere: any = {};
-  const paymentWhere: any = {
+  const jobCardWhere: Prisma.JobCardWhereInput = {};
+  const paymentWhere: Prisma.PaymentWhereInput = {
     OR: [
       { jobCard: { customerId: id } },
       { invoice: { customerId: id } },
@@ -162,7 +163,7 @@ export async function getCustomerFullDetails(id: string, fromDate?: string, toDa
                 include: { service: true }
               },
               parts: {
-                include: { batch: { include: { inventory: true } } }
+                include: { inventory: true, batch: { include: { inventory: true } } }
               },
               invoice: {
                 include: { payments: true }

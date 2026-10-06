@@ -1,8 +1,12 @@
 "use client"
 
+import type { InventoryItemView } from "@/lib/view-models"
+
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { z } from "zod"
+type InventoryFormInput = z.input<typeof inventorySchema>
 import { InventoryFormValues, inventorySchema, openingStockSchema } from "../schema"
 import { createInventoryItem, updateInventoryItem, getNextPartNumber, getInventoryItemOptions, addOpeningStockToItem } from "../actions"
 import { Input } from "@/components/ui/input"
@@ -14,8 +18,8 @@ import { useTranslation } from "@/i18n"
 import { Check, Search, X } from "lucide-react"
 
 interface InventoryFormProps {
-  initialData?: any
-  onSuccess?: (item?: any) => void
+  initialData?: InventoryItemView
+  onSuccess?: (item?: InventoryMutationResult) => void
   openingStockMode?: boolean
 }
 
@@ -44,7 +48,7 @@ export function InventoryForm({ initialData, onSuccess, openingStockMode = false
   }, [itemOptions, itemSearch])
 
   const formSchema = openingStockMode ? openingStockSchema : inventorySchema
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<any>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<InventoryFormInput, unknown, InventoryFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       itemName: initialData?.itemName || "",
@@ -84,7 +88,7 @@ export function InventoryForm({ initialData, onSuccess, openingStockMode = false
       queryClient.invalidateQueries({ queryKey: ['jobcards-dropdowns'] })
       onSuccess?.(result)
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })

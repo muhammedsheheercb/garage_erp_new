@@ -43,7 +43,7 @@ export function PaymeterForm({ initialData, onSuccess }: PaymeterFormProps) {
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })

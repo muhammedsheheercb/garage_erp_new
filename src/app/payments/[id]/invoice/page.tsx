@@ -13,7 +13,7 @@ export default async function PaymentInvoicePage({ params }: { params: Promise<{
   const grandTotal = job.grandTotal
   const balanceAfterPayment = Math.max(0, grandTotal - totalPaidToDate)
   let otherChargesList: Array<{ name: string; amount: number }> = []
-  try { otherChargesList = JSON.parse(job.otherCharges || "[]").map((charge: any) => ({ name: charge.description, amount: Number(charge.amount) || 0 })) } catch {}
+  try { otherChargesList = JSON.parse(job.otherCharges || "[]").map((charge: { description: string; amount: number }) => ({ name: charge.description, amount: Number(charge.amount) || 0 })) } catch {}
   return <InvoicePrintClient invoice={{
     id: payment.id, createdAt: payment.paymentDate, payments: [], grandTotal,
     transactionPaymentAmount: payment.amount, totalPaidToDate, balanceAfterPayment,

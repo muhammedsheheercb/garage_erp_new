@@ -45,7 +45,7 @@ export function MechanicForm({ initialData, onSuccess }: MechanicFormProps) {
       queryClient.invalidateQueries({ queryKey: ['mechanics'] })
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })

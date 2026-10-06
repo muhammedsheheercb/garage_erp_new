@@ -1,9 +1,12 @@
 "use client";
 
+import Image from "next/image"
+import { safeReturnPath } from "@/lib/navigation"
+
 import { useState } from "react";
 import { loginAction } from "@/app/actions/auth";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
+
 import { Wrench, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
@@ -31,10 +34,10 @@ export default function LoginPage() {
       }
 
       toast.success(t.login.success);
-      const from = searchParams.get("from") || "/";
+      const from = safeReturnPath(searchParams.get("from"));
       router.push(from);
       router.refresh();
-    } catch (error) {
+    } catch  {
       toast.error(t.login.tryAgain);
     } finally {
       setIsLoading(false);
@@ -45,7 +48,7 @@ export default function LoginPage() {
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#1c1c1c] text-white font-sans selection:bg-[#e32400] selection:text-white">
       {/* Left side - Image */}
       <div className="relative w-full h-[40vh] lg:w-1/2 lg:h-screen">
-        <img
+        <Image unoptimized width={1470} height={980} loading="eager"
           src="https://images.unsplash.com/photo-1551522435-a13afa10f103?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Garage Background"
           className="absolute inset-0 h-full w-full object-cover"

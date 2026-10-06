@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { getRoleAndPermissions } from "@/app/actions/auth"
-import { type PagePermission, type PermissionAction } from "@/lib/permissions"
+import { type PagePermission, type PermissionAction, type ModulePermissions } from "@/lib/permissions"
 
 export function usePermissions() {
   const { data, isLoading } = useQuery({
@@ -16,7 +16,7 @@ export function usePermissions() {
     if (!data) return false
     if (data.role === "ADMIN") return true
     
-    const pagePerms = (data.permissions as any)?.[page]
+    const pagePerms = (data.permissions as ModulePermissions)?.[page]
     return Array.isArray(pagePerms) && pagePerms.includes(action)
   }
 

@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { getCreatorName, requirePagePermission } from "@/lib/authorization"
 import { revalidatePath } from "next/cache"
@@ -54,7 +55,7 @@ function parseSaleDate(value: string) {
   return saleDate
 }
 
-async function assertAndDeduct(tx: any, rows: Array<{ batchId: string; quantity: number }>) {
+async function assertAndDeduct(tx: Prisma.TransactionClient, rows: Array<{ batchId: string; quantity: number }>) {
   const grouped = new Map<string, number>()
   for (const row of rows) grouped.set(row.batchId, (grouped.get(row.batchId) || 0) + row.quantity)
   for (const [batchId, quantity] of grouped) {
@@ -86,7 +87,8 @@ export async function getDirectSaleStock(search = "") {
   }}).filter(batch => batch.availableQuantity > 0)
 }
 
-export async function getDirectSales(page = 1, search = "", fromDate?: string, toDate?: string) {
+export async function getDirectSales(_page = 1, search = "", fromDate?: string, toDate?: string) {
+  void _page
   await requirePagePermission("inventory")
   const where = search ? { OR: [{ customerName: { contains: search, mode: "insensitive" as const } }, { vehicleNumber: { contains: search, mode: "insensitive" as const } }, { customerMobile: { contains: search, mode: "insensitive" as const } }] } : {}
   if (fromDate || toDate) {

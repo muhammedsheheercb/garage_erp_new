@@ -1,6 +1,8 @@
 "use client"
 
-import { useForm, Controller } from "react-hook-form"
+import type { VehicleView } from "@/lib/view-models"
+
+import { useWatch, useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { VehicleFormValues, vehicleSchema } from "../schema"
 import { Input } from "@/components/ui/input"
@@ -16,10 +18,10 @@ import { useTranslation } from "@/i18n"
 import { Check, Search, X } from "lucide-react"
 
 interface VehicleFormProps {
-  initialData?: VehicleFormValues & { id?: string }
+  initialData?: Partial<VehicleView>
   initialCustomerId?: string
   defaultFuelType?: string
-  onSuccess?: (vehicle?: any) => void
+  onSuccess?: (vehicle?: Exclude<Awaited<ReturnType<typeof createVehicle>>, { success: false }>) => void
 }
 
 export function VehicleForm({ initialData, initialCustomerId, defaultFuelType, onSuccess }: VehicleFormProps) {
@@ -38,7 +40,7 @@ export function VehicleForm({ initialData, initialCustomerId, defaultFuelType, o
     Hybrid: t.vehicles.fuelHybrid,
   }
   
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<VehicleFormValues>({
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
       plateNumber: initialData?.plateNumber || "",
@@ -67,7 +69,8 @@ export function VehicleForm({ initialData, initialCustomerId, defaultFuelType, o
       vehicleCatalog[initialData.brand] = [...existingModels, initialData.model]
     }
   }
-  const selectedBrand = watch("brand")
+  const subscribedBrand = useWatch({ control: control, name: "brand" })
+  const selectedBrand = subscribedBrand
   const availableModels = vehicleCatalog[selectedBrand] || []
 
   const mutation = useMutation({
@@ -84,9 +87,9 @@ export function VehicleForm({ initialData, initialCustomerId, defaultFuelType, o
       }
       toast.success(initialData?.id ? t.vehicles.vehicleUpdated : t.vehicles.vehicleCreated)
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
-      onSuccess?.(data)
+      if ("id" in data) onSuccess?.(data)
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })

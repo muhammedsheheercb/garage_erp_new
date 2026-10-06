@@ -1,4 +1,23 @@
-# garage_erp_new
+# Garage ERP
+
+Next.js web application and Electron desktop wrapper, sharing a PostgreSQL database and server actions. See [DEPLOYMENT.md](DEPLOYMENT.md) for hosting, Windows releases and backup storage requirements.
+
+## Development and verification
+
+Use Node.js 22 and pnpm 10.25.0. Install with `pnpm install --frozen-lockfile`, copy `.env.example` to `.env`, configure the database and session secret, and run `pnpm prisma generate` followed by `pnpm dev`.
+
+- `pnpm lint`: repository lint checks; generated build output is excluded.
+- `pnpm typecheck`: strict TypeScript checks. Run `pnpm exec next typegen` first in a fresh checkout to generate route types.
+- `pnpm test`: financial/stock/date regression checks and database backup/scheduler tests using isolated fixtures.
+- `node scripts/supplier-payment-date-check.mjs`: independent supplier payment reporting check, without database writes.
+- `pnpm prisma validate`: database schema validation.
+- `pnpm build`: generate Prisma Client and build the production application.
+- `pnpm electron:prepare`: prepare the standalone server assets after a successful build.
+- `pnpm test:smoke`: verify the prepared production HTTP server, assets and protected-route redirects with isolated database credentials; does not exercise browser hydration.
+
+Initialize a new admin only through the reviewed deployment setup. Seeding requires `INITIAL_ADMIN_EMAIL` and a password of at least 12 characters in `INITIAL_ADMIN_PASSWORD`; it never resets an existing admin or deletes other admins. No credentials belong in source control or installers. Repair scripts in `scripts/` can change live financial data and are manual tools, not startup tasks.
+
+## Database backups
 
 Settings database backups use PostgreSQL snapshots of all application tables, including accounts and settings. Administrators can create and restore backups from Settings → Database Management. Restore validates the schema, saves a safety snapshot, and replaces the application data in one transaction. Backups from the previous SQLite implementation are not compatible.
 

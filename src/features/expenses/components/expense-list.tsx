@@ -1,4 +1,8 @@
-"use client";
+"use client"
+
+import type { TranslationKeys } from "@/lib/view-models"
+
+import type { ExpenseView } from "@/lib/view-models";
 
 import { refreshQueries } from "@/lib/refresh-queries"
 import { useState } from "react";
@@ -75,7 +79,7 @@ const getCategoryTranslationKey = (category: string): string => {
   return keyMap[category] || category;
 };
 
-const getTranslatedCategory = (t: any, category: string): string => {
+const getTranslatedCategory = (t: TranslationKeys, category: string): string => {
   const keyMap = getCategoryTranslationKey(category);
   return t.expensesMod[keyMap as keyof typeof t.expensesMod] || category;
 };
@@ -89,7 +93,7 @@ export function ExpenseList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [editingExpense, setEditingExpense] = useState<ExpenseView | null>(null);
   const { can } = usePermissions();
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (paramFrom) {
@@ -128,7 +132,7 @@ export function ExpenseList() {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["monthly-expenses"] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong);
     },
   });

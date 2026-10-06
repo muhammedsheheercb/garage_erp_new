@@ -1,5 +1,7 @@
 "use client"
 
+import type { PartOption } from "@/lib/view-models"
+
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getInventoryList } from "../actions"
@@ -11,7 +13,7 @@ import { Search, Plus } from "lucide-react"
 import { useTranslation } from "@/i18n"
 
 interface PartSelectionModalProps {
-  onSelect: (part: any) => void
+  onSelect: (part: PartOption) => void
   jobCardId?: string
 }
 
@@ -65,7 +67,7 @@ export function PartSelectionModal({ onSelect, jobCardId }: PartSelectionModalPr
               ) : parts?.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center">{t.jobcards.noPartsFound}</TableCell></TableRow>
               ) : (
-                parts?.map((part: any) => (
+                parts?.map((part) => (
                   <TableRow key={part.id}>
                     <TableCell className="font-medium">{part.inventory.itemName}</TableCell>
                     <TableCell>{part.inventory.partNumber}</TableCell>
@@ -79,7 +81,7 @@ export function PartSelectionModal({ onSelect, jobCardId }: PartSelectionModalPr
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">{part.purchasePrice} OMR</TableCell>
+                    <TableCell className="text-right">{("purchasePrice" in part ? part.purchasePrice : 0)} OMR</TableCell>
                     <TableCell className="text-right">{part.sellingPrice} OMR</TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" type="button" variant={part.availableQuantity <= 0 ? "secondary" : "default"} onClick={() => {

@@ -1,5 +1,7 @@
 "use client"
 
+import Image from "next/image"
+
 import { ArrowLeft, Printer } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useSyncExternalStore } from "react"
@@ -11,7 +13,7 @@ function dateText(value: Date | string, locale: "en" | "ar") {
 
 import { formatAmount } from "@/lib/amount"
 
-function amountText(value: number, locale: "en" | "ar") {
+function amountText(value: number) {
   return formatAmount(value)
 }
 
@@ -57,7 +59,7 @@ export function InvoicePrintClient({ invoice, otherChargesList }: { invoice: Inv
   const hideServicePartsAmounts = Boolean(invoice.jobCard?.hideServicePartsAmounts)
   const totalPaid = invoice.totalPaidToDate ?? invoice.payments.reduce((total: number, payment) => total + payment.amount, 0)
   const balance = invoice.balanceAfterPayment ?? Math.max(0, invoice.grandTotal - totalPaid)
-  const money = (value: number) => `${amountText(value, locale)} ${isRTL ? "ر.ع." : "OMR"}`
+  const money = (value: number) => `${amountText(value)} ${isRTL ? "ر.ع." : "OMR"}`
   const l = isRTL ? {
     invoice: "فاتورة", customer: "اسم العميل", vehicle: "المركبة", phone: "الهاتف / الاتصال", plate: "رقم اللوحة",
     complaint: "الشكوى / المشكلة", description: "الوصف / التفاصيل", service: "رسوم الخدمة والعمل",
@@ -92,7 +94,7 @@ export function InvoicePrintClient({ invoice, otherChargesList }: { invoice: Inv
         </div>
         <div className="bill-paper print-container border p-6 rounded-lg">
           <header className="bill-header">
-            <img src="/images/logo.webp" alt="Bin Matar Garage" width="240" height="96" className="bill-logo" />
+            <Image unoptimized loading="eager" src="/images/logo.webp" alt="Bin Matar Garage" width="240" height="96" className="bill-logo" />
             <div className="bill-title">{l.invoice}</div>
             <div className="bill-number">INV. NO.<strong>{invoice.id.split("-")[0].toUpperCase()}</strong>{dateText(invoice.createdAt, locale)}</div>
           </header>

@@ -1,9 +1,11 @@
 "use client"
 
+import type { PurchaseView } from "@/lib/view-models"
+
 import { refreshQueries } from "@/lib/refresh-queries"
 import { formatDateInput } from "@/lib/date-format"
 import { getPurchasePaymentSelection } from "../payment-selection"
-import { useForm, Controller, useFieldArray } from "react-hook-form"
+import { useWatch, useForm, Controller, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { PurchaseFormValues, purchaseSchema } from "../schema"
@@ -26,7 +28,7 @@ import { format } from "date-fns"
 
 interface PurchaseFormProps {
   onSuccess?: () => void
-  initialData?: any
+  initialData?: PurchaseView
 }
 
 export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
@@ -48,19 +50,18 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   })
 
   const activeTaxRate = activeTax ? activeTax.percentage : 0
-  const activeTaxName = activeTax ? activeTax.name : t.settings.taxTab.taxName
 
-  const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = useForm<PurchaseFormValues>({
+  const { register, handleSubmit, control, setValue, getValues, formState: { errors } } = useForm<PurchaseFormValues>({
     resolver: zodResolver(purchaseSchema),
     defaultValues: initialData ? {
       purchaseDate: formatDateInput(initialData.purchaseDate),
-      purchaseType: initialData.purchaseType || "STOCK",
+      purchaseType: (initialData.purchaseType || "STOCK") as PurchaseFormValues["purchaseType"],
       jobCardId: initialData.jobCardId || null,
       supplierId: initialData.supplierId,
       ...getPurchasePaymentSelection(initialData),
       discount: initialData.discount,
       paidAmount: initialData.paidAmount,
-      items: initialData.items.map((item: any) => ({
+      items: initialData.items.map((item) => ({
         inventoryId: item.inventoryId,
         quantity: item.quantity,
         purchasePrice: item.purchasePrice,
@@ -81,7 +82,13 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
     }
   })
 
-  const purchaseType = watch("purchaseType")
+  const subscribedPurchaseType = useWatch({ control: control, name: "purchaseType" })
+  const subscribedJobCardId = useWatch({ control: control, name: "jobCardId" })
+  const subscribedItems = useWatch({ control: control, name: "items" })
+  const subscribedDiscount = useWatch({ control: control, name: "discount" })
+  const subscribedPaidAmount = useWatch({ control: control, name: "paidAmount" })
+  const subscribedPaymentSource = useWatch({ control: control, name: "paymentSource" })
+  const purchaseType = subscribedPurchaseType
   const paymentOptions = [...(dropdownData?.paymeters || [])]
   if (initialData?.paymentMethod && getPurchasePaymentSelection(initialData).paymentSource === "PAYMETER" &&
       !paymentOptions.some(method => method.id === initialData.paymentMethodId)) {
@@ -96,9 +103,9 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
   const [supplierSearch, setSupplierSearch] = useState("")
   const [isSupplierPickerOpen, setIsSupplierPickerOpen] = useState(false)
   const [supplierPickerPosition, setSupplierPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
-  const selectedJobCard = dropdownData?.jobCards?.find((jc: any) => jc.id === watch("jobCardId"))
+  const selectedJobCard = dropdownData?.jobCards?.find((jc) => jc.id === subscribedJobCardId)
 
-  const matchingPurchaseJobCards = dropdownData?.jobCards?.filter((jc: any) => {
+  const matchingPurchaseJobCards = dropdownData?.jobCards?.filter((jc) => {
     if (purchaseType === "PENDING_PARTS" && !jc.parts?.some((part: { isPending: boolean }) => part.isPending)) return false
     const query = vehicleSearch.trim().toLowerCase()
     return (!query || jc.vehicle.plateNumber.toLowerCase().includes(query) || jc.customer.name.toLowerCase().includes(query) || jc.complaint.toLowerCase().includes(query))
@@ -142,15 +149,15 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })
 
-  const items = watch("items") || []
-  const discountVal = watch("discount") || 0
-  const paidVal = watch("paidAmount") || 0
-  const paymentSource = watch("paymentSource")
+  const items = subscribedItems || []
+  const discountVal = subscribedDiscount || 0
+  const paidVal = subscribedPaidAmount || 0
+  const paymentSource = subscribedPaymentSource
 
   const subTotal = items.reduce((acc, item) => {
     const qty = Number(item?.quantity) || 0
@@ -281,12 +288,12 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                   }}><X className="h-4 w-4" /></button>}
                   {isJobCardSelectOpen && jobCardPickerPosition && typeof document !== "undefined" && createPortal(
                     <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={jobCardPickerPosition}>
-                      {matchingPurchaseJobCards.length > 0 ? matchingPurchaseJobCards.map((jc: any) => (
+                      {matchingPurchaseJobCards.length > 0 ? matchingPurchaseJobCards.map((jc) => (
                         <button key={jc.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
                           field.onChange(jc.id)
                           setVehicleSearch(jc.vehicle.plateNumber + " - " + jc.customer.name)
                           if (purchaseType === "PENDING_PARTS" && jc.parts?.length) {
-                            setValue("items", jc.parts.map((part: any) => ({ inventoryId: (part.inventory || part.batch?.inventory).id, quantity: part.quantity, purchasePrice: part.batch?.purchasePrice || 0, sellingPrice: part.price, taxRate: activeTaxRate || 0 })), { shouldDirty: true, shouldValidate: true })
+                            setValue("items", jc.parts.map((part) => ({ inventoryId: (part.inventory || part.batch?.inventory)?.id || "", quantity: part.quantity, purchasePrice: part.batch?.purchasePrice || 0, sellingPrice: part.price, taxRate: activeTaxRate || 0 })), { shouldDirty: true, shouldValidate: true })
                           }
                           setIsJobCardSelectOpen(false)
                           setJobCardPickerPosition(null)
@@ -352,8 +359,8 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
             control={control}
             name="supplierId"
             render={({ field }) => {
-              const selectedSupplier = dropdownData?.suppliers.find((s: any) => s.id === field.value)
-              const filteredSuppliers = dropdownData?.suppliers.filter((s: any) => s.name.toLowerCase().includes(supplierSearch.trim().toLowerCase())) || []
+              const selectedSupplier = dropdownData?.suppliers.find((s) => s.id === field.value)
+              const filteredSuppliers = dropdownData?.suppliers.filter((s) => s.name.toLowerCase().includes(supplierSearch.trim().toLowerCase())) || []
               return (
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
@@ -388,7 +395,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                   }}><X className="h-4 w-4" /></button>}
                   {isSupplierPickerOpen && supplierPickerPosition && typeof document !== "undefined" && createPortal(
                     <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={supplierPickerPosition}>
-                      {filteredSuppliers.length > 0 ? filteredSuppliers.map((supplier: any) => (
+                      {filteredSuppliers.length > 0 ? filteredSuppliers.map((supplier) => (
                         <button key={supplier.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
                           field.onChange(supplier.id)
                           setSupplierSearch(supplier.name)
@@ -505,7 +512,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                     await queryClient.invalidateQueries({ queryKey: ["purchase-dropdowns"] })
 
                     const targetIndex = newItemTargetIndex ?? items.findIndex((purchaseItem) => !purchaseItem.inventoryId)
-                    if (item?.id && targetIndex >= 0) {
+                    if (item && "id" in item && targetIndex >= 0) {
                       setValue(`items.${targetIndex}.inventoryId`, item.id, { shouldDirty: true, shouldValidate: true })
                       const targetField = fields[targetIndex]
                       if (targetField) {
@@ -545,9 +552,9 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
             </TableHeader>
             <TableBody>
               {fields.map((field, index) => {
-                const itemQty = watch(`items.${index}.quantity`) || 0
-                const itemPrice = watch(`items.${index}.purchasePrice`) || 0
-                const itemTaxRate = watch(`items.${index}.taxRate`) ?? (activeTaxRate || 0)
+                const itemQty = subscribedItems[index]?.quantity || 0
+                const itemPrice = subscribedItems[index]?.purchasePrice || 0
+                const itemTaxRate = subscribedItems[index]?.taxRate ?? (activeTaxRate || 0)
                 const productAmount = itemQty * itemPrice
                 const itemTaxAmount = (productAmount * (Number(itemTaxRate) || 0)) / 100
                 const rowTotal = productAmount + itemTaxAmount
@@ -559,9 +566,9 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                         control={control}
                         name={`items.${index}.inventoryId`}
                         render={({ field: selectField }) => {
-                          const selectedInv = dropdownData?.inventory.find((i: any) => i.id === selectField.value)
+                          const selectedInv = dropdownData?.inventory.find((i) => i.id === selectField.value)
                           const search = itemSearches[field.id] ?? ""
-                          const filteredInventory = dropdownData?.inventory.filter((inv: any) => {
+                          const filteredInventory = dropdownData?.inventory.filter((inv) => {
                             const query = search.trim().toLowerCase()
                             return !query || inv.itemName.toLowerCase().includes(query) || inv.partNumber.toLowerCase().includes(query)
                           }) || []
@@ -587,7 +594,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                                   const value = event.target.value
                                   setItemSearches((current) => ({ ...current, [field.id]: value }))
                                   updateItemPickerPosition(event.currentTarget)
-                                  const exactMatch = dropdownData?.inventory.find((inv: any) =>
+                                  const exactMatch = dropdownData?.inventory.find((inv) =>
                                     inv.itemName.toLowerCase() === value.trim().toLowerCase() ||
                                     inv.partNumber.toLowerCase() === value.trim().toLowerCase()
                                   )
@@ -620,7 +627,7 @@ export function PurchaseForm({ onSuccess, initialData }: PurchaseFormProps) {
                                   style={{ top: itemPickerPosition.top, left: itemPickerPosition.left, width: itemPickerPosition.width }}
                                 >
                                   <div className="space-y-1">
-                                    {filteredInventory.length > 0 ? filteredInventory.map((inv: any) => (
+                                    {filteredInventory.length > 0 ? filteredInventory.map((inv) => (
                                       <button
                                         key={inv.id}
                                         type="button"

@@ -13,7 +13,7 @@ export function NotFoundComponent() {
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl">404</h1>
         <h2 className="text-2xl font-semibold tracking-tight">Page not found</h2>
         <p className="max-w-[400px] text-muted-foreground">
-          The page you are looking for doesn't exist, has been moved, or is temporarily unavailable.
+          The page you are looking for doesn&apos;t exist, has been moved, or is temporarily unavailable.
         </p>
       </div>
 

@@ -6,21 +6,10 @@ import { QueryClient, QueryClientProvider, keepPreviousData } from "@tanstack/re
 import { Toaster } from "@/components/ui/sonner"
 import { LanguageInitializer } from "@/components/language-initializer"
 
-// Filter out the React 19 script tag warning in development (caused by next-themes)
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  const orig = console.error;
-  console.error = (...args: any[]) => {
-    if (typeof args[0] === 'string' && args[0].includes('Encountered a script tag')) {
-      return;
-    }
-    orig.apply(console, args);
-  };
-}
-
 // Keep navigation fast while still showing records added from another browser.
 // Mutations invalidate affected queries immediately, so a longer client cache
 // only avoids duplicate reads while navigating between modules.
-const queryClient = new QueryClient({
+const createQueryClient = () => new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60,
@@ -35,6 +24,7 @@ const queryClient = new QueryClient({
 })
 
 export function Providers({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>) {
+  const [queryClient] = React.useState(createQueryClient)
   return (
     <NextThemesProvider {...props}>
       <QueryClientProvider client={queryClient}>

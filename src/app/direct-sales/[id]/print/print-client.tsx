@@ -1,5 +1,9 @@
 "use client"
 
+import Image from "next/image"
+
+import type { DirectSaleView } from "@/lib/view-models"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Printer } from "lucide-react"
@@ -7,7 +11,7 @@ import { formatDisplayDate } from "@/lib/date-format"
 
 const amount = (value: number) => Number(value || 0).toFixed(3).replace(/\.?0+$/, "")
 
-export function DirectSalePrint({ sale }: { sale: any }) {
+export function DirectSalePrint({ sale }: { sale: DirectSaleView }) {
   const customerDetails = [
     { label: "Customer Name", value: sale.customerName },
     { label: "Mobile Number", value: sale.customerMobile },
@@ -77,7 +81,7 @@ export function DirectSalePrint({ sale }: { sale: any }) {
 
       <article id="direct-sale-bill">
         <header className="ds-header">
-          <img src="/images/logo.webp" alt="Logo" className="ds-logo" />
+          <Image unoptimized width={559} height={157} loading="eager" src="/images/logo.webp" alt="Logo" className="ds-logo" />
           <div className="ds-heading"><h1>DIRECT SALE INVOICE</h1></div>
           <div className="ds-reference"><strong>Invoice: DS-{sale.id.split("-")[0].toUpperCase()}</strong><span>Sale Date: {formatDisplayDate(sale.saleDate || sale.createdAt)}</span></div>
         </header>
@@ -90,7 +94,7 @@ export function DirectSalePrint({ sale }: { sale: any }) {
           <div className="ds-table-wrap">
             <table className="ds-table">
               <thead><tr><th>Product / Batch</th><th className="ds-center">Qty</th><th className="ds-money">Sales Price</th><th className="ds-money">VAT %</th><th className="ds-money">VAT Amount</th><th className="ds-money">Line Total</th></tr></thead>
-              <tbody>{sale.items.map((item: any) => {
+              <tbody>{sale.items.map((item) => {
                 const tax = item.quantity * item.salesPrice * item.vat / 100
                 const itemMeta = [item.batch?.inventory?.partNumber && `Part: ${item.batch.inventory.partNumber}`, item.batch?.batchNumber && `Batch: ${item.batch.batchNumber}`].filter(Boolean).join(" · ")
                 return <tr key={item.id}>

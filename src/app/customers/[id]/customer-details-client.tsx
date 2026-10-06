@@ -1,11 +1,13 @@
 "use client"
 
+import type { CustomerDetailsView, CustomerJobView } from "@/lib/view-models"
+
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
@@ -38,15 +40,15 @@ function formatPaymentMethod(method: string) {
   return method.charAt(0) + method.slice(1).toLowerCase()
 }
 
-function getLedgerDiscount(jobCard: any) {
+function getLedgerDiscount(jobCard: CustomerJobView) {
   return Math.max(0, Number(jobCard.invoice?.discount ?? jobCard.discount) || 0)
 }
 
-function getLedgerAfterDiscountTotal(jobCard: any) {
+function getLedgerAfterDiscountTotal(jobCard: CustomerJobView) {
   return Math.max(0, Number(jobCard.invoice?.grandTotal ?? jobCard.grandTotal) || 0)
 }
 
-function PaymentHistoryTable({ payments, showVehicle = false }: { payments: any[], showVehicle?: boolean }) {
+function PaymentHistoryTable({ payments, showVehicle = false }: { payments: CustomerDetailsView["paymentHistory"], showVehicle?: boolean }) {
   if (payments.length === 0) {
     return <p className="py-8 text-center text-sm text-muted-foreground">No payment history found.</p>
   }
@@ -81,7 +83,7 @@ function PaymentHistoryTable({ payments, showVehicle = false }: { payments: any[
   )
 }
 
-export function CustomerDetailsClient({ customer }: { customer: any }) {
+export function CustomerDetailsClient({ customer }: { customer: CustomerDetailsView }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -93,10 +95,10 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
     to: toParam ? new Date(toParam) : undefined
   })
 
-  const [selectedJobCard, setSelectedJobCard] = useState<any>(null)
-  const [payingJobCard, setPayingJobCard] = useState<any>(null)
+  const [selectedJobCard, setSelectedJobCard] = useState<CustomerJobView | null>(null)
+  const [payingJobCard, setPayingJobCard] = useState<CustomerJobView | null>(null)
   const [isCustomerPaymentHistoryOpen, setIsCustomerPaymentHistoryOpen] = useState(false)
-  const [selectedVehicleForPaymentHistory, setSelectedVehicleForPaymentHistory] = useState<any>(null)
+  const [selectedVehicleForPaymentHistory, setSelectedVehicleForPaymentHistory] = useState<CustomerDetailsView["vehicles"][number] | null>(null)
   const [jobPages, setJobPages] = useState<Record<string, number>>({})
   const [vehiclePage, setVehiclePage] = useState(1)
 
@@ -181,7 +183,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
           <p className="text-muted-foreground">No vehicles found.</p>
         )}
         
-        {customer.vehicles.slice((vehiclePage - 1) * 5, vehiclePage * 5).map((vehicle: any) => (
+        {customer.vehicles.slice((vehiclePage - 1) * 5, vehiclePage * 5).map((vehicle) => (
           <Card key={vehicle.id} className="overflow-hidden">
             <CardHeader className="bg-muted/40">
               <div className="flex items-center justify-between">
@@ -222,7 +224,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {vehicle.jobCards.slice(((jobPages[vehicle.id] || 1) - 1) * 5, (jobPages[vehicle.id] || 1) * 5).map((jc: any) => (
+                    {vehicle.jobCards.slice(((jobPages[vehicle.id] || 1) - 1) * 5, (jobPages[vehicle.id] || 1) * 5).map((jc) => (
                       <TableRow key={jc.id}>
                         <TableCell>{formatDisplayDate(jc.createdAt)}</TableCell>
                         <TableCell>
@@ -296,7 +298,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
           </DialogHeader>
           {selectedVehicleForPaymentHistory && (
             <PaymentHistoryTable
-              payments={customer.paymentHistory.filter((payment: any) => payment.vehicleId === selectedVehicleForPaymentHistory.id)}
+              payments={customer.paymentHistory.filter((payment) => payment.vehicleId === selectedVehicleForPaymentHistory.id)}
             />
           )}
         </DialogContent>
@@ -345,7 +347,7 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {selectedJobCard.services.map((js: any) => (
+                        {selectedJobCard.services.map((js) => (
                           <TableRow key={js.id}>
                             <TableCell>{js.service.name}</TableCell>
                             <TableCell className="text-right">{formatCurrency(js.price)}</TableCell>
@@ -375,10 +377,10 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {selectedJobCard.parts.map((jp: any) => (
+                        {selectedJobCard.parts.map((jp) => (
                           <TableRow key={jp.id}>
                             <TableCell>
-                              {jp.batch.inventory.itemName} ({jp.batch.inventory.partNumber})
+                              {(jp.batch?.inventory.itemName || jp.inventory?.itemName || "Pending part")} ({(jp.batch?.inventory.partNumber || jp.inventory?.partNumber || "")})
                             </TableCell>
                             <TableCell className="text-right">{jp.quantity}</TableCell>
                             <TableCell className="text-right">{formatCurrency(jp.price)}</TableCell>
@@ -399,11 +401,11 @@ export function CustomerDetailsClient({ customer }: { customer: any }) {
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span>Services Total:</span>
-                      <span>{formatCurrency(selectedFinancialRecord.serviceCharge ?? selectedFinancialRecord.serviceTotal ?? 0)}</span>
+                      <span>{formatCurrency(("serviceCharge" in selectedFinancialRecord ? selectedFinancialRecord.serviceCharge : selectedFinancialRecord.serviceTotal) ?? 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Parts Total:</span>
-                      <span>{formatCurrency(selectedFinancialRecord.partsCost ?? selectedFinancialRecord.partsTotal ?? 0)}</span>
+                      <span>{formatCurrency(("partsCost" in selectedFinancialRecord ? selectedFinancialRecord.partsCost : selectedFinancialRecord.partsTotal) ?? 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Other Charges:</span>

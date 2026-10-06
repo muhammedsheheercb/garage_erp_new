@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { requirePagePermission } from "@/lib/authorization"
 import { InventoryFormValues, inventorySchema, openingStockSchema } from "./schema"
@@ -10,7 +11,7 @@ export async function getInventory(page = 1, search = "", fromDate?: string, toD
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = {
+  const where: Prisma.InventoryWhereInput = {
     OR: [
       { itemName: { contains: search, mode: "insensitive" } },
       { partNumber: { contains: search, mode: "insensitive" } },

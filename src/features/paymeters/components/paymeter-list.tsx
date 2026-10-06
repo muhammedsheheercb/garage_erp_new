@@ -1,5 +1,7 @@
 "use client"
 
+import type { PaymeterView } from "@/lib/view-models"
+
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getPaymeters, deletePaymeter, payPurchasePayment } from "../actions"
@@ -44,8 +46,8 @@ export function PaymeterList() {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [editingPaymeter, setEditingPaymeter] = useState<any>(null)
-  const [settlingPaymeter, setSettlingPaymeter] = useState<any>(null)
+  const [editingPaymeter, setEditingPaymeter] = useState<PaymeterView | null>(null)
+  const [settlingPaymeter, setSettlingPaymeter] = useState<PaymeterView | null>(null)
   const [settlementDates, setSettlementDates] = useState<Record<string, string>>({})
   const todayDate = format(new Date(), "yyyy-MM-dd")
   const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({})
@@ -89,7 +91,7 @@ export function PaymeterList() {
       toast.success(t.settings.databaseTab.paymeterDeleted)
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })
@@ -102,7 +104,7 @@ export function PaymeterList() {
       queryClient.invalidateQueries({ queryKey: ['purchases'] })
       setSettlementAmounts((amounts) => ({ ...amounts, [variables.purchaseId]: "0" }))
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })
@@ -115,7 +117,7 @@ export function PaymeterList() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
       setSettlementAmounts((amounts) => ({ ...amounts, [variables.expenseId]: "0" }))
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })
@@ -129,7 +131,7 @@ export function PaymeterList() {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] })
       setSettlementAmounts((amounts) => ({ ...amounts, [variables.paymentId]: "0" }))
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })
@@ -179,7 +181,7 @@ export function PaymeterList() {
             ) : paymeters.length === 0 ? (
               <TableRow><TableCell colSpan={3} className="text-center h-24">{t.settings.databaseTab.noPaymeters}</TableCell></TableRow>
             ) : (
-              paymeters.map((pm: any) => (
+              paymeters.map((pm) => (
                 <TableRow key={pm.id}>
                   <TableCell className="font-medium">{pm.name}</TableCell>
                   <TableCell>
@@ -215,12 +217,12 @@ export function PaymeterList() {
                                 </TableHeader>
                                 <TableBody>
                                   {(() => {
-                                    const filtered = pm.purchases.filter((p: any) => (p.paymeterAdvanceAmount || 0) > (p.paymeterReimbursed || 0));
+                                    const filtered = pm.purchases.filter((p) => (p.paymeterAdvanceAmount || 0) > (p.paymeterReimbursed || 0));
                                     if (filtered.length === 0) return <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle}</TableCell></TableRow>;
                                     const paginated = filtered.slice((pursePurchasesPage - 1) * 5, pursePurchasesPage * 5);
                                     return (
                                       <>
-                                        {paginated.map((purchase: any) => (
+                                        {paginated.map((purchase) => (
                                           <TableRow key={purchase.id}>
                                             <TableCell>{purchase.purchaseNumber}</TableCell>
                                             <TableCell>
@@ -303,12 +305,12 @@ export function PaymeterList() {
                                   </TableHeader>
                                   <TableBody>
                                     {(() => {
-                                      const filtered = pm.expenses.filter((e: any) => e.pendingAmount > 0);
+                                      const filtered = pm.expenses.filter((e) => e.pendingAmount > 0);
                                       if (filtered.length === 0) return <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle || "No pending amounts to settle"}</TableCell></TableRow>;
                                       const paginated = filtered.slice((purseExpensesPage - 1) * 5, purseExpensesPage * 5);
                                       return (
                                         <>
-                                          {paginated.map((expense: any) => (
+                                          {paginated.map((expense) => (
                                             <TableRow key={expense.id}>
                                               <TableCell>{formatDisplayDate(expense.date)}</TableCell>
                                               <TableCell>{expense.category}</TableCell>
@@ -368,7 +370,7 @@ export function PaymeterList() {
                             </div>
 
                             <div className="mt-8 border-t pt-6">
-                              <h3 className="font-semibold mb-3">{(t.suppliers as any)?.supplierPayments || "Supplier Payments"}</h3>
+                              <h3 className="font-semibold mb-3">{"Supplier Payments"}</h3>
                               {pm.purchasePayments && pm.purchasePayments.length > 0 ? (
                                 <Table>
                                   <TableHeader>
@@ -383,12 +385,12 @@ export function PaymeterList() {
                                   </TableHeader>
                                   <TableBody>
                                     {(() => {
-                                      const filtered = pm.purchasePayments.filter((p: any) => p.pendingAmount > 0);
+                                      const filtered = pm.purchasePayments.filter((p) => p.pendingAmount > 0);
                                       if (filtered.length === 0) return <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t.purchases.noPendingToSettle || "No pending amounts to settle"}</TableCell></TableRow>;
                                       const paginated = filtered.slice((purseSupplierPage - 1) * 5, purseSupplierPage * 5);
                                       return (
                                         <>
-                                          {paginated.map((payment: any) => (
+                                          {paginated.map((payment) => (
                                             <TableRow key={payment.id}>
                                               <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                                               <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>
@@ -483,7 +485,7 @@ export function PaymeterList() {
                                       const paginated = items.slice((eyePurchasesPage - 1) * 5, eyePurchasesPage * 5);
                                       return (
                                         <>
-                                          {paginated.map((purchase: any) => (
+                                          {paginated.map((purchase) => (
                                             <TableRow key={purchase.id}>
                                               <TableCell>{formatDisplayDate(purchase.purchaseDate)}</TableCell>
                                               <TableCell>{purchase.purchaseNumber}</TableCell>
@@ -532,7 +534,7 @@ export function PaymeterList() {
                                       const paginated = items.slice((eyeExpensesPage - 1) * 5, eyeExpensesPage * 5);
                                       return (
                                         <>
-                                          {paginated.map((expense: any) => (
+                                          {paginated.map((expense) => (
                                             <TableRow key={expense.id}>
                                               <TableCell>{formatDisplayDate(expense.date)}</TableCell>
                                               <TableCell>{expense.category}</TableCell>
@@ -561,7 +563,7 @@ export function PaymeterList() {
                           </div>
 
                           <div>
-                            <h3 className="font-semibold mb-3">{(t.suppliers as any)?.supplierPayments || "Supplier Payments"}</h3>
+                            <h3 className="font-semibold mb-3">{"Supplier Payments"}</h3>
                             {pm.purchasePayments && pm.purchasePayments.length > 0 ? (
                               <div className="border rounded-md">
                                 <Table>
@@ -580,7 +582,7 @@ export function PaymeterList() {
                                       const paginated = items.slice((eyeSupplierPage - 1) * 5, eyeSupplierPage * 5);
                                       return (
                                         <>
-                                          {paginated.map((payment: any) => (
+                                          {paginated.map((payment) => (
                                             <TableRow key={payment.id}>
                                               <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                                               <TableCell>{payment.purchase?.supplier?.name || '-'}</TableCell>

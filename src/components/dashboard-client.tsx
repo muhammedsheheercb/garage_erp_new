@@ -1,5 +1,7 @@
 "use client"
 
+import Image from "next/image"
+
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
 import { Button } from "@/components/ui/button"
@@ -72,7 +74,7 @@ export function DashboardClient({ session, realStats, recentActivities }: Dashbo
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 max-w-screen-2xl items-center mx-auto px-4">
           <div className="flex items-center gap-3 mr-4">
-            <img src="/images/logo.webp" alt="Bin Matar Garage" className="h-9 object-contain" />
+            <Image unoptimized width={559} height={157} loading="eager" src="/images/logo.webp" alt="Bin Matar Garage" className="h-9 w-auto object-contain" />
             {/* <span className="font-bold text-xl tracking-tight hidden sm:inline-block">{t.common.appName}</span> */}
           </div>
           <div className="flex flex-1 items-center justify-end space-x-2">

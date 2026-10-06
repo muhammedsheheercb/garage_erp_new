@@ -1,15 +1,19 @@
-const { test } = require('node:test')
-const assert = require('node:assert/strict')
-const fs = require('node:fs')
-const path = require('node:path')
-const ts = require('typescript')
+import { renderToStaticMarkup } from "react-dom/server"
+import { Prisma } from "@prisma/client"
+import { createRequire } from "node:module"
+const nodeRequire = createRequire(import.meta.url)
+import { test } from "node:test"
+import assert from "node:assert/strict"
+import fs from "node:fs"
+import path from "node:path"
+import ts from "typescript"
 
 // Execute the real server actions with isolated database and authorization mocks.
 function loadSource(file, mocks = {}, cache = new Map()) {
   const absolute = path.resolve(file)
   if (cache.has(absolute)) return cache.get(absolute).exports
-  const module = { exports: {} }
-  cache.set(absolute, module)
+  const loadedModule = { exports: {} }
+  cache.set(absolute, loadedModule)
   const code = ts.transpileModule(fs.readFileSync(absolute, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX },
   }).outputText
@@ -19,10 +23,10 @@ function loadSource(file, mocks = {}, cache = new Map()) {
       const target = name.startsWith('@/') ? path.resolve('src', name.slice(2)) : path.resolve(path.dirname(absolute), name)
       return loadSource(target + '.ts', mocks, cache)
     }
-    return require(name)
+    return nodeRequire(name)
   }
-  new Function('require', 'module', 'exports', code)(localRequire, module, module.exports)
-  return module.exports
+  new Function('require', 'module', 'exports', code)(localRequire, loadedModule, loadedModule.exports)
+  return loadedModule.exports
 }
 
 const form = {
@@ -31,7 +35,7 @@ const form = {
   services: [], parts: [], otherCharges: [], hideServicePartsAmounts: false,
   serviceTotal: 100, partsTotal: 0, discount: 0, tax: 0, grandTotal: 100, advancePaid: 50,
 }
-const auth = { requirePagePermission: async () => {}, getCreatorName: async () => 'Test' }
+const auth = { requireSession: async () => {}, requirePagePermission: async () => {}, getCreatorName: async () => 'Test' }
 const commonMocks = { '../invoices/current-totals': { syncJobCardInvoice: async () => {} }, 'next/cache': { revalidatePath: () => {} }, '@/lib/authorization': auth }
 
 test('job card print keeps service line amounts and names parts without a batch', () => {
@@ -48,7 +52,6 @@ test('job card print keeps service line amounts and names parts without a batch'
     parts: [{ id: 'part', quantity: 2, price: 10, inventory: { itemName: 'Brake Pad', partNumber: 'BP1' } }],
     grandTotal: 95, customer: {}, vehicle: {},
   } })
-  const { renderToStaticMarkup } = require('react-dom/server')
   const html = renderToStaticMarkup(tree)
   assert.match(html, /Brake Pad \(BP1\)/)
   assert.match(html, /class="money">25<\/td><td class="money">75<\/td>/)
@@ -480,7 +483,7 @@ test('income, purchase and expense channels reconcile including unclassified ent
       { grandTotal: 40, paymentMethod: { name: 'Staff Ledger' } },
     ] },
   }
-  const { getReportsDashboardTotals } = loadSource('src/features/reports/actions.ts', { '@/lib/prisma': prisma })
+  const { getReportsDashboardTotals } = loadSource('src/features/reports/actions.ts', { ...commonMocks, '@/lib/prisma': prisma })
   const totals = await getReportsDashboardTotals('2026-10-03', '2026-10-03')
   assert.equal(totals.totalIncome, 130)
   assert.equal(totals.incomeByMethod['Total Cash Amount'], 80)
@@ -535,7 +538,6 @@ test('later payments include the advance in the paid balance and collect only th
 })
 
 test('conflicting payment transactions ask the user to refresh and retry', async () => {
-  const { Prisma } = require('@prisma/client')
   const { createPayment } = loadSource('src/features/payments/actions.ts', {
     ...commonMocks,
     '@/lib/prisma': { $transaction: async () => {
@@ -553,7 +555,7 @@ test('advance details show the payment date and selected channel', async () => {
     directSale: { findMany: async () => [] }, expense: { findMany: async () => [] },
     purchase: { findMany: async () => [] }, purchasePayment: { findMany: async () => [] },
   }
-  const { getReportsDashboardDetails } = loadSource('src/features/reports/actions.ts', { '@/lib/prisma': prisma })
+  const { getReportsDashboardDetails } = loadSource('src/features/reports/actions.ts', { ...commonMocks, '@/lib/prisma': prisma })
   const details = await getReportsDashboardDetails('2026-10-03', '2026-10-03')
   assert.equal(details.incomeDetails[0].method, 'Advance (Bank Transfer)')
   assert.equal(details.incomeDetails[0].amount, 50)
@@ -574,7 +576,7 @@ test('a backdated payment counts on its payment date rather than its creation or
     expense: { findMany: async () => [] }, purchase: { findMany: async () => [] },
     purchasePayment: { findMany: async () => [] }, paymeterSettlement: { findMany: async () => [] },
   }
-  const { getReportsDashboardTotals } = loadSource('src/features/reports/actions.ts', { '@/lib/prisma': prisma })
+  const { getReportsDashboardTotals } = loadSource('src/features/reports/actions.ts', { ...commonMocks, '@/lib/prisma': prisma })
   assert.equal((await getReportsDashboardTotals('2026-10-03', '2026-10-03')).totalIncome, 75)
   assert.equal((await getReportsDashboardTotals('2026-10-04', '2026-10-04')).totalIncome, 0)
 })
@@ -880,4 +882,27 @@ test('invoice descriptions follow current service and part names including pendi
   job.parts[0] = { batch: { inventory: { itemName: 'Filter' } }, quantity: 1, isPending: false }
   assert.match(currentInvoiceDetails(job).partsDetails, /Filter/)
   assert.doesNotMatch(currentInvoiceDetails(job).partsDetails, /Brake Pad/)
+})
+
+test('report actions reject anonymous requests before querying data', async () => {
+  const actions = loadSource('src/features/reports/actions.ts', {
+    '@/lib/authorization': { requireSession: async () => { throw new Error('Unauthorized') }, requirePagePermission: async () => { throw new Error('Unauthorized') } },
+    '@/lib/prisma': new Proxy({}, { get: (_, key) => { if (key === '__esModule') return false; throw new Error('Database accessed before authorization') } }),
+  })
+  for (const action of Object.values(actions)) await assert.rejects(() => action(), /Unauthorized/)
+})
+
+test('login return paths allow local pages and reject executable or external URLs', () => {
+  const { safeReturnPath } = loadSource('src/lib/navigation.ts')
+  assert.equal(safeReturnPath('/jobcards?status=PENDING#details'), '/jobcards?status=PENDING#details')
+  for (const value of [null, 'javascript:alert(1)', 'https://example.com', '//example.com', '/\\example.com', '/\n/example.com']) assert.equal(safeReturnPath(value), '/')
+})
+
+test('settings mutations reject non-admin requests before database access', async () => {
+  const actions = loadSource('src/features/settings/actions.ts', {
+    '@/lib/authorization': { requireAdmin: async () => { throw new Error('Unauthorized') } },
+    '@/lib/prisma': new Proxy({}, { get: (_, key) => { if (key === '__esModule') return false; throw new Error('Database accessed before authorization') } }),
+    './database-backup': {}, './backup-auth': {}, '@/lib/session': {},
+  })
+  for (const name of ['updateSettings', 'updateAdminCredentials', 'createTaxSetting', 'updateTaxSetting', 'activateTaxSetting', 'deleteTaxSetting']) await assert.rejects(() => actions[name](), /Unauthorized/)
 })

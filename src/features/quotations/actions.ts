@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { requirePagePermission, getCreatorName } from "@/lib/authorization"
 import { revalidatePath } from "next/cache"
@@ -23,7 +24,7 @@ export async function getQuotations(
   validUntilTo?: string,
 ) {
   await requirePagePermission("quotations")
-  const where: any = {
+  const where: Prisma.QuotationWhereInput = {
     ...(search ? { OR: [{ customer: { name: { contains: search, mode: "insensitive" } } }, { vehicle: { plateNumber: { contains: search, mode: "insensitive" } } }] } : {}),
     ...(status ? { status } : {}),
   }
@@ -142,7 +143,7 @@ export async function getQuotationJobCardPrefill(id: string) {
   const quote = await prisma.quotation.findFirst({ where: { id, status: "PENDING", jobCardId: null }, include: quotationInclude })
   if (!quote) return null
 
-  const partRows: Array<any> = []
+  const partRows: Array<{ batchId: string; inventoryId?: string; name: string; quantity: number; price: number; maxStock: number; isPending: boolean; batch?: { quantity: number; inventory: { itemName: string; partNumber: string } }; inventory?: { id: string; itemName: string; partNumber: string } }> = []
   for (const part of quote.parts) {
     const batches = await prisma.inventoryBatch.findMany({
       where: { inventoryId: part.inventoryId },

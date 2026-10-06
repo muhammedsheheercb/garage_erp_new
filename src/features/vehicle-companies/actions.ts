@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { requirePagePermission } from "@/lib/authorization"
 import { revalidatePath } from "next/cache"
@@ -12,7 +13,7 @@ const refreshVehicleData = () => {
 
 export async function getVehicleCompanies(fromDateStr?: string, toDateStr?: string, search = "") {
   await requirePagePermission("vehicle-companies", "view")
-  const where: any = {};
+  const where: Prisma.VehicleCompanyWhereInput = {};
   if (fromDateStr || toDateStr) {
     where.createdAt = {};
     if (fromDateStr) where.createdAt.gte = new Date(fromDateStr);

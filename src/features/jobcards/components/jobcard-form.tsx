@@ -1,7 +1,9 @@
-"use client";
+"use client"
+
+import type { JobCardFormData } from "@/lib/view-models";
 
 import { refreshQueries } from "@/lib/refresh-queries"
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useWatch, useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { JobCardFormValues, jobCardSchema } from "../schema";
 import { calculateJobCardTotals } from "../totals";
@@ -55,7 +57,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/amount";
 
 interface JobCardFormProps {
-  initialData?: any; // JobCard with relations
+  initialData?: JobCardFormData; // JobCard with relations
   onSuccess?: () => void;
   quotationId?: string;
 }
@@ -87,7 +89,6 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
     register,
     handleSubmit,
     control,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<JobCardFormValues>({
@@ -100,7 +101,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       status:
         initialData?.status === "WORKING"
           ? "IN_PROGRESS"
-          : initialData?.status || "PENDING",
+          : (initialData?.status || "PENDING") as JobCardFormValues["status"],
       complaint: initialData?.complaint || "",
       workDone: initialData?.workDone || "",
       notes: initialData?.notes || "",
@@ -111,7 +112,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       vehicleKm: initialData?.vehicleKm ?? 0,
 
       services:
-        initialData?.services?.map((s: any) => ({
+        initialData?.services?.map((s) => ({
           serviceId: s.serviceId,
           name: s.service?.name || t.common.unknown,
           quantity: s.quantity,
@@ -119,7 +120,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
         })) || [],
 
       parts:
-        initialData?.parts?.map((p: any) => ({
+        initialData?.parts?.map((p) => ({
           batchId: p.batchId || "",
           inventoryId: p.inventoryId || p.batch?.inventory?.id,
           name: p.batch?.inventory?.itemName || p.inventory?.itemName || t.common.unknown,
@@ -140,7 +141,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
       tax: initialData?.tax || 0,
       grandTotal: initialData?.grandTotal || 0,
       advancePaid: initialData?.advancePaid || 0,
-      advancePaymentMethod: initialData?.payments?.[0]?.receivedMethod || "CASH",
+      advancePaymentMethod: (initialData?.payments?.[0]?.receivedMethod || "CASH") as "CASH" | "CARD" | "TRANSFER",
     },
   });
 
@@ -169,15 +170,25 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
   } = useFieldArray({ control, name: "otherCharges" });
 
   // Watch for totals calculation
-  const watchedServices = watch("services") || [];
-  const watchedParts = watch("parts") || [];
-  const watchedOtherCharges = watch("otherCharges") || [];
+  const subscribedServices = useWatch({ control: control, name: "services" })
+  const subscribedParts = useWatch({ control: control, name: "parts" })
+  const subscribedOtherCharges = useWatch({ control: control, name: "otherCharges" })
+  const subscribedDiscount = useWatch({ control: control, name: "discount" })
+  const subscribedTax = useWatch({ control: control, name: "tax" })
+  const subscribedCustomerId = useWatch({ control: control, name: "customerId" })
+  const subscribedVehicleId = useWatch({ control: control, name: "vehicleId" })
+  const subscribedServiceTotal = useWatch({ control: control, name: "serviceTotal" })
+  const subscribedPartsTotal = useWatch({ control: control, name: "partsTotal" })
+  const subscribedGrandTotal = useWatch({ control: control, name: "grandTotal" })
+  const subscribedAdvancePaid = useWatch({ control: control, name: "advancePaid" })
+  const subscribedStatus = useWatch({ control: control, name: "status" })
+  const subscribedDate = useWatch({ control: control, name: "date" })
+  const watchedServices = subscribedServices;
+  const watchedParts = subscribedParts;
+  const watchedOtherCharges = subscribedOtherCharges;
 
-  const servicesJson = JSON.stringify(watchedServices);
-  const partsJson = JSON.stringify(watchedParts);
-  const otherChargesJson = JSON.stringify(watchedOtherCharges);
-  const watchedDiscount = watch("discount") || 0;
-  const watchedTax = watch("tax") || 0;
+  const watchedDiscount = subscribedDiscount || 0;
+  const watchedTax = subscribedTax || 0;
 
   useEffect(() => {
     const totals = calculateJobCardTotals({
@@ -191,7 +202,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
     setValue("partsTotal", totals.partsTotal);
 
     setValue("grandTotal", totals.grandTotal);
-  }, [servicesJson, partsJson, otherChargesJson, watchedDiscount, watchedTax, setValue]);
+  }, [watchedServices, watchedParts, watchedOtherCharges, watchedDiscount, watchedTax, setValue]);
 
   const {
     data: dropdowns = { vehicles: [], mechanics: [] },
@@ -249,7 +260,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
     });
   };
 
-  const selectedCustomerId = watch("customerId");
+  const selectedCustomerId = subscribedCustomerId;
   const { data: savedCustomers = [] } = useQuery({
     queryKey: ["jobcard-customer", selectedCustomerId],
     queryFn: () => getJobCardCustomers("", selectedCustomerId),
@@ -263,11 +274,11 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
     enabled: isCustomerPickerOpen && (Boolean(debouncedCustomerSearch) || !initialData?.id),
     placeholderData: () => undefined,
   });
-  const selectedVehicleId = watch("vehicleId");
+  const selectedVehicleId = subscribedVehicleId;
   const selectedVehicle = dropdowns.vehicles.find(
-    (vehicle: any) => vehicle.id === selectedVehicleId,
+    (vehicle) => vehicle.id === selectedVehicleId,
   ) || (initialData?.vehicle?.id === selectedVehicleId ? initialData.vehicle : undefined);
-  const matchingVehicles = dropdowns.vehicles.filter((vehicle: any) => {
+  const matchingVehicles = dropdowns.vehicles.filter((vehicle) => {
     if (selectedCustomerId && vehicle.customerId !== selectedCustomerId) return false;
     const query = vehicleSearch.trim().toLowerCase();
     return !query || vehicle.plateNumber.toLowerCase().includes(query) ||
@@ -290,18 +301,6 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
     setMechanicPickerPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280) });
   };
 
-  useEffect(() => {
-    if (selectedVehicle) {
-      setVehicleSearch(selectedVehicle.plateNumber);
-    }
-  }, [selectedVehicle]);
-
-  useEffect(() => {
-    if (selectedCustomer) {
-      setCustomerSearch(selectedCustomer.name);
-    }
-  }, [selectedCustomer]);
-
   const { data: vehicleHistory = [], isLoading: isVehicleHistoryLoading } =
     useQuery({
       queryKey: ["vehicle-history", selectedVehicleId, initialData?.id],
@@ -320,11 +319,11 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
     return statusKeyMap[status] ? t.jobcards[statusKeyMap[status]] : status;
   };
 
-  const serviceTotal = watch("serviceTotal");
-  const partsTotal = watch("partsTotal");
+  const serviceTotal = subscribedServiceTotal;
+  const partsTotal = subscribedPartsTotal;
   const otherChargesTotal = watchedOtherCharges.reduce((total, charge) => total + (Number(charge?.amount) || 0), 0);
-  const grandTotal = watch("grandTotal");
-  const advancePaid = watch("advancePaid") || 0;
+  const grandTotal = subscribedGrandTotal;
+  const advancePaid = subscribedAdvancePaid || 0;
   const balanceAmount = Math.max(0, grandTotal - advancePaid);
   const isStatusReadOnly = Boolean(quotationId && !initialData?.id);
 
@@ -583,7 +582,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                       className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
                       style={{ top: vehiclePickerPosition.top, left: vehiclePickerPosition.left, width: vehiclePickerPosition.width }}
                     >
-                      {matchingVehicles.length > 0 ? matchingVehicles.map((vehicle: any) => (
+                      {matchingVehicles.length > 0 ? matchingVehicles.map((vehicle) => (
                         <button
                           key={vehicle.id}
                           type="button"
@@ -658,8 +657,8 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                 control={control}
                 name="mechanicId"
                 render={({ field }) => {
-                  const selectedMechanic = dropdowns.mechanics.find((m: any) => m.id === field.value)
-                  const filteredMechanics = dropdowns.mechanics.filter((m: any) => m.name.toLowerCase().includes(mechanicSearch.trim().toLowerCase()))
+                  const selectedMechanic = dropdowns.mechanics.find((m) => m.id === field.value)
+                  const filteredMechanics = dropdowns.mechanics.filter((m) => m.name.toLowerCase().includes(mechanicSearch.trim().toLowerCase()))
                   return (
                     <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
@@ -694,7 +693,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                       }}><X className="h-4 w-4" /></button>}
                       {isMechanicPickerOpen && mechanicPickerPosition && typeof document !== "undefined" && createPortal(
                         <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={mechanicPickerPosition}>
-                          {filteredMechanics.length > 0 ? filteredMechanics.map((mechanic: any) => (
+                          {filteredMechanics.length > 0 ? filteredMechanics.map((mechanic) => (
                             <button key={mechanic.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
                               field.onChange(mechanic.id);
                               setMechanicSearch(mechanic.name);
@@ -723,7 +722,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                 {t.common.status} <span className="text-destructive">*</span>
               </Label>
               {isStatusReadOnly ? (
-                <><input type="hidden" {...register("status")} /><Input value={getTranslatedStatus(watch("status"))} readOnly aria-readonly="true" className="cursor-default bg-muted" /></>
+                <><input type="hidden" {...register("status")} /><Input value={getTranslatedStatus(subscribedStatus)} readOnly aria-readonly="true" className="cursor-default bg-muted" /></>
               ) : (
                 <Controller
                   control={control}
@@ -784,7 +783,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
               <Input
                 id="expectedFinishDate"
                 type="date"
-                min={watch("date")}
+                min={subscribedDate}
                 {...register("expectedFinishDate")}
               />
               <p className="text-xs text-muted-foreground">When the vehicle is expected to be ready.</p>
@@ -1203,7 +1202,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
             </p>
           ) : vehicleHistory.length > 0 ? (
             <div className="space-y-3">
-              {vehicleHistory.map((job: any) => (
+              {vehicleHistory.map((job) => (
                 <div key={job.id} className="rounded-md border p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -1228,7 +1227,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                     <p className="mt-2 text-xs text-muted-foreground">
                       {t.jobcards.services}:{" "}
                       {job.services
-                        .map((service: any) => service.service.name)
+                        .map((service) => service.service.name)
                         .join(", ")}
                     </p>
                   )}

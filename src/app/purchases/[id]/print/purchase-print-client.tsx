@@ -1,5 +1,7 @@
 "use client"
 
+import Image from "next/image"
+
 import { ArrowLeft, Printer } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useSyncExternalStore } from "react"
@@ -10,7 +12,7 @@ function dateText(value: Date | string, locale: "en" | "ar") {
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-OM" : "en-GB").format(new Date(value))
 }
 
-function amountText(value: number, locale: "en" | "ar") {
+function amountText(value: number) {
   return formatAmount(value)
 }
 
@@ -67,7 +69,7 @@ export function PurchasePrintClient({ purchase }: { purchase: PurchasePrintData 
 
   if (!hydrated) return null
 
-  const money = (value: number) => `${amountText(value, locale)} ${isRTL ? "ر.ع." : "OMR"}`
+  const money = (value: number) => `${amountText(value)} ${isRTL ? "ر.ع." : "OMR"}`
 
   const subTotal = purchase.subTotal
   const totalTax = purchase.taxAmount
@@ -198,7 +200,7 @@ export function PurchasePrintClient({ purchase }: { purchase: PurchasePrintData 
         {/* Printable Invoice Container */}
         <div className="bill-paper print-container border p-6 rounded-lg">
           <header className="bill-header">
-            <img src="/images/logo.webp" alt="Bin Matar Garage" width="240" height="96" className="bill-logo" />
+            <Image unoptimized loading="eager" src="/images/logo.webp" alt="Bin Matar Garage" width="240" height="96" className="bill-logo" />
             <div className="bill-title">{l.invoiceTitle}</div>
             <div className="bill-number">{l.purchaseNo}<strong>{purchase.purchaseNumber}</strong>{dateText(purchase.purchaseDate, locale)}</div>
           </header>

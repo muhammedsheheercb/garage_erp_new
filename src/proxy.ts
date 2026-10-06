@@ -15,7 +15,7 @@ export async function proxy(request: NextRequest) {
         if (data.role && Array.isArray(data.permissions) && Date.now() - data.createdAt <= 1000 * 60 * 60 * 24) {
           session = data
         }
-      } catch (error) {
+      } catch  {
         session = null
       }
     }

@@ -27,7 +27,7 @@ export default function ErrorPage({
       <div className="space-y-2">
         <h2 className="text-2xl font-bold tracking-tight">Something went wrong</h2>
         <p className="max-w-[500px] text-muted-foreground">
-          An unexpected error has occurred. We've been notified and are looking into it.
+          An unexpected error has occurred. We&apos;ve been notified and are looking into it.
         </p>
       </div>
 

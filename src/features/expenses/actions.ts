@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { parseSettlementDate } from "@/lib/settlement-date"
 import { ExpenseFormValues, expenseSchema } from "./schema"
@@ -11,7 +12,7 @@ export async function getExpenses(page = 1, search = "", fromDate?: string, toDa
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = search ? {
+  const where: Prisma.ExpenseWhereInput = search ? {
     OR: [
       { category: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } }

@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Save, Database, Download, RotateCcw, AlertTriangle, ShieldCheck, Eye, EyeOff, Plus, Check, Trash2, Edit } from "lucide-react"
+import { Loader2, Save, Database, Download, RotateCcw, AlertTriangle, ShieldCheck, Eye, EyeOff, Check, Trash2, Edit } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageToggle } from "@/components/language-toggle"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -64,7 +64,7 @@ export function SettingsForm() {
       setTaxPercentage("")
       queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
     },
-    onError: (error: any) => toast.error(error.message)
+    onError: (error) => toast.error(error.message)
   })
 
   const updateTaxMutation = useMutation({
@@ -76,7 +76,7 @@ export function SettingsForm() {
       setEditingTaxId(null)
       queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
     },
-    onError: (error: any) => toast.error(error.message)
+    onError: (error) => toast.error(error.message)
   })
 
   const activateTaxMutation = useMutation({
@@ -85,7 +85,7 @@ export function SettingsForm() {
       toast.success(t.settings.taxActivated)
       queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
     },
-    onError: (error: any) => toast.error(error.message)
+    onError: (error) => toast.error(error.message)
   })
 
   const deleteTaxMutation = useMutation({
@@ -94,7 +94,7 @@ export function SettingsForm() {
       toast.success(t.settings.taxDeleted)
       queryClient.invalidateQueries({ queryKey: ['tax-settings'] })
     },
-    onError: (error: any) => toast.error(error.message)
+    onError: (error) => toast.error(error.message)
   })
 
   const { data: settings, isLoading } = useQuery({
@@ -126,7 +126,7 @@ export function SettingsForm() {
       toast.success(t.settings.settingsSaved)
       queryClient.invalidateQueries({ queryKey: ['settings'] })
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.settings.failedToSave)
     }
   })
@@ -137,7 +137,7 @@ export function SettingsForm() {
       toast.success(res.message)
       queryClient.invalidateQueries({ queryKey: ['backups'] })
     },
-    onError: (error: any) => toast.error(error.message)
+    onError: (error) => toast.error(error.message)
   })
 
   const deleteBackupMutation = useMutation({
@@ -156,7 +156,7 @@ export function SettingsForm() {
       // Force reload to pick up new DB state
       setTimeout(() => window.location.reload(), 2000)
     },
-    onError: (error: any) => toast.error(error.message)
+    onError: (error) => toast.error(error.message)
   })
 
   const securityMutation = useMutation({
@@ -167,7 +167,7 @@ export function SettingsForm() {
       setNewPassword("")
       // Email stays updated in the input
     },
-    onError: (error: any) => toast.error(error.message)
+    onError: (error) => toast.error(error.message)
   })
 
   const onSubmit = (data: SettingsFormValues) => {
@@ -591,7 +591,7 @@ export function SettingsForm() {
                     ) : taxSettings.length === 0 ? (
                       <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">{t.settings.noTaxRates}</TableCell></TableRow>
                     ) : (
-                      taxSettings.map((tax: any) => (
+                      taxSettings.map((tax) => (
                         <TableRow key={tax.id}>
                           <TableCell className="font-medium">{tax.name}</TableCell>
                           <TableCell>{tax.percentage}%</TableCell>

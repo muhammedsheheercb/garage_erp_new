@@ -1,5 +1,7 @@
 "use client"
 
+import type { PurchaseView } from "@/lib/view-models"
+
 import { refreshQueries } from "@/lib/refresh-queries"
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -29,8 +31,8 @@ export function PurchaseList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [viewingPurchase, setViewingPurchase] = useState<any>(null)
-  const [editingPurchase, setEditingPurchase] = useState<any>(null)
+  const [viewingPurchase, setViewingPurchase] = useState<PurchaseView | null>(null)
+  const [editingPurchase, setEditingPurchase] = useState<PurchaseView | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (paramFrom) {
       return {
@@ -58,7 +60,7 @@ export function PurchaseList() {
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
       queryClient.invalidateQueries({ queryKey: ['paymeters'] })
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })
@@ -263,7 +265,7 @@ export function PurchaseList() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {viewingPurchase.items?.map((item: any) => {
+                      {viewingPurchase.items?.map((item) => {
                         const prodAmt = (item.quantity * item.purchasePrice)
                         const rate = Number(item.taxRate) || 0
                         const taxAmt = item.taxAmount ? (item.taxAmount) : ((prodAmt * rate) / 100)

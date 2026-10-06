@@ -1,5 +1,7 @@
 "use client"
 
+import type { InventoryItemView } from "@/lib/view-models"
+
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getInventory, deleteInventoryItem } from "../actions"
@@ -23,7 +25,7 @@ export function InventoryList() {
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isOpeningStockOpen, setIsOpeningStockOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<any>(null)
+  const [editingItem, setEditingItem] = useState<InventoryItemView | null>(null)
   const { t } = useTranslation()
   const { can } = usePermissions()
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
@@ -121,14 +123,14 @@ export function InventoryList() {
                         <span className="font-semibold">{item.quantity} {t.inventoryMod.total}</span>
                         {item.batches && item.batches.length > 0 && (
                           <div className="text-xs text-muted-foreground flex flex-col gap-0.5 mt-1 border-t pt-1 border-border/50 max-w-[120px]">
-                            {item.batches.map((b: any) => {
+                            {item.batches.map((b) => {
                               const isOpeningBatch = b.batchNumber?.toUpperCase().startsWith("OPENING-")
                               const openingBatchLabel = b.batchNumber?.match(/^OPENING-(\d+)$/i)?.[1]
                               const openingBatchNumber = isOpeningBatch
                                 ? openingBatchLabel ?? [...item.batches]
-                                    .filter((batch: any) => batch.batchNumber?.toUpperCase().startsWith("OPENING-"))
-                                    .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-                                    .findIndex((batch: any) => batch.id === b.id) + 1
+                                    .filter((batch) => batch.batchNumber?.toUpperCase().startsWith("OPENING-"))
+                                    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                                    .findIndex((batch) => batch.id === b.id) + 1
                                 : null
 
                               return (

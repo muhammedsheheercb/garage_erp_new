@@ -1,5 +1,6 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { requirePagePermission } from "@/lib/authorization"
 import { ServiceFormValues, serviceSchema } from "./schema"
@@ -10,7 +11,7 @@ export async function getServices(page = 1, search = "", fromDate?: string, toDa
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = {
+  const where: Prisma.ServiceWhereInput = {
     OR: [
       { name: { contains: search, mode: "insensitive" } },
       { category: { contains: search, mode: "insensitive" } },

@@ -1,5 +1,9 @@
 "use client"
 
+import Image from "next/image"
+
+import type { SupplierView } from "@/lib/view-models"
+
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { getSuppliers, deleteSupplier, getSupplierDetails } from "../actions"
@@ -71,8 +75,8 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
   if (isLoading) return <div className="p-8 text-center">{t.common.loading}</div>
   if (!details) return <div className="p-8 text-center text-destructive">{t.suppliers.supplierNotFound}</div>
 
-  const totalPaid = details.purchases.reduce((acc: number, purchase: any) => acc + purchase.paidAmount, 0)
-  const pendingAmount = details.purchases.reduce((acc: number, purchase: any) => acc + purchase.pendingAmount, 0)
+  const totalPaid = details.purchases.reduce((acc: number, purchase) => acc + purchase.paidAmount, 0)
+  const pendingAmount = details.purchases.reduce((acc: number, purchase) => acc + purchase.pendingAmount, 0)
   // Compare calendar dates, including both endpoints and single-day selections.
   const matchesDateRange = (value: Date | string) => {
     if (!dateRange?.from) return true
@@ -82,19 +86,19 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
   }
   const purchaseHistory = details.purchases.filter((purchase) => matchesDateRange(purchase.purchaseDate))
   const paymentHistory = [
-    ...details.purchases.flatMap((purchase: any) =>
-      purchase.purchasePayments.map((payment: any) => ({
+    ...details.purchases.flatMap((purchase) =>
+      purchase.purchasePayments.map((payment) => ({
         ...payment,
         purchaseNumber: purchase.purchaseNumber,
         method: payment.paymeter ? getPaymentMethodLabel(payment.paymeter.name) : '-',
       }))
     ),
-    ...details.payments.map((payment: any) => ({
+    ...details.payments.map((payment) => ({
       ...payment,
       purchaseNumber: payment.reference || '—',
       method: getPaymentMethodLabel(payment.method),
     })),
-  ].filter((payment) => matchesDateRange(payment.date)).sort((a: any, b: any) => {
+  ].filter((payment) => matchesDateRange(payment.date)).sort((a, b) => {
     const dateDifference = new Date(b.date).getTime() - new Date(a.date).getTime()
     return dateDifference || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   })
@@ -107,11 +111,11 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
           <div className="text-xl font-bold">{details.purchases.length}</div>
         </div>
         <div className="rounded-lg bg-muted/50 p-4">
-          <div className="mb-1 flex text-sm text-muted-foreground"><img src="/Omr_symbol.svg" alt="OMR" className="mr-1 h-4 w-4 object-contain" /> {t.suppliers.totalPaid}</div>
+          <div className="mb-1 flex text-sm text-muted-foreground"><Image unoptimized width={24} height={24} loading="eager" src="/Omr_symbol.svg" alt="OMR" className="mr-1 h-4 w-4 object-contain" /> {t.suppliers.totalPaid}</div>
           <div className="text-xl font-bold text-green-600">{totalPaid} OMR</div>
         </div>
         <div className="rounded-lg bg-muted/50 p-4">
-          <div className="mb-1 flex text-sm text-muted-foreground"><img src="/Omr_symbol.svg" alt="OMR" className="mr-1 h-4 w-4 object-contain" /> {t.suppliers.pendingAmount}</div>
+          <div className="mb-1 flex text-sm text-muted-foreground"><Image unoptimized width={24} height={24} loading="eager" src="/Omr_symbol.svg" alt="OMR" className="mr-1 h-4 w-4 object-contain" /> {t.suppliers.pendingAmount}</div>
           <div className="text-xl font-bold text-destructive">{pendingAmount} OMR</div>
         </div>
       </div>
@@ -149,7 +153,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
               {purchaseHistory.length === 0 ? (
                 <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">{t.suppliers.noPurchases}</TableCell></TableRow>
               ) : (
-                purchaseHistory.slice((purchasePage - 1) * 5, purchasePage * 5).map((purchase: any) => (
+                purchaseHistory.slice((purchasePage - 1) * 5, purchasePage * 5).map((purchase) => (
                   <TableRow key={purchase.id}>
                     <TableCell>{formatDisplayDate(purchase.purchaseDate)}</TableCell>
                     <TableCell className="font-medium">{purchase.purchaseNumber}</TableCell>
@@ -167,7 +171,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-4">
           <h3 className="font-medium">{t.suppliers.paymentHistory}</h3>
-          {details.purchases.some((purchase: any) => purchase.pendingAmount > 0) && (
+          {details.purchases.some((purchase) => purchase.pendingAmount > 0) && (
             <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
               <DialogTrigger render={<Button size="sm"><Plus className="mr-2 h-4 w-4" /> {t.suppliers.addPayment}</Button>} />
               <DialogContent className="sm:max-w-4xl">
@@ -191,7 +195,7 @@ function SupplierDetails({ supplierId }: { supplierId: string }) {
               {paymentHistory.length === 0 ? (
                 <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">{t.suppliers.noPayments}</TableCell></TableRow>
               ) : (
-                paymentHistory.slice((paymentPage - 1) * 5, paymentPage * 5).map((payment: any) => (
+                paymentHistory.slice((paymentPage - 1) * 5, paymentPage * 5).map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell>{formatDisplayDate(payment.date)}</TableCell>
                     <TableCell className="font-medium">{payment.purchaseNumber}</TableCell>
@@ -214,7 +218,7 @@ export function SupplierList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [editingSupplier, setEditingSupplier] = useState<any>(null)
+  const [editingSupplier, setEditingSupplier] = useState<SupplierView | null>(null)
   const [viewingSupplier, setViewingSupplier] = useState<string | null>(null)
   const debouncedSearch = useDebounce(search, 400)
   const [dateRange, setDateRange] = useState<DateRange | undefined>()

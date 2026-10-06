@@ -6,7 +6,7 @@ import type { Prisma } from "@prisma/client"
 import { PurchaseFormValues, purchaseSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { getCreatorName, requirePagePermission } from "@/lib/authorization"
-import { userPaymeterWhere } from "@/lib/paymeter"
+import { userPaymeterWhere, getDirectPaymeterId } from "@/lib/paymeter"
 import { recalculateJobCardTotals } from "../jobcards/recalculate"
 import { assertPurchasableJobCard, editPurchaseStock } from "./edit-stock"
 
@@ -14,29 +14,12 @@ import { assertPurchasableJobCard, editPurchaseStock } from "./edit-stock"
 // Allow these atomic operations more time than Prisma's five-second default.
 const purchaseTransactionOptions = { timeout: 30_000 }
 
-const directPaymentNames = {
-  CASH: "Direct Cash",
-  BANK_TRANSFER: "Direct Bank Transfer",
-  CARD: "Card",
-} as const
-
-async function getDirectPaymeterId(
-  tx: Prisma.TransactionClient,
-  method: keyof typeof directPaymentNames,
-) {
-  const name = directPaymentNames[method]
-  const existing = await tx.paymeter.findUnique({ where: { name } })
-  if (existing) return existing.id
-
-  return (await tx.paymeter.create({ data: { name } })).id
-}
-
 export async function getPurchases(page = 1, search = "", fromDate?: string, toDate?: string) {
   await requirePagePermission("purchases", "view")
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = search ? {
+  const where: Prisma.PurchaseWhereInput = search ? {
     OR: [
       { purchaseNumber: { contains: search, mode: "insensitive" } },
       { supplier: { name: { contains: search, mode: "insensitive" } } }

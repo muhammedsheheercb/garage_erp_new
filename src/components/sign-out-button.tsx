@@ -22,7 +22,7 @@ export function SignOutButton() {
     // Hard navigate to our custom logout route.
     // This allows Electron to intercept and clear all Chromium storage,
     // and deletes server cookies before loading the login page.
-    window.location.href = "/api/auth/logout"
+    window.location.assign(new URL("/api/auth/logout", window.location.origin).href)
   }
 
   return (

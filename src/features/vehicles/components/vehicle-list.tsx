@@ -1,5 +1,7 @@
 "use client"
 
+import type { VehicleView } from "@/lib/view-models"
+
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getVehicles, deleteVehicle } from "../actions"
@@ -24,9 +26,9 @@ export function VehicleList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [editingVehicle, setEditingVehicle] = useState<any>(null)
-  const [viewingVehicle, setViewingVehicle] = useState<any>(null)
-  const [viewingHistory, setViewingHistory] = useState<any>(null)
+  const [editingVehicle, setEditingVehicle] = useState<VehicleView | null>(null)
+  const [viewingVehicle, setViewingVehicle] = useState<VehicleView | null>(null)
+  const [viewingHistory, setViewingHistory] = useState<VehicleView | null>(null)
   const { t } = useTranslation()
   const { can } = usePermissions()
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
@@ -144,7 +146,7 @@ export function VehicleList() {
                             <div><dt className="text-muted-foreground">{t.vehicles.companyName}</dt><dd className="font-medium mt-1">{viewingVehicle.brand}</dd></div>
                             <div><dt className="text-muted-foreground">{t.vehicles.model}</dt><dd className="font-medium mt-1">{viewingVehicle.model}</dd></div>
                             <div><dt className="text-muted-foreground">{t.vehicles.year}</dt><dd className="font-medium mt-1">{viewingVehicle.year}</dd></div>
-                            <div><dt className="text-muted-foreground">{t.vehicles.fuelType}</dt><dd className="font-medium mt-1">{fuelTypeLabels[viewingVehicle.fuelType] || viewingVehicle.fuelType}</dd></div>
+                            <div><dt className="text-muted-foreground">{t.vehicles.fuelType}</dt><dd className="font-medium mt-1">{fuelTypeLabels[viewingVehicle.fuelType || ""] || viewingVehicle.fuelType}</dd></div>
                             <div><dt className="text-muted-foreground">{t.vehicles.owner}</dt><dd className="font-medium mt-1">{viewingVehicle.customer.name}</dd></div>
                           </dl>
                         </DialogContent>
@@ -165,7 +167,7 @@ export function VehicleList() {
                           <div className="space-y-4">
                             {vehicle.jobCards.length > 0 ? (
                               <div className="space-y-3">
-                                {vehicle.jobCards.map((job: any) => (
+                                {vehicle.jobCards.map((job) => (
                                   <div key={job.id} className="flex justify-between items-center p-3 border rounded-md">
                                     <div>
                                       <p className="text-sm font-medium">Job Card</p>

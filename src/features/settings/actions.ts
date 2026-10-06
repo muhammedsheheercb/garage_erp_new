@@ -1,7 +1,9 @@
 "use server"
 
+import type { Prisma } from "@prisma/client"
+import { requireAdmin } from "@/lib/authorization"
 import prisma from "@/lib/prisma"
-import { SettingsFormValues } from "./schema"
+import { SettingsFormValues, settingsSchema } from "./schema"
 import { revalidatePath } from "next/cache"
 import { availableBackups, snapshotDatabase, restoreSnapshot, deleteSnapshot } from "./database-backup"
 import { getSession } from "@/lib/session"
@@ -28,8 +30,9 @@ export async function getSettings() {
 }
 
 export async function updateSettings(data: SettingsFormValues) {
-  // Execute sequentially to avoid SQLite locking issues (SQLITE_BUSY)
-  for (const [key, value] of Object.entries(data)) {
+  await requireAdmin()
+  const parsed = settingsSchema.parse(data)
+  for (const [key, value] of Object.entries(parsed)) {
     await prisma.setting.upsert({
       where: { key },
       update: { value: String(value) },
@@ -72,6 +75,7 @@ export async function restoreDatabase(filename: string) {
 }
 
 export async function updateAdminCredentials(currentPassword: string, newEmail: string, newPassword?: string) {
+  await requireAdmin()
   const session = await getSession()
   
   if (!session || !session.email) {
@@ -95,7 +99,7 @@ export async function updateAdminCredentials(currentPassword: string, newEmail: 
   }
   
   // Prepare update data
-  const updateData: any = {
+  const updateData: Prisma.AdminUpdateInput = {
     email: newEmail
   }
   
@@ -139,6 +143,7 @@ export async function getActiveTaxSetting() {
 }
 
 export async function createTaxSetting(name: string, percentage: number, isActive = false) {
+  await requireAdmin()
   if (isActive) {
     // Deactivate all others first
     await prisma.taxSetting.updateMany({
@@ -155,6 +160,7 @@ export async function createTaxSetting(name: string, percentage: number, isActiv
 }
 
 export async function updateTaxSetting(id: string, name: string, percentage: number) {
+  await requireAdmin()
   const taxSetting = await prisma.taxSetting.update({
     where: { id },
     data: { name, percentage }
@@ -165,6 +171,7 @@ export async function updateTaxSetting(id: string, name: string, percentage: num
 }
 
 export async function activateTaxSetting(id: string) {
+  await requireAdmin()
   await prisma.$transaction([
     prisma.taxSetting.updateMany({
       data: { isActive: false }
@@ -180,6 +187,7 @@ export async function activateTaxSetting(id: string) {
 }
 
 export async function deleteTaxSetting(id: string) {
+  await requireAdmin()
   await prisma.taxSetting.delete({
     where: { id }
   })

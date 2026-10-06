@@ -22,7 +22,7 @@ export async function getJobCards(
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = {
+  const where: Prisma.JobCardWhereInput = {
     OR: [
       { complaint: { contains: search, mode: "insensitive" } },
       { customer: { name: { contains: search, mode: "insensitive" } } },

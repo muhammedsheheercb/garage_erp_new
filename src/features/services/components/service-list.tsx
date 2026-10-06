@@ -23,7 +23,7 @@ export function ServiceList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [editingService, setEditingService] = useState<any>(null)
+  const [editingService, setEditingService] = useState<import("@prisma/client").Service | null>(null)
   const { t } = useTranslation()
   const { can } = usePermissions()
   const [dateRange, setDateRange] = useState<DateRange | undefined>()

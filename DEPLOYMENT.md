@@ -28,6 +28,12 @@ pnpm prisma db push
 pnpm prisma db seed
 ```
 
+Before seeding, explicitly set `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD`
+(at least 12 characters) in the process environment or private `.env`. Seeding
+creates a missing admin and preserves existing accounts and passwords. Do not
+run initialization or data repair scripts against production without reviewing
+their effects and taking a backup.
+
 For a production change-management workflow, create and commit a PostgreSQL
 migration against a disposable PostgreSQL database, then apply it to Neon with
 `pnpm prisma migrate deploy`. Existing SQLite data needs a one-time, reviewed

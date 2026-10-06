@@ -1,6 +1,8 @@
 "use client"
 
-import { useForm, Controller } from "react-hook-form"
+import type { InvoiceView } from "@/lib/view-models"
+
+import { useWatch, useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { InvoiceFormValues, invoiceSchema } from "../schema"
@@ -14,12 +16,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Trash, Trash2, Loader2, ClipboardList, AlertTriangle, Search, Check, X } from "lucide-react"
+import { Plus, Trash, ClipboardList, AlertTriangle, Search, Check, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useTranslation } from "@/i18n"
 import { formatAmount } from "@/lib/amount"
 
-export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onSuccess?: () => void }) {
+export function InvoiceForm({ initialData, onSuccess }: { initialData?: InvoiceView, onSuccess?: () => void }) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const isPaidLock = initialData?.status === "PAID" && initialData.grandTotal > 0
@@ -29,7 +31,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
       try {
         const parsed = JSON.parse(initialData.otherCharges)
         if (Array.isArray(parsed)) return parsed
-      } catch (e) {}
+      } catch  {}
     }
     return []
   })
@@ -48,13 +50,13 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
   const [discountInput, setDiscountInput] = useState<number>(() => Number(initialData?.discount) || 0)
 
   const [taxType, setTaxType] = useState<"percentage" | "amount">(() => {
-    return initialData?.tax > 0 ? "amount" : "percentage"
+    return (initialData?.tax ?? 0) > 0 ? "amount" : "percentage"
   })
   const [taxInput, setTaxInput] = useState<number>(() => {
     return Number(initialData?.tax) || 0
   })
 
-  const { register, handleSubmit, control, watch, setValue, getValues, formState: { errors } } = useForm<InvoiceFormValues>({
+  const { register, handleSubmit, control, setValue, getValues, formState: { errors } } = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
       jobCardId: initialData?.jobCardId || "",
@@ -67,7 +69,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
       servicesDetails: initialData?.servicesDetails || "",
       partsDetails: initialData?.partsDetails || "",
       otherCharges: initialData?.otherCharges || "[]",
-      status: initialData?.status || "UNPAID",
+      status: (initialData?.status || "UNPAID") as InvoiceFormValues["status"],
     }
   })
 
@@ -75,9 +77,13 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
     setValue("otherCharges", JSON.stringify(otherChargesList))
   }, [otherChargesList, setValue])
 
-  const watchService = watch("serviceCharge") || 0
-  const watchLabour = watch("labourCharge") || 0
-  const watchParts = watch("partsCost") || 0
+  const subscribedServiceCharge = useWatch({ control: control, name: "serviceCharge" })
+  const subscribedLabourCharge = useWatch({ control: control, name: "labourCharge" })
+  const subscribedPartsCost = useWatch({ control: control, name: "partsCost" })
+  const subscribedJobCardId = useWatch({ control: control, name: "jobCardId" })
+  const watchService = subscribedServiceCharge || 0
+  const watchLabour = subscribedLabourCharge || 0
+  const watchParts = subscribedPartsCost || 0
 
   const otherChargesSum = otherChargesList.reduce((acc, c) => acc + (parseFloat(c.amount as string) || 0), 0)
 
@@ -120,46 +126,41 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
     setValue("tax", calculatedTax)
   }, [calculatedDiscount, calculatedTax, setValue])
 
-  // Auto-fill customerId when jobCardId changes
-  const watchJobCardId = watch("jobCardId")
-  useEffect(() => {
-    if (watchJobCardId && dropdownData?.jobCards) {
-      const jc = dropdownData.jobCards.find((jc: any) => jc.id === watchJobCardId)
-      if (jc && !initialData) {
-        if (getValues("customerId") !== jc.customerId) {
-          setValue("customerId", jc.customerId)
-        }
-        // Auto-load totals
-        setValue("serviceCharge", jc.serviceTotal || 0)
-        setValue("labourCharge", 0) // Leave labour blank for manual entry
-        setValue("partsCost", jc.partsTotal || 0)
-
-        if (jc.discount > 0) {
-          setDiscountType("amount")
-          setDiscountInput(jc.discount)
-        } else {
-          setDiscountInput(0)
-        }
-
-        if (jc.tax > 0) {
-          setTaxType("amount")
-          setTaxInput(jc.tax)
-        } else {
-          setTaxInput(0)
-        }
-
-        // Auto-generate details text
-        if (jc.services && jc.services.length > 0) {
-          const servicesText = jc.services.map((s: any) => `${s.service.name} (${t.invoicesMod.qty}: ${s.quantity})`).join(", ")
-          setValue("servicesDetails", servicesText)
-        }
-        if (jc.parts && jc.parts.length > 0) {
-          const partsText = jc.parts.map((p: any) => `${p.batch?.inventory?.itemName || p.inventory?.itemName || "Unknown part"} (${t.invoicesMod.qty}: ${p.quantity})${p.isPending ? " — Pending purchase" : ""}`).join(", ")
-          setValue("partsDetails", partsText)
-        }
-      }
+  const watchJobCardId = subscribedJobCardId
+  const applyJobCard = (jc: Awaited<ReturnType<typeof getDropdownData>>["jobCards"][number]) => {
+    if (initialData) return
+    if (getValues("customerId") !== jc.customerId) {
+      setValue("customerId", jc.customerId)
     }
-  }, [watchJobCardId, dropdownData, setValue, getValues, t, initialData])
+    // Auto-load totals
+    setValue("serviceCharge", jc.serviceTotal || 0)
+    setValue("labourCharge", 0) // Leave labour blank for manual entry
+    setValue("partsCost", jc.partsTotal || 0)
+
+    if (jc.discount > 0) {
+      setDiscountType("amount")
+      setDiscountInput(jc.discount)
+    } else {
+      setDiscountInput(0)
+    }
+
+    if (jc.tax > 0) {
+      setTaxType("amount")
+      setTaxInput(jc.tax)
+    } else {
+      setTaxInput(0)
+    }
+
+    // Auto-generate details text
+    if (jc.services && jc.services.length > 0) {
+      const servicesText = jc.services.map((s) => `${s.service.name} (${t.invoicesMod.qty}: ${s.quantity})`).join(", ")
+      setValue("servicesDetails", servicesText)
+    }
+    if (jc.parts && jc.parts.length > 0) {
+      const partsText = jc.parts.map((p) => `${p.batch?.inventory?.itemName || p.inventory?.itemName || "Unknown part"} (${t.invoicesMod.qty}: ${p.quantity})${p.isPending ? " — Pending purchase" : ""}`).join(", ")
+      setValue("partsDetails", partsText)
+    }
+  }
 
   const mutation = useMutation({
     mutationFn: (data: InvoiceFormValues) =>
@@ -170,7 +171,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
       queryClient.invalidateQueries({ queryKey: ['invoice-dropdowns'] })
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })
@@ -178,13 +179,13 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
   if (dropdownLoading) return <div>{t.common.loading}</div>
 
   const availableJobCards = dropdownData?.jobCards || []
-  if (initialData?.jobCard && !availableJobCards.find((jc: any) => jc.id === initialData.jobCard.id)) {
+  if (initialData?.jobCard && !availableJobCards.find((jc) => jc.id === initialData.jobCard.id)) {
     availableJobCards.push(initialData.jobCard)
   }
 
-  const selectedJobCardDetails = availableJobCards.find((jc: any) => jc.id === watchJobCardId)
+  const selectedJobCardDetails = availableJobCards.find((jc) => jc.id === watchJobCardId)
 
-  const filteredJobCards = availableJobCards.filter((jc: any) => {
+  const filteredJobCards = availableJobCards.filter((jc) => {
     const query = jobCardSearch.trim().toLowerCase()
     return !query || jc.vehicle?.plateNumber?.toLowerCase().includes(query) || jc.customer?.name?.toLowerCase().includes(query) || jc.id.toLowerCase().includes(query)
   })
@@ -223,7 +224,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               control={control}
               name="jobCardId"
               render={({ field }) => {
-                const selected = availableJobCards.find((jc: any) => jc.id === field.value)
+                const selected = availableJobCards.find((jc) => jc.id === field.value)
                 return (
                   <div className="relative flex-1">
                     <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
@@ -258,9 +259,10 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                     }}><X className="h-4 w-4" /></button>}
                     {isJobCardPickerOpen && jobCardPickerPosition && typeof document !== "undefined" && createPortal(
                       <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={jobCardPickerPosition}>
-                        {filteredJobCards.length > 0 ? filteredJobCards.map((jc: any) => (
+                        {filteredJobCards.length > 0 ? filteredJobCards.map((jc) => (
                           <button key={jc.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
                             field.onChange(jc.id)
+                            applyJobCard(jc)
                             setJobCardSearch(`${jc.vehicle?.plateNumber} - ${jc.customer?.name}`)
                             setIsJobCardPickerOpen(false)
                             setJobCardPickerPosition(null)
@@ -332,7 +334,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {selectedJobCardDetails.services.map((s: any) => (
+                            {selectedJobCardDetails.services.map((s) => (
                               <TableRow key={s.id}>
                                 <TableCell>{s.service?.name}</TableCell>
                                 <TableCell>{s.quantity}</TableCell>
@@ -356,7 +358,7 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {selectedJobCardDetails.parts.map((p: any) => (
+                            {selectedJobCardDetails.parts.map((p) => (
                               <TableRow key={p.id}>
                                 <TableCell>{p.batch?.inventory?.itemName}</TableCell>
                                 <TableCell>{p.quantity}</TableCell>
@@ -384,11 +386,11 @@ export function InvoiceForm({ initialData, onSuccess }: { initialData?: any, onS
               <Select onValueChange={field.onChange} value={field.value} disabled>
                 <SelectTrigger>
                   <SelectValue placeholder={t.invoicesMod.autoFilledJobCard}>
-                    {(val: string) => dropdownData?.customers.find((c: any) => c.id === val)?.name || null}
+                    {(val: string) => dropdownData?.customers.find((c) => c.id === val)?.name || null}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {dropdownData?.customers.map((c: any) => (
+                  {dropdownData?.customers.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>

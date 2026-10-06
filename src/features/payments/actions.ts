@@ -12,7 +12,7 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = search ? {
+  const where: Prisma.PaymentWhereInput = search ? {
     OR: [
       { jobCard: { customer: { name: { contains: search, mode: "insensitive" } } } },
       { jobCard: { vehicle: { plateNumber: { contains: search, mode: "insensitive" } } } },
@@ -120,7 +120,7 @@ export async function getPayments(page = 1, search = "", fromDate?: string, toDa
 export async function getPendingInvoices(page = 1, search = "") {
   await requirePagePermission("payments", "view")
   const limit = 5
-  const where: any = {}
+  const where: Prisma.JobCardWhereInput = {}
   if (search.trim()) {
     where.OR = [
       { customer: { name: { contains: search.trim(), mode: "insensitive" } } },
@@ -208,7 +208,8 @@ export async function createPayment(data: PaymentFormValues) {
       throw new Error(`Payment amount and discount cannot exceed the outstanding balance of ${(dueAmount)} OMR.`)
     }
 
-    const { discountAmount: _discountAmount, paymentDate: paymentDateValue, ...paymentData } = parsed
+    const { paymentDate: paymentDateValue } = parsed
+    const paymentData = { amount: parsed.amount, method: parsed.method }
     const paymentDate = new Date(paymentDateValue + "T12:00:00")
     const grandTotalAtPayment = Math.max(0, invoiceBeforePayment.grandTotal - discountAmount)
     const totalPaidAtPayment = alreadyPaid + parsed.amount

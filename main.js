@@ -5,24 +5,22 @@ const { spawn } = require('child_process');
 const http = require('http');
 const { dialog } = require('electron');
 
-const waitForServer = (url, timeout = 30000) => {
-  return new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      if (Date.now() - startTime > timeout) {
-        clearInterval(interval);
-        reject(new Error('Timeout waiting for server'));
-      }
-      const req = http.get(url, () => {
-        clearInterval(interval);
-        resolve();
-      });
-      req.on('error', () => {
-        // Connection refused, server not up yet
-      });
-    }, 500);
-  });
-};
+const waitForServer = (url, timeout = 30000) => new Promise((resolve, reject) => {
+  const startedAt = Date.now();
+  const poll = () => {
+    if (Date.now() - startedAt >= timeout) {
+      reject(new Error('Timeout waiting for server'));
+      return;
+    }
+    const request = http.get(url, response => {
+      response.resume();
+      resolve();
+    });
+    request.setTimeout(Math.min(1000, timeout), () => request.destroy(new Error('Server readiness timeout')));
+    request.on('error', () => { setTimeout(poll, 500); });
+  };
+  poll();
+});
 
 let mainWindow;
 let nextProcess;
@@ -65,12 +63,10 @@ async function createWindow() {
   const handleLogoutNavigation = (event, targetUrl) => {
     if (targetUrl.includes('/api/auth/logout') || targetUrl.includes('/api/auth/force-logout') || targetUrl.includes('/api/auth/signout')) {
       event.preventDefault();
-      console.log('Intercepted logout navigation in Electron main process, clearing storage...');
       const ses = mainWindow.webContents.session;
       ses.clearStorageData({
         storages: ['cookies', 'localstorage', 'indexdb', 'websql', 'serviceworkers', 'cachestorage']
       }).then(() => {
-        console.log('Storage cleared successfully. Redirecting to login...');
         mainWindow.loadURL(`${url}/login`);
       }).catch(err => {
         console.error('Failed to clear storage:', err);

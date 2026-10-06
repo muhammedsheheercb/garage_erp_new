@@ -6,7 +6,7 @@ import { getPayments, getPendingInvoices } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, FileText, ChevronLeft, ChevronRight, CreditCard, Banknote, Building, Wallet } from "lucide-react"
+import { Search, Plus, FileText, ChevronLeft, ChevronRight, CreditCard, Banknote, Building } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { PaymentForm } from "./payment-form"
 import { useRouter, useSearchParams } from "next/navigation"

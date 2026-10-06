@@ -1,6 +1,7 @@
 "use server"
 
 import { currentInvoiceTotals, currentInvoiceDetails } from "./current-totals"
+import type { Prisma } from "@prisma/client"
 import prisma from "@/lib/prisma"
 import { InvoiceFormValues, invoiceSchema } from "./schema"
 import { revalidatePath } from "next/cache"
@@ -11,7 +12,7 @@ export async function getInvoices(page = 1, search = "", fromDate?: string, toDa
   const limit = 5;
   const skip = (page - 1) * limit;
 
-  const where: any = search ? {
+  const where: Prisma.InvoiceWhereInput = search ? {
     OR: [
       { customer: { name: { contains: search, mode: "insensitive" } } },
       { jobCard: { vehicle: { plateNumber: { contains: search, mode: "insensitive" } } } },
@@ -133,7 +134,7 @@ export async function createInvoice(data: InvoiceFormValues) {
       try {
         const parsedCharges = JSON.parse(parsed.otherCharges)
         if (Array.isArray(parsedCharges)) {
-          otherAmountSum = parsedCharges.reduce((acc, c: any) => acc + Math.max(0, Number(c.amount) || 0), 0)
+          otherAmountSum = parsedCharges.reduce((acc, c) => acc + Math.max(0, Number(c.amount) || 0), 0)
         }
       } catch (e) {
         console.error("Failed to parse otherCharges", e)
@@ -221,7 +222,7 @@ export async function updateInvoice(id: string, data: InvoiceFormValues) {
       try {
         const parsedCharges = JSON.parse(parsed.otherCharges)
         if (Array.isArray(parsedCharges)) {
-          otherAmountSum = parsedCharges.reduce((acc, c: any) => acc + Math.max(0, Number(c.amount) || 0), 0)
+          otherAmountSum = parsedCharges.reduce((acc, c) => acc + Math.max(0, Number(c.amount) || 0), 0)
         }
       } catch (e) {
         console.error("Failed to parse otherCharges", e)

@@ -1,7 +1,7 @@
 "use client"
 
 import { refreshQueries } from "@/lib/refresh-queries"
-import { useForm, Controller } from "react-hook-form"
+import { useWatch, useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { PaymentFormValues, paymentSchema } from "../schema"
@@ -34,7 +34,7 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
   const [isJobCardPickerOpen, setIsJobCardPickerOpen] = useState(false)
   const [jobCardPickerPosition, setJobCardPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null)
 
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<PaymentFormValues>({
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       jobCardId: initialJobCardId || "",
@@ -46,9 +46,12 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
   })
 
   // Watch jobCardId to auto-fill amount with due amount
-  const watchJobCardId = watch("jobCardId")
-  const watchedPaymentAmount = watch("amount") || 0
-  const watchedDiscountAmount = watch("discountAmount") || 0
+  const subscribedJobCardId = useWatch({ control: control, name: "jobCardId" })
+  const subscribedAmount = useWatch({ control: control, name: "amount" })
+  const subscribedDiscountAmount = useWatch({ control: control, name: "discountAmount" })
+  const watchJobCardId = subscribedJobCardId
+  const watchedPaymentAmount = subscribedAmount || 0
+  const watchedDiscountAmount = subscribedDiscountAmount || 0
   const selectedJobCard = jobCards?.find(i => i.id === watchJobCardId)
   const currentBalance = selectedJobCard?.dueAmount || 0
   const combinedAmount = Math.max(0, Number(watchedPaymentAmount) || 0) + Math.max(0, Number(watchedDiscountAmount) || 0)
@@ -82,7 +85,7 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
       queryClient.invalidateQueries({ queryKey: ['report-chart'] })
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error.message || t.common.somethingWrong)
     }
   })
@@ -115,8 +118,8 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
           control={control}
           name="jobCardId"
           render={({ field }) => {
-            const selectedJobCard = jobCards?.find((jobCard: any) => jobCard.id === field.value)
-            const filteredjobCards = jobCards?.filter((jobCard: any) => jobCard.label.toLowerCase().includes(jobCardSearch.trim().toLowerCase())) || []
+            const selectedJobCard = jobCards?.find((jobCard) => jobCard.id === field.value)
+            const filteredjobCards = jobCards?.filter((jobCard) => jobCard.label.toLowerCase().includes(jobCardSearch.trim().toLowerCase())) || []
             return (
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
@@ -151,7 +154,7 @@ export function PaymentForm({ onSuccess, initialJobCardId }: { onSuccess?: () =>
                 }}><X className="h-4 w-4" /></button>}
                 {isJobCardPickerOpen && jobCardPickerPosition && typeof document !== "undefined" && createPortal(
                   <div className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg" style={jobCardPickerPosition}>
-                    {filteredjobCards.length > 0 ? filteredjobCards.map((jobCard: any) => (
+                    {filteredjobCards.length > 0 ? filteredjobCards.map((jobCard) => (
                       <button key={jobCard.id} type="button" className="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-accent" onMouseDown={(event) => event.preventDefault()} onClick={() => {
                         field.onChange(jobCard.id)
                         setJobCardSearch(jobCard.label)

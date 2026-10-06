@@ -1,4 +1,8 @@
-"use client";
+"use client"
+
+import Image from "next/image"
+
+import type { JobCardView } from "@/lib/view-models";
 
 import { Currency } from "@/components/currency";
 import { PrintButton } from "./print-button";
@@ -14,23 +18,23 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
   return <div className="jc-field"><span>{label}</span><strong>{value === null || value === undefined || value === "" ? "—" : value}</strong></div>;
 }
 
-export function JobCardPrintClient({ job }: { job: any }) {
+export function JobCardPrintClient({ job }: { job: JobCardView }) {
   const { isRTL } = useTranslation();
   const isHydrated = useSyncExternalStore(() => () => {}, () => true, () => false);
 
   useEffect(() => { document.documentElement.dir = isRTL ? "rtl" : "ltr"; }, [isRTL]);
   if (!isHydrated) return null;
 
-  const servicesTotal = job.services.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
-  const partsTotal = job.parts.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
-  const otherCharges = (() => { try { return JSON.parse(job.otherCharges || "[]") } catch { return [] } })();
-  const otherChargesTotal = otherCharges.reduce((sum: number, charge: any) => sum + (Number(charge.amount) || 0), 0);
+  const servicesTotal = job.services.reduce((sum: number, item) => sum + (item.price || 0), 0);
+  const partsTotal = job.parts.reduce((sum: number, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+  const otherCharges: Array<{ description: string; amount: number }> = (() => { try { return JSON.parse(job.otherCharges || "[]") } catch { return [] } })();
+  const otherChargesTotal = otherCharges.reduce((sum: number, charge) => sum + (Number(charge.amount) || 0), 0);
   const grandTotal = job.grandTotal ?? servicesTotal + partsTotal + otherChargesTotal;
   const balance = Math.max(0, grandTotal - (job.advancePaid || 0));
   const items = [
     ...(job.workDone ? [{ type: "Work done / العمل المنجز", name: job.workDone, quantity: 1, price: job.estimatedCost || 0, id: "work" }] : []),
-    ...(job.services || []).map((item: any) => ({ type: "Service / خدمة", name: item.service?.name, quantity: item.quantity || 1, price: (item.price || 0) / (item.quantity || 1), amount: item.price || 0, id: `service-${item.id}` })),
-    ...(!job.hideServicePartsAmounts ? (job.parts || []).map((item: any) => ({ type: "Part / قطعة", name: `${item.batch?.inventory?.itemName || item.inventory?.itemName || "Pending part"}${(item.batch?.inventory?.partNumber || item.inventory?.partNumber) ? ` (${item.batch?.inventory?.partNumber || item.inventory?.partNumber})` : ""}`, quantity: item.quantity || 1, price: item.price || 0, id: `part-${item.id}` })) : []),
+    ...(job.services || []).map((item) => ({ type: "Service / خدمة", name: item.service?.name, quantity: item.quantity || 1, price: (item.price || 0) / (item.quantity || 1), amount: item.price || 0, id: `service-${item.id}` })),
+    ...(!job.hideServicePartsAmounts ? (job.parts || []).map((item) => ({ type: "Part / قطعة", name: `${item.batch?.inventory?.itemName || item.inventory?.itemName || "Pending part"}${(item.batch?.inventory?.partNumber || item.inventory?.partNumber) ? ` (${item.batch?.inventory?.partNumber || item.inventory?.partNumber})` : ""}`, quantity: item.quantity || 1, price: item.price || 0, id: `part-${item.id}` })) : []),
   ];
 
   return (
@@ -74,7 +78,7 @@ export function JobCardPrintClient({ job }: { job: any }) {
       ` }} />
       <article className="jc-page jc-page-one">
         <header className="jc-header">
-          <img src="/images/logo.webp" alt="Workshop logo" className="jc-logo" />
+          <Image unoptimized width={559} height={157} loading="eager" src="/images/logo.webp" alt="Workshop logo" className="jc-logo" />
           <div className="jc-title">JOB CARD<small>بطاقة عمل · WORKSHOP SERVICE RECORD</small></div>
           <div className="jc-number">JOB NO. / رقم البطاقة<strong>{job.id?.slice(-8)?.toUpperCase() || "—"}</strong></div>
         </header>
@@ -88,13 +92,13 @@ export function JobCardPrintClient({ job }: { job: any }) {
         </div><div className="jc-text"><b>Complaint / الشكوى:</b><br />{dash(job.complaint)}</div>{job.notes && <div className="jc-text"><b>Notes & remarks / ملاحظات:</b><br />{job.notes}</div>}</section>
 
         <section className="jc-section"><div className="jc-section-title">Service & Parts Details / تفاصيل الخدمات والقطع</div><table className="jc-items"><thead><tr><th className="number">#</th><th className="type">Type / النوع</th><th>Description / الوصف</th><th className="qty">Qty / الكمية</th>{!job.hideServicePartsAmounts && <><th className="money">Rate / السعر</th><th className="money">Amount / الإجمالي</th></>}</tr></thead><tbody>
-          {items.length ? items.map((item: any, index: number) => <tr key={item.id}><td className="number">{index + 1}</td><td className="type">{item.type}</td><td>{item.name}</td><td className="qty">{item.quantity}</td>{!job.hideServicePartsAmounts && <><td className="money"><Currency amount={item.price} /></td><td className="money"><Currency amount={item.amount ?? item.price * item.quantity} /></td></>}</tr>) : <tr><td colSpan={job.hideServicePartsAmounts ? 4 : 6} style={{ textAlign: "center" }}>No services or parts listed / لا توجد خدمات أو قطع مضافة</td></tr>}
-        </tbody></table>{otherCharges.length > 0 && <div className="jc-text"><b>Other charges / رسوم أخرى:</b><br />{otherCharges.map((charge: any, index: number) => <div key={index}>{charge.description} — <Currency amount={Number(charge.amount) || 0} /></div>)}</div>}<div className="jc-totals">{!job.hideServicePartsAmounts && <div className="jc-totals-note">Service total: <Currency amount={servicesTotal} /> &nbsp;·&nbsp; Parts total: <Currency amount={partsTotal} /> &nbsp;·&nbsp; Other charges: <Currency amount={otherChargesTotal} /></div>}<div className="jc-totals-values" style={job.hideServicePartsAmounts ? { gridColumn: "1 / -1", borderLeft: 0 } : undefined}><div className="jc-total"><span>Grand total</span><Currency amount={grandTotal} /></div><div className="jc-total"><span>Advance paid</span><Currency amount={job.advancePaid || 0} /></div><div className="jc-total"><span>Balance amount</span><Currency amount={balance} /></div></div></div></section>
+          {items.length ? items.map((item, index: number) => <tr key={item.id}><td className="number">{index + 1}</td><td className="type">{item.type}</td><td>{item.name}</td><td className="qty">{item.quantity}</td>{!job.hideServicePartsAmounts && <><td className="money"><Currency amount={item.price} /></td><td className="money"><Currency amount={("amount" in item ? item.amount : item.price * item.quantity)} /></td></>}</tr>) : <tr><td colSpan={job.hideServicePartsAmounts ? 4 : 6} style={{ textAlign: "center" }}>No services or parts listed / لا توجد خدمات أو قطع مضافة</td></tr>}
+        </tbody></table>{otherCharges.length > 0 && <div className="jc-text"><b>Other charges / رسوم أخرى:</b><br />{otherCharges.map((charge, index: number) => <div key={index}>{charge.description} — <Currency amount={Number(charge.amount) || 0} /></div>)}</div>}<div className="jc-totals">{!job.hideServicePartsAmounts && <div className="jc-totals-note">Service total: <Currency amount={servicesTotal} /> &nbsp;·&nbsp; Parts total: <Currency amount={partsTotal} /> &nbsp;·&nbsp; Other charges: <Currency amount={otherChargesTotal} /></div>}<div className="jc-totals-values" style={job.hideServicePartsAmounts ? { gridColumn: "1 / -1", borderLeft: 0 } : undefined}><div className="jc-total"><span>Grand total</span><Currency amount={grandTotal} /></div><div className="jc-total"><span>Advance paid</span><Currency amount={job.advancePaid || 0} /></div><div className="jc-total"><span>Balance amount</span><Currency amount={balance} /></div></div></div></section>
 
         <JobCardTermsAndConditions />
         <footer className="jc-section jc-footer"><div className="jc-signatures"><div className="jc-signature-approval"><div className="jc-signature-field">Customer signature / توقيع العميل</div><div className="jc-signature-field">Authorized signature / توقيع معتمد</div></div><div className="jc-signature">Foreman / الملاحظ</div><div className="jc-signature">Receptionist / موظف الاستقبال</div><div className="jc-signature">Workshop Manager / مدير الورشة</div></div></footer>
       </article>
-      <article className="jc-page jc-damage-page"><img src="/images/jobcard/car.webp" alt="Vehicle damage inspection diagram" /></article>
+      <article className="jc-page jc-damage-page"><Image unoptimized width={1054} height={1492} loading="eager" src="/images/jobcard/car.webp" alt="Vehicle damage inspection diagram" /></article>
       <div className="print-hidden"><PrintButton /></div>
     </main>
   );

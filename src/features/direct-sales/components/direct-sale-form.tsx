@@ -1,5 +1,7 @@
 "use client"
 
+import type { DirectSaleView, DirectSalePartOption } from "@/lib/view-models"
+
 import { refreshQueries } from "@/lib/refresh-queries"
 import { formatDateInput } from "@/lib/date-format"
 import { useState } from "react"
@@ -17,12 +19,12 @@ type Row = { batchId: string; label: string; available: number; quantity: number
 type Errors = { vehicleNumber?: string; customerName?: string; saleDate?: string; items?: string }
 const money = (amount: number) => amount.toFixed(3).replace(/\.?0+$/, "")
 
-export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; onSuccess: () => void }) {
+export function DirectSaleForm({ initialData, onSuccess }: { initialData?: DirectSaleView; onSuccess: () => void }) {
   const queryClient = useQueryClient()
   const [customer, setCustomer] = useState({ vehicleNumber: initialData?.vehicleNumber || "", customerName: initialData?.customerName || "", customerMobile: initialData?.customerMobile || "" })
   const [saleDate, setSaleDate] = useState(() => formatDateInput(initialData?.saleDate || new Date()))
-  const [rows, setRows] = useState<Row[]>(() => initialData?.items?.map((item: any) => ({ batchId: item.batchId, label: `${item.batch.inventory.itemName} — Batch ${item.batch.batchNumber}`, available: item.quantity, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat })) || [])
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">(initialData?.paymentMethod || "CASH")
+  const [rows, setRows] = useState<Row[]>(() => initialData?.items?.map((item) => ({ batchId: item.batchId, label: `${item.batch.inventory.itemName} — Batch ${item.batch.batchNumber}`, available: item.quantity, quantity: item.quantity, purchasePrice: item.purchasePrice, salesPrice: item.salesPrice, vat: item.vat })) || [])
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">((initialData?.paymentMethod || "CASH") as "CASH" | "CARD" | "TRANSFER")
   const [discount, setDiscount] = useState(initialData?.discount || 0)
   const [errors, setErrors] = useState<Errors>({})
   const subtotal = rows.reduce((sum, row) => sum + row.quantity * row.salesPrice, 0)
@@ -44,7 +46,7 @@ export function DirectSaleForm({ initialData, onSuccess }: { initialData?: any; 
   const submit = () => {
     setErrors({}); mutation.mutate()
   }
-  const addPart = (part: any) => setRows(current => [...current, { batchId: part.id, label: `${part.itemName} — Batch ${part.batchNumber}`, available: part.availableQuantity, quantity: 1, purchasePrice: part.purchasePrice, salesPrice: part.sellingPrice, vat: 0 }])
+  const addPart = (part: DirectSalePartOption) => setRows(current => [...current, { batchId: part.id, label: `${part.itemName} — Batch ${part.batchNumber}`, available: part.availableQuantity, quantity: 1, purchasePrice: part.purchasePrice, salesPrice: part.sellingPrice, vat: 0 }])
   return <div className="direct-sale-form space-y-5">
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <CustomerField id="sale-vehicle" label="Vehicle Number" value={customer.vehicleNumber} error={errors.vehicleNumber} onChange={value => { setCustomer({ ...customer, vehicleNumber: value }); setErrors({ ...errors, vehicleNumber: undefined }) }} />
