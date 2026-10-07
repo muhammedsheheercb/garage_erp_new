@@ -479,6 +479,8 @@ model PurchaseCancellation {
   pendingAmount  Float
   cancelledAt    DateTime @default(now())
   cancelledBy    String
+  restoredAt     DateTime?
+  restoredBy     String?
   snapshot       Json
 }
 

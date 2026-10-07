@@ -10,6 +10,7 @@ import { userPaymeterWhere, getDirectPaymeterId } from "@/lib/paymeter"
 import { recalculateJobCardTotals } from "../jobcards/recalculate"
 import { assertPurchasableJobCard, editPurchaseStock } from "./edit-stock"
 import { PurchaseCancellationError, reversePurchase } from "./cancellation"
+import { restoreCancelledPurchase } from "./restoration"
 
 // Purchases write multiple items, stock batches, ledger entries and job card parts.
 // Allow these atomic operations more time than Prisma's five-second default.
@@ -292,7 +293,7 @@ export async function createPurchase(data: PurchaseFormValues) {
 
 export async function getCancelledPurchases() {
   await requirePagePermission("purchases", "view")
-  return prisma.purchaseCancellation.findMany({ orderBy: { cancelledAt: "desc" }, take: 50,
+  return prisma.purchaseCancellation.findMany({ where: { restoredAt: null }, orderBy: { cancelledAt: "desc" }, take: 50,
     select: { id: true, purchaseNumber: true, supplierName: true, grandTotal: true, paidAmount: true,
       pendingAmount: true, cancelledAt: true, cancelledBy: true } })
 }
@@ -306,6 +307,20 @@ export async function cancelPurchase(id: string) {
     if (!(error instanceof PurchaseCancellationError)) console.error("Purchase cancellation failed", error)
     return { success: false as const, error: error instanceof PurchaseCancellationError
       ? error.message : "Unable to cancel the purchase. No changes were saved. Refresh and try again, or check the server log." }
+  }
+  revalidatePath('/', 'layout')
+  return { success: true as const }
+}
+
+export async function restorePurchase(id: string) {
+  try {
+    await requirePagePermission("purchases", "restore")
+    const restoredBy = await getCreatorName()
+    await prisma.$transaction(tx => restoreCancelledPurchase(tx, id, restoredBy), { timeout: 30_000, isolationLevel: "Serializable" })
+  } catch (error) {
+    if (!(error instanceof PurchaseCancellationError)) console.error("Purchase restoration failed", error)
+    return { success: false as const, error: error instanceof PurchaseCancellationError
+      ? error.message : "Unable to restore the purchase. No changes were saved. Refresh and try again, or check the server log." }
   }
   revalidatePath('/', 'layout')
   return { success: true as const }

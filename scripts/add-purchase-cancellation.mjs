@@ -14,7 +14,8 @@ try {
     "cancelledBy" TEXT NOT NULL,
     "snapshot" JSONB NOT NULL
   )`)
-  console.log('Purchase cancellation history table is ready.')
+  await prisma.$executeRawUnsafe('ALTER TABLE "PurchaseCancellation" ADD COLUMN IF NOT EXISTS "restoredAt" TIMESTAMP(3), ADD COLUMN IF NOT EXISTS "restoredBy" TEXT')
+  console.log('Purchase cancellation and restoration history table is ready.')
 } catch (error) {
   console.error(error.message)
   process.exitCode = 1

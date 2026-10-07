@@ -498,6 +498,34 @@ test('cancel permission is explicit, purchase-only, and not inferred from legacy
   assert.ok(!permissions.permissionActionsForPage('inventory').includes('cancel'))
 })
 
+test('restore permission is explicit and purchase-only', () => {
+  const permissions = loadSource('src/lib/permissions.ts')
+  for (const saved of ['["purchases"]', '{"purchases":["view","cancel","delete"]}']) {
+    assert.equal(permissions.canUseModule(permissions.parseModulePermissions(saved), 'purchases', 'restore'), false)
+  }
+  const saved = permissions.parseModulePermissions('{"purchases":["view","restore"],"inventory":["view","restore"]}')
+  assert.equal(permissions.canUseModule(saved, 'purchases', 'restore'), true)
+  assert.equal(permissions.canUseModule(saved, 'inventory', 'restore'), false)
+})
+
+test('purchase restoration checks its permission before accessing the database', async () => {
+  let accessedDatabase = false
+  const actions = loadSource('src/features/purchases/actions.ts', {
+    ...commonMocks,
+    '@/lib/authorization': { ...auth, requirePagePermission: async (page, action) => {
+      assert.equal(page, 'purchases'); assert.equal(action, 'restore')
+      throw new Error('Forbidden')
+    } },
+    '@/lib/prisma': { $transaction: async () => { accessedDatabase = true } },
+  })
+  const originalError = console.error
+  console.error = () => {}
+  try {
+    assert.equal((await actions.restorePurchase('purchase')).success, false)
+    assert.equal(accessedDatabase, false)
+  } finally { console.error = originalError }
+})
+
 test('income, purchase and expense channels reconcile including unclassified entries', async () => {
   let paymentQuery
   const prisma = {

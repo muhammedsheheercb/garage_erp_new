@@ -45,7 +45,8 @@ export function planPurchaseCancellation(purchase: CancellationPurchase) {
 }
 
 export async function reversePurchase(tx: Prisma.TransactionClient, id: string, cancelledBy: string) {
-  if (await tx.purchaseCancellation.findUnique({ where: { id } })) return
+  const previousCancellation = await tx.purchaseCancellation.findUnique({ where: { id } })
+  if (previousCancellation && !previousCancellation.restoredAt) return
   const purchase = await tx.purchase.findUnique({ where: { id }, include: {
     supplier: true, paymentMethod: true, items: { include: { inventory: true } }, purchasePayments: true,
     batches: { include: { directSaleItems: true, jobCardParts: { include: { jobCard: { select: { status: true } } } } } },
@@ -72,12 +73,14 @@ export async function reversePurchase(tx: Prisma.TransactionClient, id: string, 
       }
     }
   }
-  await tx.purchaseCancellation.create({ data: {
+  const archiveData = {
     id, purchaseNumber: purchase.purchaseNumber, supplierName: purchase.supplier.name,
     purchaseDate: purchase.purchaseDate, grandTotal: purchase.grandTotal,
     paidAmount: purchase.paidAmount, pendingAmount: purchase.pendingAmount, cancelledBy,
     snapshot: JSON.parse(JSON.stringify(purchase)) as Prisma.InputJsonValue,
-  } })
+    cancelledAt: new Date(), restoredAt: null, restoredBy: null,
+  }
+  await tx.purchaseCancellation.upsert({ where: { id }, create: archiveData, update: archiveData })
   // Cascades remove purchase items, payments and batches after their job-card links are reversed.
   await tx.purchase.delete({ where: { id } })
   if (purchase.jobCardId && purchase.purchaseType !== "STOCK") await recalculateJobCardTotals(tx, purchase.jobCardId)

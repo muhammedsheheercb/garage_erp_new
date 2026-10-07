@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { randomUUID } from "node:crypto"
 import { PrismaClient } from "@prisma/client"
 import { reversePurchase, PurchaseCancellationError } from "../src/features/purchases/cancellation"
+import { restoreCancelledPurchase } from "../src/features/purchases/restoration"
 
 const prisma = new PrismaClient()
 const rollback = new Error("Cancellation checks complete; roll back fixtures")
@@ -53,7 +54,33 @@ async function main() {
           assert.equal(part.isPending, true)
           assert.equal(part.batchId, null)
           assert.equal(part.inventoryId, inventory.id)
+          await tx.jobCardPart.update({ where: { id: part.id }, data: { quantity: 3 } })
+          await assert.rejects(restoreCancelledPurchase(tx, p.id, "check"), /pending parts have been changed/)
+          assert.equal(await tx.purchase.count({ where: { id: p.id } }), 0)
+          await tx.jobCardPart.update({ where: { id: part.id }, data: { quantity: 2 } })
         }
+        await restoreCancelledPurchase(tx, p.id, "Restoration check")
+        const restored = await tx.purchase.findUniqueOrThrow({ where: { id: p.id }, include: { purchasePayments: true, batches: true, items: true } })
+        assert.equal(restored.grandTotal, 100)
+        assert.equal(restored.paidAmount, 75)
+        assert.equal(restored.pendingAmount, 25)
+        assert.equal(restored.purchasePayments.length, 2)
+        assert.equal(restored.items.length, 1)
+        assert.equal(restored.batches[0].id, p.batches[0].id)
+        assert.equal(restored.batches[0].quantity, 2)
+        assert.equal((await tx.paymeter.findUniqueOrThrow({ where: { id: initial.id } })).spentAmount, 50)
+        assert.equal((await tx.paymeter.findUniqueOrThrow({ where: { id: later.id } })).spentAmount, 25)
+        assert.ok((await tx.purchaseCancellation.findUniqueOrThrow({ where: { id: p.id } })).restoredAt)
+        await restoreCancelledPurchase(tx, p.id, "Repeated restore")
+        assert.equal((await tx.paymeter.findUniqueOrThrow({ where: { id: initial.id } })).spentAmount, 50)
+        assert.equal(await tx.purchasePayment.count({ where: { purchaseId: p.id } }), 2)
+        if (type !== "STOCK") {
+          const restoredPart = await tx.jobCardPart.findFirstOrThrow({ where: { batchId: p.batches[0].id } })
+          assert.equal(restoredPart.isPending, false)
+          assert.equal((await tx.jobCard.findUniqueOrThrow({ where: { id: job.id } })).partsTotal, 120)
+        }
+        await reversePurchase(tx, p.id, "Cancel restored purchase")
+        assert.equal((await tx.purchaseCancellation.findUniqueOrThrow({ where: { id: p.id } })).restoredAt, null)
       }
       const totals = await tx.purchase.aggregate({ where: { supplierId: supplier.id }, _sum: { grandTotal: true, paidAmount: true, pendingAmount: true } })
       assert.equal(totals._sum.grandTotal, null)
@@ -69,11 +96,11 @@ async function main() {
       assert.equal(await tx.purchase.count({ where: { id: blocked.id } }), 1)
       assert.equal(await tx.purchaseCancellation.count({ where: { id: blocked.id } }), 0)
       throw rollback
-    }, { timeout: 60_000, isolationLevel: "Serializable" })
+    }, { timeout: 120_000, isolationLevel: "Serializable" })
   } catch (error) {
     if (error !== rollback) throw error
   }
-  console.log("Cancellation database checks passed; all temporary records rolled back.")
+  console.log("Cancellation and restoration database checks passed; all temporary records rolled back.")
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1 }).finally(() => prisma.$disconnect())

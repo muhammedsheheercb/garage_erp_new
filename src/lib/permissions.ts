@@ -19,12 +19,12 @@ export const PAGE_PERMISSIONS = [
 ] as const
 
 export type PagePermission = (typeof PAGE_PERMISSIONS)[number]["key"]
-export const PERMISSION_ACTIONS = ["view", "create", "edit", "delete", "cancel"] as const
+export const PERMISSION_ACTIONS = ["view", "create", "edit", "delete", "cancel", "restore"] as const
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number]
 export type ModulePermissions = Partial<Record<PagePermission, PermissionAction[]>>
 
 export function permissionActionsForPage(page: PagePermission): readonly PermissionAction[] {
-  return page === "purchases" ? PERMISSION_ACTIONS : PERMISSION_ACTIONS.filter(action => action !== "cancel")
+  return page === "purchases" ? PERMISSION_ACTIONS : PERMISSION_ACTIONS.filter(action => action !== "cancel" && action !== "restore")
 }
 
 export function isPagePermission(value: string): value is PagePermission {

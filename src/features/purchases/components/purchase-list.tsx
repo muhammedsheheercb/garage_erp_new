@@ -6,11 +6,11 @@ import { refreshQueries } from "@/lib/refresh-queries"
 import { usePermissions } from "@/lib/use-permissions"
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { getPurchases, deletePurchase, cancelPurchase, getCancelledPurchases } from "../actions"
+import { getPurchases, deletePurchase, cancelPurchase, getCancelledPurchases, restorePurchase } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Trash, Eye, Edit, ChevronLeft, ChevronRight, Printer, Download, Ban } from "lucide-react"
+import { Search, Plus, Trash, Eye, Edit, ChevronLeft, ChevronRight, Printer, Download, Ban, RotateCcw } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { PurchaseForm } from "./purchase-form"
@@ -31,6 +31,7 @@ export function PurchaseList() {
   const { t } = useTranslation()
   const { can } = usePermissions()
   const canCancelPurchase = can('purchases', 'cancel')
+  const canRestorePurchase = can('purchases', 'restore')
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -96,6 +97,26 @@ export function PurchaseList() {
     onError: (error: Error) => toast.error(error.message),
   })
   const isPurchaseLocked = (id: string) => cancelledIds.has(id) || (cancelMutation.isPending && cancelMutation.variables === id)
+  const restoreMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await restorePurchase(id)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onSuccess: async (_result, id) => {
+      setCancelledIds(previous => { const next = new Set(previous); next.delete(id); return next })
+      await refreshQueries(queryClient, [
+        'purchases', 'cancelled-purchases', 'inventory', 'paymeters', 'supplier', 'suppliers',
+        'report-totals', 'report-details', 'report-chart', 'dashboard', 'dashboard-stats',
+        'jobcards', 'jobcard', 'vehicles', 'invoices', 'payments', 'purchase-dropdowns',
+        'direct-sale-stock', 'parts-list', 'pending-jobcards', 'pending-jobcards-dropdown',
+        'invoice-dropdowns', 'jobcards-dropdowns',
+      ])
+      router.refresh()
+      toast.success('Purchase restored with its stock, payments and outstanding balance.')
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
 
   return (
     <div className="space-y-4">
@@ -207,7 +228,7 @@ export function PurchaseList() {
                             and its {p.pendingAmount} OMR outstanding balance. Stock and vehicle costs will
                             be updated. Purchased pending parts will return to pending status.
                             This corrects the records; it does not refund money from the supplier.
-                            The purchase will remain in cancellation history and cannot be restored.
+                            The purchase will remain in cancellation history. Restoring it requires Restore Purchase permission.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -273,6 +294,27 @@ export function PurchaseList() {
                 <TableCell>{p.paidAmount} OMR</TableCell><TableCell>{p.pendingAmount} OMR</TableCell>
                 <TableCell>{formatDisplayDate(p.cancelledAt)}</TableCell><TableCell>{p.cancelledBy}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
+                  {canRestorePurchase && <AlertDialog>
+                    <AlertDialogTrigger render={
+                      <Button variant="ghost" size="icon" disabled={restoreMutation.isPending} title="Restore Purchase" aria-label="Restore Purchase">
+                        <RotateCcw className="h-4 w-4 text-primary" />
+                      </Button>
+                    } />
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Restore {p.purchaseNumber}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Restore the original {p.grandTotal} OMR purchase, {p.paidAmount} OMR in recorded payments,
+                          and {p.pendingAmount} OMR outstanding balance. Its stock or vehicle parts will also return.
+                          This restores recorded payments; do not pay the supplier again.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Cancelled</AlertDialogCancel>
+                        <AlertDialogAction disabled={restoreMutation.isPending} onClick={() => restoreMutation.mutate(p.id)}>Restore Purchase</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>}
                   {[{ Icon: Printer, label: 'Print' }, { Icon: Eye, label: 'View' }, { Icon: Edit, label: 'Edit' }, { Icon: Ban, label: 'Cancel Purchase' }, { Icon: Trash, label: 'Delete' }].filter(({ Icon }) => Icon !== Ban || canCancelPurchase).map(({ Icon, label }) => (
                     <Button key={label} variant="ghost" size="icon" disabled aria-label={label} title={`${label} unavailable: purchase cancelled`}>
                       <Icon className="h-4 w-4" />
