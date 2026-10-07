@@ -4,7 +4,7 @@ Next.js web application and Electron desktop wrapper, sharing a PostgreSQL datab
 
 ## Development and verification
 
-Use Node.js 22 and pnpm 10.25.0. Install with `pnpm install --frozen-lockfile`, copy `.env.example` to `.env`, configure the database and session secret, and run `pnpm prisma generate` followed by `pnpm dev`.
+Use Node.js 22 and pnpm 10.25.0. Install with `pnpm install --frozen-lockfile`, copy `.env.example` to `.env`,, configure the database and session secret, and run `pnpm prisma generate` followed by `pnpm dev`.
 
 - `pnpm lint`: repository lint checks; generated build output is excluded.
 - `pnpm typecheck`: strict TypeScript checks. Run `pnpm exec next typegen` first in a fresh checkout to generate route types.
