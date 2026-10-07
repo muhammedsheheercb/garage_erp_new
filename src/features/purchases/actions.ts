@@ -9,6 +9,7 @@ import { getCreatorName, requirePagePermission } from "@/lib/authorization"
 import { userPaymeterWhere, getDirectPaymeterId } from "@/lib/paymeter"
 import { recalculateJobCardTotals } from "../jobcards/recalculate"
 import { assertPurchasableJobCard, editPurchaseStock } from "./edit-stock"
+import { PurchaseCancellationError, reversePurchase } from "./cancellation"
 
 // Purchases write multiple items, stock batches, ledger entries and job card parts.
 // Allow these atomic operations more time than Prisma's five-second default.
@@ -129,9 +130,11 @@ export async function getPurchaseDropdownData() {
 
 export async function getNextPurchaseNumber() {
   await requirePagePermission("purchases", "view")
-  const latestItem = await prisma.purchase.findFirst({
-    orderBy: { purchaseNumber: 'desc' }
-  })
+  const latest = await Promise.all([
+    prisma.purchase.findFirst({ orderBy: { purchaseNumber: 'desc' }, select: { purchaseNumber: true } }),
+    prisma.purchaseCancellation.findFirst({ orderBy: { purchaseNumber: 'desc' }, select: { purchaseNumber: true } }),
+  ])
+  const latestItem = latest.filter(item => item !== null).sort((a, b) => b.purchaseNumber.localeCompare(a.purchaseNumber))[0]
   
   let nextNum = 1
   if (latestItem && latestItem.purchaseNumber) {
@@ -285,6 +288,27 @@ export async function createPurchase(data: PurchaseFormValues) {
   revalidatePath('/reports')
   revalidatePath('/')
   return result
+}
+
+export async function getCancelledPurchases() {
+  await requirePagePermission("purchases", "view")
+  return prisma.purchaseCancellation.findMany({ orderBy: { cancelledAt: "desc" }, take: 50,
+    select: { id: true, purchaseNumber: true, supplierName: true, grandTotal: true, paidAmount: true,
+      pendingAmount: true, cancelledAt: true, cancelledBy: true } })
+}
+
+export async function cancelPurchase(id: string) {
+  try {
+    await requirePagePermission("purchases", "delete")
+    const cancelledBy = await getCreatorName()
+    await prisma.$transaction(tx => reversePurchase(tx, id, cancelledBy), { timeout: 30_000, isolationLevel: "Serializable" })
+  } catch (error) {
+    if (!(error instanceof PurchaseCancellationError)) console.error("Purchase cancellation failed", error)
+    return { success: false as const, error: error instanceof PurchaseCancellationError
+      ? error.message : "Unable to cancel the purchase. No changes were saved. Refresh and try again, or check the server log." }
+  }
+  revalidatePath('/', 'layout')
+  return { success: true as const }
 }
 
 export async function deletePurchase(id: string) {

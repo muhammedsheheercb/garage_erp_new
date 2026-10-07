@@ -17,6 +17,12 @@ Use Node.js 22 and pnpm 10.25.0. Install with `pnpm install --frozen-lockfile`, 
 
 Initialize a new admin only through the reviewed deployment setup. Seeding requires `INITIAL_ADMIN_EMAIL` and a password of at least 12 characters in `INITIAL_ADMIN_PASSWORD`; it never resets an existing admin or deletes other admins. No credentials belong in source control or installers. Repair scripts in `scripts/` can change live financial data and are manual tools, not startup tasks.
 
+## Purchase cancellation
+
+Before deploying this feature to an existing database, run `pnpm db:add-purchase-cancellation`, then rebuild. Purchases → Cancel Purchase archives the original purchase and reverses its active purchase, payment, outstanding balance and stock records in one transaction. Vehicle parts are removed and job-card/invoice totals recalculated; purchased pending parts return to pending status. The Cancelled Purchases button opens a modal showing the latest 50 cancellations, original totals, reversed payments, cleared balances and cancellation details. All purchase action buttons in that history are disabled. Cancelled purchase numbers remain reserved.
+
+Cancellation corrects recorded entries; it does not return real money from a supplier. Stock already sold, consumed or reserved elsewhere, completed job cards and reimbursed payments block cancellation with a readable message. Historical reimbursement entries do not identify their purchase, so they cannot safely be reversed automatically. `pnpm test:purchase-cancellation-db` verifies stock, vehicle and pending-parts reversals against the configured database using temporary fixtures that always roll back. Take a new database backup after upgrading: snapshots from before this schema change do not match the new backup schema.
+
 ## Database backups
 
 Settings database backups use PostgreSQL snapshots of all application tables, including accounts and settings. Administrators can create and restore backups from Settings → Database Management. Restore validates the schema, saves a safety snapshot, and replaces the application data in one transaction. Backups from the previous SQLite implementation are not compatible.

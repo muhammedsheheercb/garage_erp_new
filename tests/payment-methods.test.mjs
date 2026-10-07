@@ -446,7 +446,7 @@ test('purchasing pending parts updates the job card total in the same transactio
   }
   const actions = loadSource('src/features/purchases/actions.ts', {
     ...commonMocks,
-    '@/lib/prisma': { purchase: { findFirst: async () => null }, $transaction: async callback => callback(tx) },
+    '@/lib/prisma': { purchase: { findFirst: async () => null }, purchaseCancellation: { findFirst: async () => null }, $transaction: async callback => callback(tx) },
   })
   await actions.createPurchase({ purchaseDate: '2026-01-01', supplierId: 'supplier',
     purchaseType: 'PENDING_PARTS', jobCardId: 'job', paymentSource: 'PAYMETER',
@@ -454,6 +454,17 @@ test('purchasing pending parts updates the job card total in the same transactio
     items: [{ inventoryId: 'item', quantity: 2, purchasePrice: 10, sellingPrice: 30, taxRate: 0 }],
   })
   assert.equal(total, 150)
+})
+
+test('new purchases never reuse a cancelled purchase number', async () => {
+  const actions = loadSource('src/features/purchases/actions.ts', {
+    ...commonMocks,
+    '@/lib/prisma': {
+      purchase: { findFirst: async () => ({ purchaseNumber: 'PUR-000009' }) },
+      purchaseCancellation: { findFirst: async () => ({ purchaseNumber: 'PUR-000010' }) },
+    },
+  })
+  assert.equal(await actions.getNextPurchaseNumber(), 'PUR-000011')
 })
 
 test('income, purchase and expense channels reconcile including unclassified entries', async () => {

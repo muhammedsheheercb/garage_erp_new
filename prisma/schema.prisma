@@ -468,6 +468,20 @@ model Purchase {
   @@index([purchaseDate])
 }
 
+// Cancelled purchases are archived separately so active financial queries exclude them.
+model PurchaseCancellation {
+  id             String   @id // Original purchase ID also prevents duplicate cancellation.
+  purchaseNumber String   @unique
+  supplierName   String
+  purchaseDate   DateTime
+  grandTotal     Float
+  paidAmount     Float
+  pendingAmount  Float
+  cancelledAt    DateTime @default(now())
+  cancelledBy    String
+  snapshot       Json
+}
+
 model PurchaseItem {
   id            String    @id @default(uuid())
   purchaseId    String

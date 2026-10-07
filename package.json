@@ -14,7 +14,9 @@
     "electron:prepare": "node scripts/prepare-electron.cjs",
     "electron:build": "pnpm build && pnpm electron:prepare && electron-builder --win",
     "typecheck": "tsc --noEmit",
-    "test": "node tests/payment-methods.test.mjs && node --import tsx --test src/features/settings/*.test.ts",
+    "test": "node tests/payment-methods.test.mjs && node --import tsx --test src/features/settings/*.test.ts src/features/purchases/*.test.ts",
+    "db:add-purchase-cancellation": "node --env-file=.env scripts/add-purchase-cancellation.mjs",
+    "test:purchase-cancellation-db": "node --env-file=.env --import tsx scripts/purchase-cancellation-check.ts",
     "test:unit": "node tests/payment-methods.test.mjs",
     "test:backup": "node --import tsx --test src/features/settings/*.test.ts",
     "test:smoke": "node scripts/production-smoke.mjs"

@@ -5,11 +5,11 @@ import type { PurchaseView } from "@/lib/view-models"
 import { refreshQueries } from "@/lib/refresh-queries"
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { getPurchases, deletePurchase } from "../actions"
+import { getPurchases, deletePurchase, cancelPurchase, getCancelledPurchases } from "../actions"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Trash, Eye, Edit, ChevronLeft, ChevronRight, Printer, Download } from "lucide-react"
+import { Search, Plus, Trash, Eye, Edit, ChevronLeft, ChevronRight, Printer, Download, Ban } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { PurchaseForm } from "./purchase-form"
@@ -31,8 +31,10 @@ export function PurchaseList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isCancelledOpen, setIsCancelledOpen] = useState(false)
   const [viewingPurchase, setViewingPurchase] = useState<PurchaseView | null>(null)
   const [editingPurchase, setEditingPurchase] = useState<PurchaseView | null>(null)
+  const [cancelledIds, setCancelledIds] = useState<Set<string>>(() => new Set())
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (paramFrom) {
       return {
@@ -65,6 +67,33 @@ export function PurchaseList() {
     }
   })
 
+  const { data: cancelledPurchases = [], isLoading: isCancelledLoading, isError: isCancelledError } = useQuery({
+    queryKey: ['cancelled-purchases'], queryFn: getCancelledPurchases,
+  })
+  const cancelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await cancelPurchase(id)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onSuccess: async (_result, id) => {
+      setCancelledIds(previous => new Set(previous).add(id))
+      setViewingPurchase(null)
+      setEditingPurchase(null)
+      await refreshQueries(queryClient, [
+        'purchases', 'cancelled-purchases', 'inventory', 'paymeters', 'supplier', 'suppliers',
+        'report-totals', 'report-details', 'report-chart', 'dashboard', 'dashboard-stats',
+        'jobcards', 'jobcard', 'vehicles', 'invoices', 'payments', 'purchase-dropdowns',
+        'direct-sale-stock', 'parts-list', 'pending-jobcards', 'pending-jobcards-dropdown',
+        'invoice-dropdowns', 'jobcards-dropdowns',
+      ])
+      router.refresh()
+      toast.success('Purchase cancelled. Stock, linked payments and balances were reversed.')
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+  const isPurchaseLocked = (id: string) => cancelledIds.has(id) || (cancelMutation.isPending && cancelMutation.variables === id)
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
@@ -85,6 +114,10 @@ export function PurchaseList() {
           date={dateRange} 
           setDate={(newDate) => { setDateRange(newDate); setPage(1); }} 
         />
+
+        <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCancelledOpen(true)}>
+          <Ban className="mr-2 h-4 w-4" /> Cancelled Purchases
+        </Button>
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger render={
@@ -148,18 +181,43 @@ export function PurchaseList() {
                   </TableCell>
                   <TableCell>{p.paymentMethod?.name || '-'}</TableCell>
                   <TableCell className="text-right space-x-1">
-                    <Button variant="ghost" size="icon" onClick={() => router.push(`/purchases/${p.id}/print`)} title={t.purchases.downloadInvoice || "Download Purchase Invoice"}>
+                    <Button variant="ghost" size="icon" disabled={isPurchaseLocked(p.id)} onClick={() => router.push(`/purchases/${p.id}/print`)} title={t.purchases.downloadInvoice || "Download Purchase Invoice"}>
                       <Printer className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setViewingPurchase(p)} title={t.purchases.viewDetails}>
+                    <Button variant="ghost" size="icon" disabled={isPurchaseLocked(p.id)} onClick={() => setViewingPurchase(p)} title={t.purchases.viewDetails}>
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setEditingPurchase(p)} title={t.common.edit}>
+                    <Button variant="ghost" size="icon" disabled={isPurchaseLocked(p.id)} onClick={() => setEditingPurchase(p)} title={t.common.edit}>
                       <Edit className="h-4 w-4 text-muted-foreground" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger render={
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title={t.purchases.deletePurchase}>
+                        <Button variant="ghost" size="icon" disabled={isPurchaseLocked(p.id) || cancelMutation.isPending || deleteMutation.isPending} className="text-destructive hover:text-destructive" title="Cancel Purchase" aria-label="Cancel Purchase">
+                          <Ban className="h-4 w-4" />
+                        </Button>
+                      } />
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Cancel {p.purchaseNumber}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Reverse this {p.grandTotal} OMR purchase, its {p.paidAmount} OMR in linked payments,
+                            and its {p.pendingAmount} OMR outstanding balance. Stock and vehicle costs will
+                            be updated. Purchased pending parts will return to pending status.
+                            This corrects the records; it does not refund money from the supplier.
+                            The purchase will remain in cancellation history and cannot be restored.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep Purchase</AlertDialogCancel>
+                          <AlertDialogAction disabled={isPurchaseLocked(p.id) || cancelMutation.isPending} onClick={() => cancelMutation.mutate(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Cancel Purchase
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <AlertDialog>
+                      <AlertDialogTrigger render={
+                        <Button variant="ghost" size="icon" disabled={isPurchaseLocked(p.id)} className="text-destructive hover:text-destructive" title={t.purchases.deletePurchase}>
                           <Trash className="h-4 w-4" />
                         </Button>
                       } />
@@ -172,7 +230,7 @@ export function PurchaseList() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMutation.mutate(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          <AlertDialogAction disabled={isPurchaseLocked(p.id)} onClick={() => deleteMutation.mutate(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                             {t.common.delete}
                           </AlertDialogAction>
                         </AlertDialogFooter>
@@ -185,6 +243,44 @@ export function PurchaseList() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={isCancelledOpen} onOpenChange={setIsCancelledOpen}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-h-[90vh] overflow-y-auto sm:max-w-7xl">
+          <DialogHeader>
+            <DialogTitle>Cancelled Purchases</DialogTitle>
+          </DialogHeader>
+          <p className="my-3 text-sm text-muted-foreground">These original amounts were reversed and are excluded from active balances and reports.</p>
+          <p className="text-sm text-muted-foreground">Showing the latest 50 cancellations.</p>
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Purchase</TableHead><TableHead>Supplier</TableHead><TableHead>Original total</TableHead>
+              <TableHead>Paid reversed</TableHead><TableHead>Balance cleared</TableHead><TableHead>Cancelled on</TableHead><TableHead>Cancelled by</TableHead><TableHead className="text-right">{t.common.actions}</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {isCancelledLoading ? (
+                <TableRow><TableCell colSpan={8} className="h-24 text-center">{t.common.loading}</TableCell></TableRow>
+              ) : isCancelledError ? (
+                <TableRow><TableCell colSpan={8} className="h-24 text-center text-destructive">Unable to load cancelled purchases. Please try again.</TableCell></TableRow>
+              ) : cancelledPurchases.length === 0 ? (
+                <TableRow><TableCell colSpan={8} className="h-24 text-center">No cancelled purchases.</TableCell></TableRow>
+              ) : cancelledPurchases.map(p => (
+              <TableRow key={p.id}>
+                <TableCell>{p.purchaseNumber} <span className="text-xs text-destructive">CANCELLED</span></TableCell>
+                <TableCell>{p.supplierName}</TableCell><TableCell>{p.grandTotal} OMR</TableCell>
+                <TableCell>{p.paidAmount} OMR</TableCell><TableCell>{p.pendingAmount} OMR</TableCell>
+                <TableCell>{formatDisplayDate(p.cancelledAt)}</TableCell><TableCell>{p.cancelledBy}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  {[{ Icon: Printer, label: 'Print' }, { Icon: Eye, label: 'View' }, { Icon: Edit, label: 'Edit' }, { Icon: Ban, label: 'Cancel Purchase' }, { Icon: Trash, label: 'Delete' }].map(({ Icon, label }) => (
+                    <Button key={label} variant="ghost" size="icon" disabled aria-label={label} title={`${label} unavailable: purchase cancelled`}>
+                      <Icon className="h-4 w-4" />
+                    </Button>
+                  ))}
+                </TableCell>
+              </TableRow>
+            ))}</TableBody>
+          </Table>
+        </DialogContent>
+      </Dialog>
 
       {/* Pagination controls */}
       {data && data.meta.totalPages > 1 && (
