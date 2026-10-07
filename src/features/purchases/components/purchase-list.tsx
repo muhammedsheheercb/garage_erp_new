@@ -3,6 +3,7 @@
 import type { PurchaseView } from "@/lib/view-models"
 
 import { refreshQueries } from "@/lib/refresh-queries"
+import { usePermissions } from "@/lib/use-permissions"
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getPurchases, deletePurchase, cancelPurchase, getCancelledPurchases } from "../actions"
@@ -28,6 +29,8 @@ export function PurchaseList() {
   const paramTo = searchParams.get("to")
   const queryClient = useQueryClient()
   const { t } = useTranslation()
+  const { can } = usePermissions()
+  const canCancelPurchase = can('purchases', 'cancel')
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -190,7 +193,7 @@ export function PurchaseList() {
                     <Button variant="ghost" size="icon" disabled={isPurchaseLocked(p.id)} onClick={() => setEditingPurchase(p)} title={t.common.edit}>
                       <Edit className="h-4 w-4 text-muted-foreground" />
                     </Button>
-                    <AlertDialog>
+                    {canCancelPurchase && <AlertDialog>
                       <AlertDialogTrigger render={
                         <Button variant="ghost" size="icon" disabled={isPurchaseLocked(p.id) || cancelMutation.isPending || deleteMutation.isPending} className="text-destructive hover:text-destructive" title="Cancel Purchase" aria-label="Cancel Purchase">
                           <Ban className="h-4 w-4" />
@@ -214,7 +217,7 @@ export function PurchaseList() {
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
-                    </AlertDialog>
+                    </AlertDialog>}
                     <AlertDialog>
                       <AlertDialogTrigger render={
                         <Button variant="ghost" size="icon" disabled={isPurchaseLocked(p.id)} className="text-destructive hover:text-destructive" title={t.purchases.deletePurchase}>
@@ -270,7 +273,7 @@ export function PurchaseList() {
                 <TableCell>{p.paidAmount} OMR</TableCell><TableCell>{p.pendingAmount} OMR</TableCell>
                 <TableCell>{formatDisplayDate(p.cancelledAt)}</TableCell><TableCell>{p.cancelledBy}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
-                  {[{ Icon: Printer, label: 'Print' }, { Icon: Eye, label: 'View' }, { Icon: Edit, label: 'Edit' }, { Icon: Ban, label: 'Cancel Purchase' }, { Icon: Trash, label: 'Delete' }].map(({ Icon, label }) => (
+                  {[{ Icon: Printer, label: 'Print' }, { Icon: Eye, label: 'View' }, { Icon: Edit, label: 'Edit' }, { Icon: Ban, label: 'Cancel Purchase' }, { Icon: Trash, label: 'Delete' }].filter(({ Icon }) => Icon !== Ban || canCancelPurchase).map(({ Icon, label }) => (
                     <Button key={label} variant="ghost" size="icon" disabled aria-label={label} title={`${label} unavailable: purchase cancelled`}>
                       <Icon className="h-4 w-4" />
                     </Button>

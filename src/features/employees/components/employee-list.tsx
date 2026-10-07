@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createEmployee, deleteEmployee, getEmployees, setEmployeeActive, updateEmployee } from "../actions"
-import { PAGE_PERMISSIONS, PERMISSION_ACTIONS, type ModulePermissions, type PagePermission, type PermissionAction } from "@/lib/permissions"
+import { PAGE_PERMISSIONS, permissionActionsForPage, parseModulePermissions, type ModulePermissions, type PagePermission, type PermissionAction } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,10 +21,7 @@ type Employee = { id: string; username: string | null; permissions: string; isAc
 type FormErrors = { username?: string; password?: string; permissions?: string }
 
 function readPermissions(value?: string): ModulePermissions {
-  try {
-    const parsed: unknown = value ? JSON.parse(value) : {}
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as ModulePermissions : {}
-  } catch { return {} }
+  return value ? parseModulePermissions(value) : {}
 }
 
 function EmployeeForm({ employee, onDone }: { employee?: Employee; onDone: () => void }) {
@@ -53,7 +50,8 @@ function EmployeeForm({ employee, onDone }: { employee?: Employee; onDone: () =>
   })
   const toggleAllPermissions = (page: PagePermission) => setPermissions((current) => {
     const actions = current[page] ?? []
-    return { ...current, [page]: actions.length === PERMISSION_ACTIONS.length ? [] : [...PERMISSION_ACTIONS] }
+    const available = permissionActionsForPage(page)
+    return { ...current, [page]: available.every(action => actions.includes(action)) ? [] : [...available] }
   })
   const validate = () => {
     const nextErrors: FormErrors = {}
@@ -69,7 +67,7 @@ function EmployeeForm({ employee, onDone }: { employee?: Employee; onDone: () =>
   return <form className="space-y-5" noValidate onSubmit={(event) => { event.preventDefault(); if (validate()) mutation.mutate() }}>
     <div className="space-y-2"><Label htmlFor="employee-username">Login username</Label><Input id="employee-username" value={username} onChange={(event) => { setUsername(event.target.value.toLowerCase().replace(/\s/g, '')); setErrors((current) => ({ ...current, username: undefined })) }} placeholder="e.g. john.m" minLength={2} aria-invalid={Boolean(errors.username)} required />{errors.username ? <p className="text-sm text-destructive">{errors.username}</p> : <p className="text-xs text-muted-foreground">At least 2 characters. Spaces are not allowed.</p>}</div>
     <div className="space-y-2"><Label htmlFor="employee-password">{employee ? "New password (optional)" : "Password"}</Label><div className="relative"><Input id="employee-password" type={showPassword ? "text" : "password"} minLength={6} value={password} onChange={(event) => { setPassword(event.target.value); setErrors((current) => ({ ...current, password: undefined })) }} aria-invalid={Boolean(errors.password)} required={!employee} className="pr-10" /><Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button></div>{errors.password ? <p className="text-sm text-destructive">{errors.password}</p> : employee && <p className="text-xs text-muted-foreground">Leave blank to keep the current password.</p>}</div>
-    <fieldset className="space-y-3"><legend className="text-base font-semibold">Module permissions</legend><p className="text-sm text-muted-foreground">Choose what this user can do in each module.</p><div className="space-y-2">{PAGE_PERMISSIONS.map((module) => { const selected = permissions[module.key] ?? []; const allSelected = selected.length === PERMISSION_ACTIONS.length; return <div key={module.key} className="rounded-lg border bg-muted/30 px-3 py-3 sm:flex sm:items-center sm:justify-between"><span className="font-medium">{module.label}</span><div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 sm:mt-0"><label className="flex items-center gap-1.5 text-sm font-medium"><input type="checkbox" checked={allSelected} onChange={() => { toggleAllPermissions(module.key); setErrors((current) => ({ ...current, permissions: undefined })) }} />All</label>{PERMISSION_ACTIONS.map((action) => <label key={action} className="flex items-center gap-1.5 text-sm capitalize"><input type="checkbox" checked={selected.includes(action)} onChange={() => { togglePermission(module.key, action); setErrors((current) => ({ ...current, permissions: undefined })) }} />{action}</label>)}</div></div> })}</div>{errors.permissions && <p className="text-sm text-destructive">{errors.permissions}</p>}</fieldset>
+    <fieldset className="space-y-3"><legend className="text-base font-semibold">Module permissions</legend><p className="text-sm text-muted-foreground">Choose what this user can do in each module.</p><div className="space-y-2">{PAGE_PERMISSIONS.map((module) => { const selected = permissions[module.key] ?? []; const available = permissionActionsForPage(module.key); const allSelected = available.every(action => selected.includes(action)); return <div key={module.key} className="rounded-lg border bg-muted/30 px-3 py-3 sm:flex sm:items-center sm:justify-between"><span className="font-medium">{module.label}</span><div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 sm:mt-0"><label className="flex items-center gap-1.5 text-sm font-medium"><input type="checkbox" checked={allSelected} onChange={() => { toggleAllPermissions(module.key); setErrors((current) => ({ ...current, permissions: undefined })) }} />All</label>{available.map((action) => <label key={action} className="flex items-center gap-1.5 text-sm capitalize"><input type="checkbox" checked={selected.includes(action)} onChange={() => { togglePermission(module.key, action); setErrors((current) => ({ ...current, permissions: undefined })) }} />{action === "cancel" ? "Cancel Purchase" : action}</label>)}</div></div> })}</div>{errors.permissions && <p className="text-sm text-destructive">{errors.permissions}</p>}</fieldset>
     <Button type="submit" disabled={mutation.isPending} className="w-full">{mutation.isPending ? "Saving…" : employee ? "Save user" : "Create user"}</Button>
   </form>
 }

@@ -467,6 +467,37 @@ test('new purchases never reuse a cancelled purchase number', async () => {
   assert.equal(await actions.getNextPurchaseNumber(), 'PUR-000011')
 })
 
+test('purchase cancellation requires its separate permission before accessing the database', async () => {
+  let accessedDatabase = false
+  const actions = loadSource('src/features/purchases/actions.ts', {
+    ...commonMocks,
+    '@/lib/authorization': { ...auth, requirePagePermission: async (page, action) => {
+      assert.equal(page, 'purchases')
+      assert.equal(action, 'cancel')
+      throw new Error('Forbidden')
+    } },
+    '@/lib/prisma': { $transaction: async () => { accessedDatabase = true } },
+  })
+  const originalError = console.error
+  console.error = () => {}
+  try {
+    assert.equal((await actions.cancelPurchase('purchase')).success, false)
+    assert.equal(accessedDatabase, false)
+  } finally { console.error = originalError }
+})
+
+test('cancel permission is explicit, purchase-only, and not inferred from legacy full access', () => {
+  const permissions = loadSource('src/lib/permissions.ts')
+  for (const saved of ['["purchases"]', '{"purchases":["view","create","edit","delete"]}']) {
+    assert.equal(permissions.canUseModule(permissions.parseModulePermissions(saved), 'purchases', 'cancel'), false)
+  }
+  const saved = permissions.parseModulePermissions('{"purchases":["view","cancel"],"inventory":["view","cancel"]}')
+  assert.equal(permissions.canUseModule(saved, 'purchases', 'cancel'), true)
+  assert.equal(permissions.canUseModule(saved, 'inventory', 'cancel'), false)
+  assert.ok(permissions.permissionActionsForPage('purchases').includes('cancel'))
+  assert.ok(!permissions.permissionActionsForPage('inventory').includes('cancel'))
+})
+
 test('income, purchase and expense channels reconcile including unclassified entries', async () => {
   let paymentQuery
   const prisma = {

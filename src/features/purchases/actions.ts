@@ -299,7 +299,7 @@ export async function getCancelledPurchases() {
 
 export async function cancelPurchase(id: string) {
   try {
-    await requirePagePermission("purchases", "delete")
+    await requirePagePermission("purchases", "cancel")
     const cancelledBy = await getCreatorName()
     await prisma.$transaction(tx => reversePurchase(tx, id, cancelledBy), { timeout: 30_000, isolationLevel: "Serializable" })
   } catch (error) {

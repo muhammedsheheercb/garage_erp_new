@@ -3,14 +3,14 @@
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/authorization"
-import { isPagePermission, PERMISSION_ACTIONS, type ModulePermissions } from "@/lib/permissions"
+import { isPagePermission, PERMISSION_ACTIONS, permissionActionsForPage, type ModulePermissions } from "@/lib/permissions"
 import { Prisma } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 const employeeBaseSchema = z.object({
   username: z.string().trim().toLowerCase().min(2, "Username must be at least 2 characters").max(50).regex(/^[a-z0-9._-]+$/, "Username cannot contain spaces; use only letters, numbers, dots, hyphens, or underscores"),
-  permissions: z.record(z.string(), z.array(z.enum(PERMISSION_ACTIONS))).refine((value) => Object.keys(value).every(isPagePermission), "Invalid module permission").refine((value) => Object.values(value).some((actions) => actions.length > 0), "Select at least one permission"),
+  permissions: z.record(z.string(), z.array(z.enum(PERMISSION_ACTIONS))).refine((value) => Object.entries(value).every(([page, actions]) => isPagePermission(page) && actions.every(action => permissionActionsForPage(page).includes(action))), "Invalid module permission").refine((value) => Object.values(value).some((actions) => actions.length > 0), "Select at least one permission"),
 })
 
 const createEmployeeSchema = employeeBaseSchema.extend({

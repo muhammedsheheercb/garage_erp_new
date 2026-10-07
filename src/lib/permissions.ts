@@ -19,9 +19,13 @@ export const PAGE_PERMISSIONS = [
 ] as const
 
 export type PagePermission = (typeof PAGE_PERMISSIONS)[number]["key"]
-export const PERMISSION_ACTIONS = ["view", "create", "edit", "delete"] as const
+export const PERMISSION_ACTIONS = ["view", "create", "edit", "delete", "cancel"] as const
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number]
 export type ModulePermissions = Partial<Record<PagePermission, PermissionAction[]>>
+
+export function permissionActionsForPage(page: PagePermission): readonly PermissionAction[] {
+  return page === "purchases" ? PERMISSION_ACTIONS : PERMISSION_ACTIONS.filter(action => action !== "cancel")
+}
 
 export function isPagePermission(value: string): value is PagePermission {
   return PAGE_PERMISSIONS.some((permission) => permission.key === value)
@@ -41,7 +45,7 @@ export function parseModulePermissions(value: string): ModulePermissions {
     if (!parsed || typeof parsed !== "object") return {}
     return Object.fromEntries(Object.entries(parsed).flatMap(([page, actions]) =>
       isPagePermission(page) && Array.isArray(actions)
-        ? [[page, actions.filter((action): action is PermissionAction => typeof action === "string" && (PERMISSION_ACTIONS as readonly string[]).includes(action))]]
+        ? [[page, actions.filter((action): action is PermissionAction => typeof action === "string" && (permissionActionsForPage(page) as readonly string[]).includes(action))]]
         : []
     )) as ModulePermissions
   } catch {
