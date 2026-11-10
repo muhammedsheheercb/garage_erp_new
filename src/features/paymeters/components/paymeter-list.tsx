@@ -80,6 +80,16 @@ export function PaymeterList() {
   })
   const paymeters = paymeterResult?.data ?? []
 
+  // Monetary values are stored as floating-point numbers. Hide tiny residuals
+  // caused by decimal arithmetic, while preserving genuine balances.
+  const formatSpentAmount = (amount: number | null | undefined) => {
+    const normalizedAmount = Math.abs(amount ?? 0) < 0.000001 ? 0 : amount ?? 0
+    return new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3,
+    }).format(normalizedAmount)
+  }
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deletePaymeter(id),
     onSuccess: (result) => {
@@ -185,9 +195,9 @@ export function PaymeterList() {
                 <TableRow key={pm.id}>
                   <TableCell className="font-medium">{pm.name}</TableCell>
                   <TableCell>
-                    {((fromDateStr || toDateStr)
-                      ? pm.filteredSpentAmount || 0
-                      : pm.spentAmount || 0)} OMR
+                    {formatSpentAmount((fromDateStr || toDateStr)
+                      ? pm.filteredSpentAmount
+                      : pm.spentAmount)} OMR
                   </TableCell>
                   <TableCell className="text-right space-x-2">
 
