@@ -394,7 +394,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   disabled={Boolean(quotationId || initialData?.quotation)}
                   onFocus={(event) => {
                     setCustomerSearch("");
-                    setIsCustomerPickerOpen(!initialData?.id);
+                    setIsCustomerPickerOpen(true);
                     updateCustomerPickerPosition(event.currentTarget);
                   }}
                   onBlur={() => window.setTimeout(() => {
@@ -403,10 +403,10 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   }, 150)}
                   onChange={(event) => {
                     setCustomerSearch(event.target.value);
-                    setChosenCustomer(null);
-                    setValue("customerId", "");
-                    setValue("vehicleId", "");
-                    setVehicleSearch("");
+                    if (event.target.value.trim()) {
+                      setChosenCustomer(null);
+                      setValue("customerId", "");
+                    }
                     setIsCustomerPickerOpen(true);
                     updateCustomerPickerPosition(event.currentTarget);
                   }}
@@ -422,8 +422,6 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                       setCustomerSearch("");
                       setChosenCustomer(null);
                       setValue("customerId", "");
-                      setValue("vehicleId", "");
-                      setVehicleSearch("");
                       setIsCustomerPickerOpen(!initialData?.id);
                       if (input) updateCustomerPickerPosition(input);
                     }}
@@ -431,7 +429,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                     <X className="h-4 w-4" />
                   </button>
                 )}
-                {isCustomerPickerOpen && (customerSearch.trim() || !initialData?.id) && customerPickerPosition && typeof document !== "undefined" && createPortal(
+                {isCustomerPickerOpen && customerPickerPosition && typeof document !== "undefined" && createPortal(
                   <div
                     className="fixed z-[100] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
                     style={{ top: customerPickerPosition.top, left: customerPickerPosition.left, width: customerPickerPosition.width }}
