@@ -1,7 +1,5 @@
 "use client"
 
-import type { VehicleView } from "@/lib/view-models"
-
 import { useWatch, useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { VehicleFormValues, vehicleSchema } from "../schema"
@@ -18,7 +16,15 @@ import { useTranslation } from "@/i18n"
 import { Check, Search, X } from "lucide-react"
 
 interface VehicleFormProps {
-  initialData?: Partial<VehicleView>
+  initialData?: {
+    id?: string
+    plateNumber?: string | null
+    brand?: string | null
+    model?: string | null
+    fuelType?: string | null
+    year?: number | null
+    customerId?: string | null
+  }
   initialCustomerId?: string
   defaultFuelType?: string
   onSuccess?: (vehicle?: Exclude<Awaited<ReturnType<typeof createVehicle>>, { success: false }>) => void
