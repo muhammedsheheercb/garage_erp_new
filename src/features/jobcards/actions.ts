@@ -389,6 +389,7 @@ export async function updateJobCard(id: string, data: JobCardFormValues) {
         }
       }
     })
+    await tx.invoice.updateMany({ where: { jobCardId: id }, data: { customerId: parsed.customerId } })
     await syncJobCardInvoice(tx, id)
   }, { timeout: 30_000, isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
   

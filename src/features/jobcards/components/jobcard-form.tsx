@@ -34,9 +34,8 @@ import {
   getJobCardCustomers,
   getVehicleHistory,
 } from "../actions";
-import { getCustomer } from "@/features/customers/actions";
 import { toast } from "sonner";
-import { Trash, Plus, Eye, CarFront, Check, Search, X, Pencil } from "lucide-react";
+import { Trash, Plus, Eye, CarFront, Check, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ServiceSelectionModal } from "./service-selection-modal";
@@ -68,8 +67,6 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
   const { t } = useTranslation();
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isNewVehicleOpen, setIsNewVehicleOpen] = useState(false);
-  const [isEditCustomerOpen, setIsEditCustomerOpen] = useState(false);
-  const [isEditVehicleOpen, setIsEditVehicleOpen] = useState(false);
   const [isNewServiceOpen, setIsNewServiceOpen] = useState(false);
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [isVehiclePickerOpen, setIsVehiclePickerOpen] = useState(false);
@@ -285,7 +282,6 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
     if (selectedVehicle) setVehicleSearch(selectedVehicle.plateNumber);
   }, [selectedVehicle?.id, selectedVehicle?.plateNumber]);
   const matchingVehicles = dropdowns.vehicles.filter((vehicle) => {
-    if (selectedCustomerId && vehicle.customerId !== selectedCustomerId) return false;
     const query = vehicleSearch.trim().toLowerCase();
     return !query || vehicle.plateNumber.toLowerCase().includes(query) ||
       vehicle.brand.toLowerCase().includes(query) ||
@@ -346,21 +342,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   {t.jobcards.customer}{" "}
                   <span className="text-destructive">*</span>
                 </Label>
-                {initialData && selectedCustomer && !initialData?.quotation && (
-                  <Dialog open={isEditCustomerOpen} onOpenChange={setIsEditCustomerOpen}>
-                    <DialogTrigger render={<Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1"><Pencil className="h-3.5 w-3.5" />{t.customers.editCustomer}</Button>} />
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader><DialogTitle>{t.customers.editCustomer}</DialogTitle></DialogHeader>
-                      <CustomerForm initialData={selectedCustomer} onSuccess={(updatedCustomer) => {
-                        setIsEditCustomerOpen(false);
-                        if (updatedCustomer) setChosenCustomer(updatedCustomer);
-                        queryClient.invalidateQueries({ queryKey: ["jobcard-customer", selectedCustomerId] });
-                        queryClient.invalidateQueries({ queryKey: ["jobcard-customer-search"] });
-                      }} />
-                    </DialogContent>
-                  </Dialog>
-                )}
-                {!initialData && (
+                {!(quotationId || initialData?.quotation) && (
                   <Dialog
                     open={isNewCustomerOpen}
                     onOpenChange={setIsNewCustomerOpen}
@@ -393,7 +375,6 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                               if (newCust && newCust.id) {
                                 setChosenCustomer(newCust);
                                 setValue("customerId", newCust.id);
-                                setValue("vehicleId", "");
                               }
                             });
                         }}
@@ -422,6 +403,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   }, 150)}
                   onChange={(event) => {
                     setCustomerSearch(event.target.value);
+                    setChosenCustomer(null);
                     setValue("customerId", "");
                     setValue("vehicleId", "");
                     setVehicleSearch("");
@@ -438,6 +420,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                     onClick={(event) => {
                       const input = event.currentTarget.parentElement?.querySelector("input") as HTMLInputElement | null;
                       setCustomerSearch("");
+                      setChosenCustomer(null);
                       setValue("customerId", "");
                       setValue("vehicleId", "");
                       setVehicleSearch("");
@@ -466,8 +449,6 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                         onClick={() => {
                           setChosenCustomer(customer);
                           setValue("customerId", customer.id, { shouldValidate: true });
-                          setValue("vehicleId", "");
-                          setVehicleSearch("");
                           setCustomerSearch(customer.name);
                           setIsCustomerPickerOpen(false);
                           setCustomerPickerPosition(null);
@@ -500,30 +481,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                   {t.jobcards.vehicle}{" "}
                   <span className="text-destructive">*</span>
                 </Label>
-                {initialData && selectedVehicle && !initialData?.quotation && (
-                  <Dialog open={isEditVehicleOpen} onOpenChange={setIsEditVehicleOpen}>
-                    <DialogTrigger render={<Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1"><Pencil className="h-3.5 w-3.5" />{t.vehicles.editVehicle}</Button>} />
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader><DialogTitle>{t.vehicles.editVehicle}</DialogTitle></DialogHeader>
-                      <VehicleForm initialData={selectedVehicle} onSuccess={(updatedVehicle) => {
-                        setIsEditVehicleOpen(false);
-                        if (updatedVehicle) {
-                          setVehicleSearch(updatedVehicle.plateNumber);
-                          if (updatedVehicle.customerId !== selectedCustomerId) {
-                            setValue("customerId", updatedVehicle.customerId, { shouldValidate: true });
-                            setValue("vehicleId", updatedVehicle.id, { shouldValidate: true });
-                            void getCustomer(updatedVehicle.customerId).then((customer) => {
-                              if (customer) setChosenCustomer(customer);
-                            });
-                          }
-                        }
-                        queryClient.invalidateQueries({ queryKey: ["jobcards-dropdowns"] });
-                        queryClient.invalidateQueries({ queryKey: ["jobcard-customer"] });
-                      }} />
-                    </DialogContent>
-                  </Dialog>
-                )}
-                {!initialData && (
+                {!(quotationId || initialData?.quotation) && (
                   <Dialog
                     open={isNewVehicleOpen}
                     onOpenChange={setIsNewVehicleOpen}
@@ -535,7 +493,7 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                           variant="outline"
                           size="sm"
                           className="h-7 text-xs gap-1"
-                          disabled={!selectedCustomerId}
+                          disabled={!selectedCustomerId || Boolean(quotationId || initialData?.quotation)}
                         >
                           <Plus className="h-3.5 w-3.5" />{" "}
                           {t.jobcards.newVehicle}
@@ -563,11 +521,17 @@ export function JobCardForm({ initialData, onSuccess, quotationId }: JobCardForm
                             })
                             .then(() => {
                               if (newVeh && newVeh.id) {
+                                setValue("customerId", newVeh.customerId, { shouldValidate: true });
                                 setValue("vehicleId", newVeh.id, {
                                   shouldValidate: true,
                                   shouldDirty: true,
                                 });
                                 setVehicleSearch(newVeh.plateNumber);
+                                if (newVeh.customerId !== selectedCustomerId) {
+                                  void getJobCardCustomers("", newVeh.customerId).then((customers) => {
+                                    if (customers[0]) setChosenCustomer(customers[0]);
+                                  });
+                                }
                               }
                             });
                         }}

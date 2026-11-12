@@ -149,32 +149,19 @@ export async function getCustomerFullDetails(id: string, fromDate?: string, toDa
     if (toDate) paymentWhere.paymentDate.lte = new Date(toDate);
   }
 
-  const [customer, payments] = await Promise.all([
-    prisma.customer.findUnique({
-    where: { id },
-    include: {
-      vehicles: {
-        include: {
-          jobCards: {
-            where: jobCardWhere,
-            orderBy: { createdAt: 'desc' },
-            include: {
-              services: {
-                include: { service: true }
-              },
-              parts: {
-                include: { inventory: true, batch: { include: { inventory: true } } }
-              },
-              invoice: {
-                include: { payments: true }
-              },
-              payments: true,
-            }
-          }
-        }
-      }
-    }
-  }),
+  const [customer, customerJobCards, payments] = await Promise.all([
+    prisma.customer.findUnique({ where: { id }, include: { vehicles: true } }),
+    prisma.jobCard.findMany({
+      where: { customerId: id, ...jobCardWhere },
+      orderBy: { createdAt: "desc" },
+      include: {
+        vehicle: true,
+        services: { include: { service: true } },
+        parts: { include: { inventory: true, batch: { include: { inventory: true } } } },
+        invoice: { include: { payments: true } },
+        payments: true,
+      },
+    }),
     prisma.payment.findMany({
       where: paymentWhere,
       orderBy: [{ paymentDate: "desc" }, { createdAt: "desc" }],
@@ -190,11 +177,23 @@ export async function getCustomerFullDetails(id: string, fromDate?: string, toDa
   let totalPaid = 0;
   let totalPending = 0;
 
-  const vehiclesWithStats = customer.vehicles.map(vehicle => {
+  const jobCardsByVehicle = new Map<string, typeof customerJobCards>()
+  for (const jobCard of customerJobCards) {
+    const current = jobCardsByVehicle.get(jobCard.vehicleId) ?? []
+    current.push(jobCard)
+    jobCardsByVehicle.set(jobCard.vehicleId, current)
+  }
+
+  const ledgerVehicles = new Map(customer.vehicles.map(vehicle => [vehicle.id, vehicle]))
+  for (const jobCard of customerJobCards) {
+    if (!ledgerVehicles.has(jobCard.vehicleId)) ledgerVehicles.set(jobCard.vehicleId, jobCard.vehicle)
+  }
+
+  const vehiclesWithStats = [...ledgerVehicles.values()].map(vehicle => {
     let vPaid = 0;
     let vPending = 0;
 
-    const jobCardsWithStats = vehicle.jobCards.map(jc => {
+    const jobCardsWithStats = (jobCardsByVehicle.get(vehicle.id) ?? []).map(jc => {
       // Payments created before job cards became directly payable can belong to
       // the invoice, while current payments belong to the job card. Combine the
       // two sets (without counting a linked payment twice) for this ledger row.
